@@ -1,0 +1,29 @@
+{
+  "id": "astargon-domain-system",
+  "title": "ADS: Astargon Domain System",
+  "description": "A system-agnostic settlement and domain management panel for Astargon campaigns in Foundry VTT.",
+  "version": "0.1.1",
+  "authors": [
+    {
+      "name": "UmutcanOrug"
+    }
+  ],
+  "url": "https://github.com/UmutcanOrug/FoundryVTT-Domain-System",
+  "manifest": "https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/module.json",
+  "download": "https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/astargon-domain-system.zip",
+  "readme": "https://github.com/UmutcanOrug/FoundryVTT-Domain-System/blob/main/README.md",
+  "bugs": "https://github.com/UmutcanOrug/FoundryVTT-Domain-System/issues",
+  "changelog": "https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13.351",
+    "maximum": "13"
+  },
+  "esmodules": [
+    "scripts/ads.js"
+  ],
+  "styles": [
+    "styles/ads.css"
+  ],
+  "socket": true
+}

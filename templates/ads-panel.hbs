@@ -1,0 +1,441 @@
+<div class="ads-root {{#unless isGM}}ads-player{{/unless}}">
+  <header class="ads-header">
+    <div class="ads-title">
+      <span class="ads-title-mark"><i class="fa-solid fa-landmark"></i></span>
+      <div>
+        <h1>ADS: Astargon Domain System</h1>
+        <p>Month {{currentMonth}}{{#if selected}} / {{selected.name}}{{/if}}</p>
+      </div>
+    </div>
+
+    {{#if selected}}
+      <div class="ads-metric-strip">
+        <div><span>Total POP</span><strong>{{selected.summary.totalPop}}</strong></div>
+        <div><span>Free POP</span><strong>{{selected.summary.freePop}}</strong></div>
+        <div><span>Gross</span><strong>{{selected.summary.grossIncome}}</strong></div>
+        <div><span>Military</span><strong>{{selected.summary.militaryCost}}</strong></div>
+        <div><span>Net</span><strong>{{selected.summary.netIncome}}</strong></div>
+        <div><span>Growth</span><strong>{{selected.summary.popChange}}</strong></div>
+      </div>
+    {{/if}}
+  </header>
+
+  <div class="ads-shell">
+    <aside class="ads-sidebar">
+      <div class="ads-search-row">
+        <input type="search" data-search-settlements value="{{search}}" placeholder="Search settlements">
+        {{#if isGM}}
+          <button type="button" class="ads-icon-button" data-click-action="addSettlement" title="Create Settlement">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+        {{/if}}
+      </div>
+
+      <div class="ads-settlement-list">
+        {{#each settlements}}
+          <button type="button" class="ads-settlement-button {{#if active}}active{{/if}}" data-select-settlement="{{id}}">
+            <strong>{{name}}</strong>
+            <span>{{type}} / {{region}}</span>
+            <small>POP {{pop}} / Net {{netIncome}}{{#if warnings}} / {{warnings}} warnings{{/if}}</small>
+          </button>
+        {{/each}}
+      </div>
+    </aside>
+
+    <main class="ads-main">
+      {{#unless hasVisibleSettlements}}
+        <section class="ads-empty">
+          <h2>No Settlement Assigned</h2>
+        </section>
+      {{/unless}}
+
+      {{#if selected}}
+        {{#if selected.hasWarnings}}
+          <section class="ads-warning-band">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <div>
+              {{#each selected.warnings}}
+                <p>{{this}}</p>
+              {{/each}}
+            </div>
+          </section>
+        {{/if}}
+
+        <nav class="ads-tabs" aria-label="ADS sections">
+          {{#each tabs}}
+            <button type="button" class="{{#if active}}active{{/if}}" data-tab="{{id}}" title="{{label}}">
+              <i class="fa-solid {{icon}}"></i>
+              <span>{{label}}</span>
+            </button>
+          {{/each}}
+        </nav>
+
+        {{#if (eq activeTab "overview")}}
+          <section class="ads-pane">
+            <form class="ads-panel" data-action-form="updateSettlementBasics">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading">
+                <h2>Overview</h2>
+                <button type="submit" class="ads-primary" {{#unless selected.canEditBasics}}disabled{{/unless}}>
+                  <i class="fa-solid fa-floppy-disk"></i><span>Save</span>
+                </button>
+              </div>
+              <div class="ads-form-grid">
+                <label>Name<input name="name" value="{{selected.name}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
+                <label>Region / Terrain<input name="region" value="{{selected.region}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
+                <label>Settlement Type<input name="type" value="{{selected.type}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
+                <label>Terrain Tags<input name="terrainTags" value="{{selected.terrainTagsText}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
+                <label>Biome Tags<input name="biomeTags" value="{{selected.biomeTagsText}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
+                <label>Owners<input value="{{selected.ownerNames}}" disabled></label>
+              </div>
+              <label class="ads-full">Notes<textarea name="notes" {{#unless selected.canEditBasics}}disabled{{/unless}}>{{selected.notes}}</textarea></label>
+              {{#if isGM}}
+                <fieldset class="ads-owner-grid">
+                  <legend>Assigned owner players</legend>
+                  {{#each userOptions}}
+                    <label><input type="checkbox" name="ownerUserIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{name}}</label>
+                  {{/each}}
+                </fieldset>
+                <label class="ads-full">GM Notes<textarea name="gmNotes">{{selected.gmNotes}}</textarea></label>
+              {{/if}}
+            </form>
+
+            <section class="ads-metrics-grid">
+              <div><span>Economic Slots</span><strong>{{selected.summary.economicSlots}}</strong></div>
+              <div><span>Military Slots</span><strong>{{selected.summary.militarySlots}}</strong></div>
+              <div><span>Total MP</span><strong>{{selected.summary.totalMp}}</strong></div>
+              <div><span>MP Used</span><strong>{{selected.summary.mpUsed}}</strong></div>
+              <div><span>MP Remaining</span><strong>{{selected.summary.mpRemaining}}</strong></div>
+              <div><span>CP This Month</span><strong>{{selected.summary.cpThisMonth}}</strong></div>
+              <div><span>Professional Cap</span><strong>{{selected.summary.professionalCapacity}}</strong></div>
+              <div><span>Militia Cap</span><strong>{{selected.summary.militiaCapacity}}</strong></div>
+            </section>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "population")}}
+          <section class="ads-pane">
+            <form class="ads-panel" data-action-form="updatePopulation">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading">
+                <h2>Population</h2>
+                {{#if isGM}}<button type="submit" class="ads-primary"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>{{/if}}
+              </div>
+              <div class="ads-metrics-grid">
+                <div><span>Total POP</span><strong>{{selected.summary.totalPop}}</strong></div>
+                <div><span>Economic Workers</span><strong>{{selected.summary.economicWorkers}}</strong></div>
+                <div><span>Military Building Workers</span><strong>{{selected.summary.militaryBuildingWorkers}}</strong></div>
+                <div><span>Professional Soldiers</span><strong>{{selected.summary.professionalSoldiers}}</strong></div>
+                <div><span>Militia</span><strong>{{selected.summary.militia}}</strong></div>
+                <div><span>Free POP</span><strong>{{selected.summary.freePop}}</strong></div>
+              </div>
+              <div class="ads-form-grid">
+                <label>Total POP<input type="number" name="totalPop" value="{{selected.population.total}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Economic Slot Bonus<input type="number" name="economicSlotBonus" value="{{selected.slots.economicBonus}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Military Slot Bonus<input type="number" name="militarySlotBonus" value="{{selected.slots.militaryBonus}}" {{#unless isGM}}disabled{{/unless}}></label>
+              </div>
+            </form>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "economy")}}
+          <section class="ads-pane">
+            <section class="ads-metrics-grid">
+              <div><span>Base POP Income</span><strong>{{selected.summary.baseIncome}}</strong></div>
+              <div><span>Building Output</span><strong>{{selected.summary.buildingOutput}}</strong></div>
+              <div><span>Gross Income</span><strong>{{selected.summary.grossIncome}}</strong></div>
+              <div><span>Military Upkeep</span><strong>{{selected.summary.militaryCost}}</strong></div>
+              <div><span>Net Monthly Income</span><strong>{{selected.summary.netIncome}}</strong></div>
+            </section>
+            <section class="ads-panel">
+              <div class="ads-panel-heading"><h2>Economic Buildings</h2></div>
+              <div class="ads-table-wrap">
+                <table class="ads-table">
+                  <thead><tr><th>Name</th><th>Level</th><th>POP</th><th>Rate</th><th>Bonus</th><th>Output</th></tr></thead>
+                  <tbody>
+                    {{#each selected.buildings}}
+                      {{#if (eq category "economic")}}
+                        <tr><td>{{name}}</td><td>{{level}}</td><td>{{assignedPop}} / {{workerCapacity}}</td><td>{{baseRate}}</td><td>{{bonusOutput}}</td><td>{{output}}</td></tr>
+                      {{/if}}
+                    {{/each}}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "buildings")}}
+          <section class="ads-pane">
+            {{#if isGM}}
+              <div class="ads-action-row">
+                <form data-action-form="addBuildingFromCatalog">
+                  <input type="hidden" name="settlementId" value="{{selected.id}}">
+                  <select name="catalogKey">
+                    {{#each catalogOptions}}<option value="{{key}}">{{name}}</option>{{/each}}
+                  </select>
+                  <button type="submit" class="ads-primary"><i class="fa-solid fa-plus"></i><span>Add Catalog Building</span></button>
+                </form>
+                <button type="button" data-click-action="addCustomBuilding" data-settlement-id="{{selected.id}}">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i><span>Add Custom Building</span>
+                </button>
+              </div>
+            {{/if}}
+
+            <div class="ads-table-wrap">
+              <table class="ads-table ads-edit-table">
+                <thead>
+                  <tr><th>Name</th><th>Cat.</th><th>Lvl</th><th>POP</th><th>Rate</th><th>Output</th><th>Slots</th><th>Caps</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {{#each selected.buildings}}
+                    <tr>
+                      <td colspan="9">
+                        <form class="ads-row-form" data-action-form="updateBuilding">
+                          <input type="hidden" name="settlementId" value="{{../selected.id}}">
+                          <input type="hidden" name="buildingId" value="{{id}}">
+                          <div class="ads-building-row">
+                            <input name="name" value="{{name}}" {{#unless canEditFull}}disabled{{/unless}}>
+                            <select name="category" {{#unless canEditFull}}disabled{{/unless}}>
+                              {{#each categoryOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+                            </select>
+                            <input type="number" name="level" value="{{level}}" min="1" max="5" {{#unless canEditFull}}disabled{{/unless}}>
+                            <input type="number" name="assignedPop" value="{{assignedPop}}" min="0" {{#unless canEditAssignments}}disabled{{/unless}}>
+                            <input type="number" name="baseRate" value="{{baseRate}}" min="0" {{#unless canEditFull}}disabled{{/unless}}>
+                            <output>{{output}}</output>
+                            <output>{{slotUsageDisplay}}</output>
+                            <output>{{capacityProfessional}} / {{capacityMilitia}}</output>
+                            <div class="ads-row-actions">
+                              <button type="submit" title="Save" {{#unless canEditAssignments}}disabled{{/unless}}><i class="fa-solid fa-floppy-disk"></i></button>
+                              {{#if ../isGM}}<button type="button" title="Delete" data-click-action="deleteBuilding" data-settlement-id="{{../selected.id}}" data-building-id="{{id}}" data-confirm="Delete this building?"><i class="fa-solid fa-trash"></i></button>{{/if}}
+                            </div>
+                          </div>
+                          {{#if ../isGM}}
+                            <div class="ads-building-details">
+                              <label>Terrain<input name="terrain" value="{{terrain}}"></label>
+                              <label>Requirement<input name="requirement" value="{{requirement}}"></label>
+                              <label>Base Workers<input type="number" name="baseWorkers" value="{{baseWorkers}}"></label>
+                              <label>Flat Output<input type="number" name="flatOutput" value="{{flatOutput}}"></label>
+                              <label>Crown Cost<input type="number" name="crownCost" value="{{crownCost}}"></label>
+                              <label>CP Cost<input type="number" name="cpCost" value="{{cpCost}}"></label>
+                              <label>Slot Usage<input type="number" name="slotUsage" value="{{slotUsage}}"></label>
+                              <label>POP Req<input type="number" name="basePopRequirement" value="{{basePopRequirement}}"></label>
+                              <label>Prof Cap<input type="number" name="capacityProfessional" value="{{capacityProfessional}}"></label>
+                              <label>Militia Cap<input type="number" name="capacityMilitia" value="{{capacityMilitia}}"></label>
+                              <label>Econ Slot Bonus<input type="number" name="bonusEconomicSlots" value="{{bonusEconomicSlots}}"></label>
+                              <label>Mil Slot Bonus<input type="number" name="bonusMilitarySlots" value="{{bonusMilitarySlots}}"></label>
+                              <label><input type="checkbox" name="active" data-bool {{activeChecked}}> Active</label>
+                              <label><input type="checkbox" name="special" data-bool {{specialChecked}}> Special</label>
+                              <label><input type="checkbox" name="gmOnly" data-bool {{gmOnlyChecked}}> GM Only</label>
+                              <label class="ads-wide">Notes<input name="notes" value="{{notes}}"></label>
+                            </div>
+                          {{/if}}
+                        </form>
+                      </td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "military")}}
+          <section class="ads-pane">
+            <section class="ads-metrics-grid">
+              <div><span>Professional Soldiers</span><strong>{{selected.summary.professionalSoldiers}}</strong></div>
+              <div><span>Professional Capacity</span><strong>{{selected.summary.professionalCapacity}}</strong></div>
+              <div><span>Militia</span><strong>{{selected.summary.militia}}</strong></div>
+              <div><span>Militia Capacity</span><strong>{{selected.summary.militiaCapacity}}</strong></div>
+              <div><span>MP Used</span><strong>{{selected.summary.mpUsed}}</strong></div>
+              <div><span>Military Cost</span><strong>{{selected.summary.militaryCost}}</strong></div>
+            </section>
+            {{#if isGM}}<button type="button" data-click-action="addTroop" data-settlement-id="{{selected.id}}"><i class="fa-solid fa-plus"></i><span>Add Troop Row</span></button>{{/if}}
+            <div class="ads-table-wrap">
+              <table class="ads-table">
+                <thead><tr><th>Type</th><th>Count</th><th>Mode</th><th>Monthly Cost</th><th>Notes</th><th></th></tr></thead>
+                <tbody>
+                  {{#each selected.troops}}
+                    <tr>
+                      <td colspan="6">
+                        <form class="ads-row-form ads-troop-row" data-action-form="updateTroop">
+                          <input type="hidden" name="settlementId" value="{{../selected.id}}">
+                          <input type="hidden" name="troopId" value="{{id}}">
+                          <select name="typeKey" {{#unless canEditFull}}disabled{{/unless}}>{{#each typeOptions}}<option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                          <input type="number" name="count" value="{{count}}" min="0" {{#unless canEditAssignments}}disabled{{/unless}}>
+                          <select name="mode" {{#unless canEditAssignments}}disabled{{/unless}}><option value="garrison" {{#if garrisonSelected}}selected{{/if}}>Garrison</option><option value="campaign" {{#if campaignSelected}}selected{{/if}}>Campaign</option></select>
+                          <output>{{monthlyCost}}</output>
+                          <input name="notes" value="{{notes}}" {{#unless canEditAssignments}}disabled{{/unless}}>
+                          <div class="ads-row-actions">
+                            <button type="submit" title="Save" {{#unless canEditAssignments}}disabled{{/unless}}><i class="fa-solid fa-floppy-disk"></i></button>
+                            {{#if ../isGM}}<button type="button" title="Delete" data-click-action="deleteTroop" data-settlement-id="{{../selected.id}}" data-troop-id="{{id}}" data-confirm="Delete this troop row?"><i class="fa-solid fa-trash"></i></button>{{/if}}
+                          </div>
+                        </form>
+                      </td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "construction")}}
+          <section class="ads-pane">
+            {{#if isGM}}<button type="button" data-click-action="addProject" data-settlement-id="{{selected.id}}"><i class="fa-solid fa-plus"></i><span>Add Project</span></button>{{/if}}
+            <div class="ads-table-wrap">
+              <table class="ads-table">
+                <thead><tr><th>Project</th><th>Target</th><th>Crown</th><th>CP</th><th>Extra CP</th><th>Status</th><th>Months</th><th></th></tr></thead>
+                <tbody>
+                  {{#each selected.construction}}
+                    <tr>
+                      <td colspan="8">
+                        <form class="ads-row-form ads-project-row" data-action-form="updateProject">
+                          <input type="hidden" name="settlementId" value="{{../selected.id}}">
+                          <input type="hidden" name="projectId" value="{{id}}">
+                          <input name="name" value="{{name}}" {{#unless canEditFull}}disabled{{/unless}}>
+                          <input type="number" name="targetLevel" value="{{targetLevel}}" min="1" max="5" {{#unless canEditFull}}disabled{{/unless}}>
+                          <span><input type="number" name="crownPaid" value="{{crownPaid}}" {{#unless canEditFull}}disabled{{/unless}}> / <input type="number" name="requiredCrown" value="{{requiredCrown}}" {{#unless canEditFull}}disabled{{/unless}}></span>
+                          <span><input type="number" name="cpPaid" value="{{cpPaid}}" {{#unless canEditFull}}disabled{{/unless}}> / <input type="number" name="requiredCp" value="{{requiredCp}}" {{#unless canEditFull}}disabled{{/unless}}></span>
+                          <span><input type="number" name="externalWorkers" value="{{externalWorkers}}" {{#unless canEditFull}}disabled{{/unless}}> + <input type="number" name="bonusCp" value="{{bonusCp}}" {{#unless canEditFull}}disabled{{/unless}}></span>
+                          <select name="status" {{#unless canEditFull}}disabled{{/unless}}>{{#each statusOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+                          <output>{{monthsDisplay}}</output>
+                          <div class="ads-row-actions">
+                            {{#if ../isGM}}<button type="submit" title="Save"><i class="fa-solid fa-floppy-disk"></i></button><button type="button" title="Delete" data-click-action="deleteProject" data-settlement-id="{{../selected.id}}" data-project-id="{{id}}" data-confirm="Delete this project?"><i class="fa-solid fa-trash"></i></button>{{/if}}
+                          </div>
+                          {{#if ../isGM}}
+                            <label class="ads-wide">Building Catalog Key<select name="catalogKey">{{#each @root.catalogOptions}}<option value="{{key}}" {{#if (eq key ../catalogKey)}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+                            <label class="ads-wide">Notes<input name="notes" value="{{notes}}"></label>
+                          {{/if}}
+                        </form>
+                      </td>
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "growth")}}
+          <section class="ads-pane">
+            <form class="ads-panel" data-action-form="updateGrowth">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading">
+                <h2>Growth</h2>
+                {{#if isGM}}<button type="submit" class="ads-primary"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>{{/if}}
+              </div>
+              <section class="ads-metrics-grid">
+                <div><span>Growth Rate</span><strong>{{selected.summary.growthRate}}</strong></div>
+                <div><span>Estimated POP Change</span><strong>{{selected.summary.popChange}}</strong></div>
+                <div><span>Projected POP</span><strong>{{selected.summary.projectedPop}}</strong></div>
+              </section>
+              <div class="ads-form-grid">
+                <label>Base %<input type="number" step="0.01" name="baseRate" value="{{selected.growth.baseRate}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Safe Bonus<input type="number" step="0.01" name="safeBonus" value="{{selected.growth.safeBonus}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Food Bonus<input type="number" step="0.01" name="foodSurplusBonus" value="{{selected.growth.foodSurplusBonus}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Migration<input type="number" step="0.01" name="migrationBonus" value="{{selected.growth.migrationBonus}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>War<input type="number" step="0.01" name="warPenalty" value="{{selected.growth.warPenalty}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Famine<input type="number" step="0.01" name="faminePenalty" value="{{selected.growth.faminePenalty}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Plague<input type="number" step="0.01" name="plaguePenalty" value="{{selected.growth.plaguePenalty}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Tax<input type="number" step="0.01" name="taxPenalty" value="{{selected.growth.taxPenalty}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Raids<input type="number" step="0.01" name="raidPenalty" value="{{selected.growth.raidPenalty}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Other<input type="number" step="0.01" name="otherModifier" value="{{selected.growth.otherModifier}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Override %<input name="overrideRate" value="{{selected.growth.overrideRate}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label>Override POP<input name="overridePopChange" value="{{selected.growth.overridePopChange}}" {{#unless isGM}}disabled{{/unless}}></label>
+                <label><input type="checkbox" name="roundDown" data-bool {{#if selected.growth.roundDown}}checked{{/if}} {{#unless isGM}}disabled{{/unless}}> Round Down</label>
+              </div>
+            </form>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "turnNote")}}
+          <section class="ads-pane">
+            <form class="ads-panel" data-action-form="updateTurnNote">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading">
+                <h2>Turn Note</h2>
+                <button type="submit" class="ads-primary" {{#unless selected.canWriteTurnNote}}disabled{{/unless}}>
+                  <i class="fa-solid fa-floppy-disk"></i><span>Save</span>
+                </button>
+              </div>
+              <textarea class="ads-turn-note" name="turnNote" {{#unless selected.canWriteTurnNote}}disabled{{/unless}}>{{selected.currentTurnNote.text}}</textarea>
+              <p class="ads-muted">Updated: {{selected.currentTurnNote.updatedLabel}}</p>
+            </form>
+            {{#if isGM}}
+              <section class="ads-panel">
+                <div class="ads-panel-heading"><h2>All Player Notes</h2></div>
+                {{#each selected.allTurnNotes}}
+                  <article class="ads-log-entry"><h3>{{authorName}} / {{updatedLabel}}</h3><pre>{{text}}</pre></article>
+                {{/each}}
+              </section>
+            {{/if}}
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "eventLog")}}
+          <section class="ads-pane">
+            <section class="ads-panel">
+              <div class="ads-panel-heading"><h2>Event Log</h2></div>
+              {{#each selected.eventLog}}
+                <article class="ads-log-entry">
+                  <h3>{{title}} <span>Month {{month}} / {{createdLabel}}</span></h3>
+                  <pre>{{text}}</pre>
+                  {{#if gmNote}}<pre>{{gmNote}}</pre>{{/if}}
+                  {{#if playerNotesText}}<pre>{{playerNotesText}}</pre>{{/if}}
+                </article>
+              {{/each}}
+            </section>
+          </section>
+        {{/if}}
+
+        {{#if (eq activeTab "gmControls")}}
+          <section class="ads-pane">
+            <form class="ads-panel" data-action-form="processMonth">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading">
+                <h2>Monthly Turn</h2>
+                <button type="submit" class="ads-danger" data-confirm="Process this settlement month?">
+                  <i class="fa-solid fa-forward-step"></i><span>Process Month</span>
+                </button>
+              </div>
+              <label class="ads-full">GM Turn Note<textarea name="gmTurnNote"></textarea></label>
+            </form>
+
+            <form class="ads-panel" data-action-form="updatePermissions">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading"><h2>Player Permissions</h2><button type="submit" class="ads-primary"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button></div>
+              <div class="ads-check-grid">
+                <label><input type="checkbox" name="playersCanEditBasics" data-bool {{#if selected.permissions.playersCanEditBasics}}checked{{/if}}> Edit basics</label>
+                <label><input type="checkbox" name="playersCanEditAssignments" data-bool {{#if selected.permissions.playersCanEditAssignments}}checked{{/if}}> Edit assignments</label>
+                <label><input type="checkbox" name="playersCanWriteTurnNotes" data-bool {{#if selected.permissions.playersCanWriteTurnNotes}}checked{{/if}}> Write turn notes</label>
+              </div>
+            </form>
+
+            <form class="ads-panel" data-action-form="updateOverrides">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ads-panel-heading"><h2>Manual Overrides</h2><button type="submit" class="ads-primary"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button></div>
+              <div class="ads-check-grid">
+                <label><input type="checkbox" name="ignorePopulationLimits" data-bool {{#if selected.manualOverrides.ignorePopulationLimits}}checked{{/if}}> Population limits</label>
+                <label><input type="checkbox" name="ignoreManpowerLimits" data-bool {{#if selected.manualOverrides.ignoreManpowerLimits}}checked{{/if}}> Manpower limits</label>
+                <label><input type="checkbox" name="ignoreMilitaryCapacity" data-bool {{#if selected.manualOverrides.ignoreMilitaryCapacity}}checked{{/if}}> Military capacity</label>
+                <label><input type="checkbox" name="ignoreBuildingRequirements" data-bool {{#if selected.manualOverrides.ignoreBuildingRequirements}}checked{{/if}}> Building requirements</label>
+                <label><input type="checkbox" name="ignoreSlotLimits" data-bool {{#if selected.manualOverrides.ignoreSlotLimits}}checked{{/if}}> Slot limits</label>
+                <label><input type="checkbox" name="ignoreGrowthLimits" data-bool {{#if selected.manualOverrides.ignoreGrowthLimits}}checked{{/if}}> Growth limits</label>
+              </div>
+            </form>
+
+            <div class="ads-action-row">
+              <button type="button" class="ads-danger" data-click-action="deleteSettlement" data-settlement-id="{{selected.id}}" data-confirm="Delete this settlement?">
+                <i class="fa-solid fa-trash"></i><span>Delete Settlement</span>
+              </button>
+              <button type="button" data-click-action="restoreDeLaurent">
+                <i class="fa-solid fa-rotate-left"></i><span>Restore De Laurent Template</span>
+              </button>
+            </div>
+          </section>
+        {{/if}}
+      {{/if}}
+    </main>
+  </div>
+</div>
