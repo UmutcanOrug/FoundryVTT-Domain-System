@@ -1,0 +1,71 @@
+name: Release Foundry Module
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - module.json
+      - scripts/**
+      - styles/**
+      - templates/**
+      - README.md
+      - KULLANIM-KILAVUZU.md
+      - CHANGELOG.md
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ds-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Read module version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./module.json').version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Foundry package
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          zip -r "DS-v${VERSION}.zip" \
+            module.json \
+            scripts \
+            styles \
+            templates \
+            README.md \
+            KULLANIM-KILAVUZU.md \
+            CHANGELOG.md
+
+      - name: Create or update GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          ZIP="DS-v${VERSION}.zip"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" module.json "$ZIP" --clobber
+            gh release edit "$TAG" --latest --title "DS v${VERSION}"
+          else
+            gh release create "$TAG" module.json "$ZIP" \
+              --target "$GITHUB_SHA" \
+              --title "DS v${VERSION}" \
+              --generate-notes \
+              --latest
+          fi
