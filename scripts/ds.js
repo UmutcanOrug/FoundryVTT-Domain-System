@@ -5,7 +5,7 @@ const SOCKET_NAME = `module.${MODULE_ID}`;
 const TEMPLATE_PATH = `modules/${MODULE_ID}/templates/ds-panel.hbs`;
 const ACTION_CONFIRM_TIMEOUT_MS = 15000;
 const DIRECT_RECRUITMENT_SOURCE = "__direct__";
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 const DISTRICT_PAGE_SIZE = 8;
 
 const TABS = [
@@ -184,7 +184,7 @@ const BUILDING_CATALOG = [
   mil("royal-arsenal", "Royal Arsenal", 40, 920000, 31000, { chainId: "siege", nodeTier: 4, parentIds: ["siege-workshop"], materialCost: 9000, buildingUpkeep: 2000, militaryCapacity: 450, canRecruit: true, recruitPerLevel: 18, recruitableUnitIds: ["royal-engineer"], constructionBonus: 320, requiredTagsAny: ["iron"], uniqueChain: true }),
   mil("grand-arsenal", "Grand Arsenal", 65, 3900000, 108000, { chainId: "siege", nodeTier: 5, parentIds: ["royal-arsenal"], materialCost: 36000, buildingUpkeep: 6000, militaryCapacity: 1000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["grand-artillery"], constructionBonus: 800, requiredTagsAny: ["iron"], defense: 100, special: true, uniqueChain: true }),
 
-  mil("laurent-manor", "Laurent Manor", 0, 0, 0, { chainId: "landmark", branch: "landmark", nodeTier: 0, landmark: true, buildingUpkeep: 300, slotUse: 0, militaryCapacity: 350, canRecruit: true, recruitPerLevel: 20, recruitableUnitIds: ["militia", "watchman", "spearman", "men-at-arms", "archer"], bonusEconomicSlots: 2, defense: 100, publicOrder: 6, special: true, gmOnly: true, uniqueChain: true, description: "De Laurent's unique fortified manor. It has no tier, consumes no normal district, and cannot be upgraded.", notes: "De Laurent's fixed noble landmark." })
+  mil("laurent-manor", "Laurent Manor", 5, 0, 0, { chainId: "landmark", branch: "landmark", nodeTier: 0, landmark: true, buildingUpkeep: 300, slotUse: 0, militaryCapacity: 350, canRecruit: true, recruitPerLevel: 20, recruitableUnitIds: ["militia", "watchman", "spearman", "men-at-arms", "archer"], bonusEconomicSlots: 2, defense: 100, publicOrder: 6, special: true, gmOnly: true, uniqueChain: true, description: "De Laurent's unique fortified manor. It has no tier or normal district, requires 5 POP, and cannot be upgraded.", notes: "De Laurent's staffed noble landmark." })
 ];
 
 const LEGACY_BUILDING_IDS = [
@@ -809,7 +809,8 @@ function selectedContext(settlement, data, isGM) {
     activeProjects: projects.filter(project => project.status !== "completed"),
     completedProjects: projects.filter(project => project.status === "completed"),
     recruitment,
-    activeRecruitment: recruitment.filter(order => order.status !== "completed"),
+    activeRecruitment: recruitment.filter(order => order.status !== "completed" && order.kind !== "replenishment"),
+    activeReplenishment: recruitment.filter(order => order.status !== "completed" && order.kind === "replenishment"),
     completedRecruitment: recruitment.filter(order => order.status === "completed"),
     constructionCatalog: constructionCatalogContext(settlement, data, permissions, summary),
     recruitableUnits: recruitableUnitsContext(settlement, data, permissions, summary, isGM),
@@ -938,7 +939,7 @@ function buildingContext(building, settlement, data, permissions) {
     output: formatNumber(output.total),
     foodOutputDisplay: formatNumber(output.food),
     materialsOutputDisplay: formatNumber(output.materials),
-    staffingPercent: building.landmark ? "Fixed" : formatNumber(Math.round(output.staffing * 100)),
+    staffingPercent: formatNumber(Math.round(output.staffing * 100)),
     grantsTagsText: building.grantsTags.join(", "),
     requiredTagsAnyText: building.requiredTagsAny.join(", "),
     mitigationTagsText: building.mitigationTags.join(", "),
@@ -1355,7 +1356,8 @@ function overviewBranchPickerContext(slot, settlement, data, permissions, summar
     current: current ? buildingContext(current, settlement, data, permissions) : null,
     isRootPicker: !current,
     rootGroups: [],
-    levels: []
+    levels: [],
+    detail: null
   };
   if (context.locked || context.supportSlot || context.hasProject) return context;
 
@@ -1371,6 +1373,7 @@ function overviewBranchPickerContext(slot, settlement, data, permissions, summar
           .map(item => constructionOptionContext(item, settlement, permissions, summary, data, slot, null, isGM))
       }))
       .filter(group => group.nodes.length);
+    context.detail = context.rootGroups.flatMap(group => group.nodes)[0] || null;
     return context;
   }
 
@@ -1381,6 +1384,8 @@ function overviewBranchPickerContext(slot, settlement, data, permissions, summar
     .sort((a, b) => a.nodeTier - b.nodeTier || a.name.localeCompare(b.name));
   context.branchLabel = branch.label;
   context.branchClass = `ds-branch-${branch.color}`;
+  const currentCatalog = data.catalog.find(item => item.id === current.catalogId);
+  context.detail = currentCatalog ? constructionOptionContext(currentCatalog, settlement, permissions, summary, data, slot, current, isGM) : null;
   context.levels = [1, 2, 3, 4, 5].map(tier => ({
     tier,
     tierRoman: romanTier(tier),
@@ -1633,6 +1638,19 @@ function activateListeners(element) {
     uiState.selectedDistrictSlotId = "";
     persistClientState();
     renderDsPanel();
+  });
+
+  root.querySelectorAll("[data-branch-detail]").forEach(node => {
+    const showDetail = () => {
+      const source = node.querySelector(".ds-node-tooltip");
+      const workspace = node.closest(".ds-branch-workspace");
+      const target = workspace?.querySelector("[data-branch-detail-content]");
+      if (!source || !target) return;
+      target.replaceChildren(...Array.from(source.childNodes, child => child.cloneNode(true)));
+      workspace.querySelectorAll("[data-branch-detail]").forEach(item => item.classList.toggle("detail-active", item === node));
+    };
+    node.addEventListener("mouseenter", showDetail);
+    node.addEventListener("focusin", showDetail);
   });
 
   root.querySelector("[data-search-settlements]")?.addEventListener("change", event => {
@@ -3394,9 +3412,11 @@ function processRecruitment(settlement, data) {
   const summary = calculateSettlement(settlement, data);
   let militaryRemaining = settlement.overrides.ignoreMilitaryCapacity ? Number.POSITIVE_INFINITY : Math.max(0, summary.militaryCapacity - summary.troopManpowerUsed);
   let manpowerRemaining = settlement.overrides.ignoreManpowerLimits ? Number.POSITIVE_INFINITY : Math.max(0, summary.manpowerCap - summary.troopManpowerUsed);
+  const orders = settlement.recruitment
+    .filter(order => order.status === "inProgress")
+    .sort((a, b) => Number(b.kind === "replenishment") - Number(a.kind === "replenishment"));
 
-  for (const order of settlement.recruitment) {
-    if (order.status !== "inProgress") continue;
+  for (const order of orders) {
     const source = settlement.buildings.find(building => building.id === order.sourceBuildingId);
     const remaining = Math.max(0, order.targetCount - order.trained);
     if (!source && !order.sourceBuildingId) {
@@ -3410,17 +3430,19 @@ function processRecruitment(settlement, data) {
 
     if (!source) continue;
 
-    const available = capacityBySource.get(source.id) || 0;
     const type = troopType(order.troopType, data.unitCatalog);
+    const isReplenishment = order.kind === "replenishment";
+    if (isReplenishment && (!source.active || !sourceUnlocksUnit(source, type.id) || buildingRecruitmentCapacity(source) <= 0)) continue;
+    const available = isReplenishment ? remaining : capacityBySource.get(source.id) || 0;
     const trainedNow = Math.min(available, remaining, militaryRemaining, manpowerRemaining);
     if (trainedNow <= 0) continue;
 
     order.trained += trainedNow;
-    capacityBySource.set(source.id, Math.max(0, available - trainedNow));
+    if (!isReplenishment) capacityBySource.set(source.id, Math.max(0, available - trainedNow));
     addRecruitsToTroops(settlement, order, trainedNow, data);
     militaryRemaining -= trainedNow;
     manpowerRemaining -= trainedNow;
-    lines.push(`${formatNumber(trainedNow)} ${type.name} ${order.kind === "replenishment" ? "replenished" : "recruited"} from ${source.name}`);
+    lines.push(`${formatNumber(trainedNow)} ${type.name} ${isReplenishment ? "replenished at month end" : "recruited"} from ${source.name}`);
 
     if (order.trained >= order.targetCount) order.status = "completed";
   }
@@ -3825,7 +3847,7 @@ function sampleSettlement(rules = defaultRules()) {
       buildingFromCatalog(BUILDING_CATALOG.find(item => item.id === "market-town"), { id: "dl-hunting", assignedPop: 20 }),
       buildingFromCatalog(BUILDING_CATALOG.find(item => item.id === "stone-quarry"), { id: "dl-ranch", assignedPop: 20 }),
       buildingFromCatalog(BUILDING_CATALOG.find(item => item.id === "farmstead"), { id: "dl-crop", assignedPop: 20 }),
-      buildingFromCatalog(BUILDING_CATALOG.find(item => item.id === "laurent-manor"), { id: "dl-manor", assignedPop: 0 })
+      buildingFromCatalog(BUILDING_CATALOG.find(item => item.id === "laurent-manor"), { id: "dl-manor", assignedPop: 5 })
     ],
     troops: [
       { id: "dl-maa", type: "men-at-arms", count: 70, mode: "garrison", notes: "" },
@@ -4023,7 +4045,7 @@ function normalizeData(raw) {
   const fallback = defaultWorldData();
   const source = clone(raw || {});
   const sourceSchema = Math.max(1, Math.trunc(toNumber(source.schemaVersion, 1)));
-  const migrateLegacy = sourceSchema < SCHEMA_VERSION;
+  const migrateLegacy = sourceSchema < 5;
   const rules = normalizeRules(source.rules || fallback.rules, migrateLegacy);
   const unitCatalog = normalizeUnitCatalog(source.unitCatalog || fallback.unitCatalog, migrateLegacy);
   const catalog = normalizeCatalog(source.catalog || fallback.catalog, unitCatalog, migrateLegacy);
@@ -4031,6 +4053,7 @@ function normalizeData(raw) {
   const settlements = Array.isArray(source.settlements) && source.settlements.length
     ? source.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, migrateLegacy))
     : fallback.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules));
+  if (sourceSchema < 6) migrateLaurentStaffing(catalog, settlements);
   return {
     schemaVersion: SCHEMA_VERSION,
     month: Math.max(1, Math.trunc(toNumber(source.month, fallback.month))),
@@ -4041,6 +4064,17 @@ function normalizeData(raw) {
     eventCatalog,
     settlements
   };
+}
+
+function migrateLaurentStaffing(catalog, settlements) {
+  const template = catalog.find(item => item.id === "laurent-manor");
+  if (template) template.workers = Math.max(5, toNumber(template.workers, 0));
+  for (const settlement of settlements) {
+    for (const building of settlement.buildings.filter(item => item.catalogId === "laurent-manor")) {
+      building.workers = Math.max(5, toNumber(building.workers, 0));
+      if (building.assignedPop <= 0) building.assignedPop = Math.min(5, building.workers);
+    }
+  }
 }
 
 function normalizeRules(value, migrateLegacy = false) {
@@ -4433,7 +4467,7 @@ function normalizeBuilding(item, unitCatalog = TROOP_TYPES, catalogItem = null, 
     category,
     active: source?.active === undefined ? true : Boolean(source.active),
     level: clamp(Math.trunc(toNumber(source?.level, 1)), 1, 5),
-    assignedPop: landmark ? 0 : Math.max(0, toNumber(source?.assignedPop, 0)),
+    assignedPop: Math.max(0, toNumber(source?.assignedPop, 0)),
     workers: Math.max(0, toNumber(source?.workers, 0), migrateLegacy ? toNumber(source?.assignedPop, 0) : 0),
     rate: Math.max(0, toNumber(source?.rate, 0)),
     flatOutput: toNumber(source?.flatOutput, 0),
@@ -5061,7 +5095,7 @@ function buildWarnings(settlement, data, summary = calculateSettlement(settlemen
 
   if (summary.freePopRaw < 0 && !overrides.ignorePopulationLimits) warnings.push(`Assigned workers exceed Total POP by ${formatNumber(Math.abs(summary.freePopRaw))}.`);
   if (summary.troopManpowerUsed + summary.manpowerQueued > summary.manpowerCap && !overrides.ignoreManpowerLimits) warnings.push(`Army and recruitment exceed manpower cap by ${formatNumber(summary.troopManpowerUsed + summary.manpowerQueued - summary.manpowerCap)}.`);
-  if (summary.troopManpowerUsed > summary.militaryCapacity && !overrides.ignoreMilitaryCapacity) warnings.push(`Army strength exceeds military capacity by ${formatNumber(summary.troopManpowerUsed - summary.militaryCapacity)}.`);
+  if (summary.troopManpowerUsed > summary.militaryCapacity && !overrides.ignoreMilitaryCapacity) warnings.push(`Army uses ${formatNumber(summary.troopManpowerUsed)} Military Capacity, but staffed buildings provide ${formatNumber(summary.militaryCapacity)} (short by ${formatNumber(summary.troopManpowerUsed - summary.militaryCapacity)}).`);
   if (summary.usedSlots > summary.unlockedSlots && !overrides.ignoreSlotLimits) warnings.push(`Unlocked district slots exceeded by ${formatNumber(summary.usedSlots - summary.unlockedSlots)}.`);
   if (summary.foodShortage > 0) warnings.push(`Projected food shortage: ${formatNumber(summary.foodShortage)} Food.`);
 

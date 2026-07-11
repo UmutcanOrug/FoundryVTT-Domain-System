@@ -65,6 +65,7 @@ vm.runInContext(`${source}\n;globalThis.__dsTest = {
   resolveMonthEvent,
   undoSettlementTurn,
   calculateSettlement,
+  buildWarnings,
   updateTroop,
   recruitableUnitsContext,
   permissionsFor,
@@ -89,7 +90,7 @@ const richSettlement = data => {
   return settlement;
 };
 
-// Schema v5 force-refreshes built-ins, removes old branchless nodes, and migrates Laurent landmarks.
+// Schema v6 preserves the v5 systems while repairing Laurent staffing.
 const stale = api.defaultWorldData();
 stale.schemaVersion = 3;
 stale.catalog.find(item => item.id === "drill-hall").parentIds = ["muster-field"];
@@ -123,7 +124,7 @@ stale.settlements = [{
   projects: []
 }];
 const migrated = api.normalizeData(stale);
-assert.equal(migrated.schemaVersion, 5);
+assert.equal(migrated.schemaVersion, 6);
 assert.deepEqual([...migrated.catalog.find(item => item.id === "drill-hall").parentIds], ["infantry-yard"]);
 assert.deepEqual([...migrated.catalog.find(item => item.id === "stable").parentIds], ["infantry-yard"]);
 assert.equal(migrated.catalog.some(item => item.id === "tannery"), false);
@@ -150,6 +151,20 @@ const migratedLaurentBuildings = migratedLaurentWorld.settlements[0].buildings.f
 assert.equal(migratedLaurentBuildings.length, 1);
 assert.equal(migratedLaurentBuildings[0].landmark, true);
 assert.equal(migratedLaurentBuildings[0].slotId, "");
+
+const schemaFiveWorld = api.defaultWorldData();
+schemaFiveWorld.schemaVersion = 5;
+schemaFiveWorld.rules.economy.incomeMultiplier = 1.37;
+const schemaFiveManor = schemaFiveWorld.settlements[0].buildings.find(building => building.catalogId === "laurent-manor");
+schemaFiveWorld.catalog.find(building => building.id === "laurent-manor").workers = 0;
+schemaFiveManor.workers = 5;
+schemaFiveManor.assignedPop = 0;
+const repairedSchemaFiveWorld = api.normalizeData(schemaFiveWorld);
+const repairedManor = repairedSchemaFiveWorld.settlements[0].buildings.find(building => building.catalogId === "laurent-manor");
+assert.equal(repairedSchemaFiveWorld.rules.economy.incomeMultiplier, 1.37, "v5 custom rules must survive the targeted v6 migration");
+assert.equal(repairedSchemaFiveWorld.catalog.find(building => building.id === "laurent-manor").workers, 5);
+assert.equal(repairedManor.workers, 5);
+assert.equal(repairedManor.assignedPop, 5);
 
 // Tier downgrade shrinks empty Metropolis slots while preserving occupied districts.
 const downgradeData = freshWorld();
@@ -218,13 +233,17 @@ assert.deepEqual([...deLaurent.buildings.map(building => building.catalogId)], [
 const laurentManor = deLaurent.buildings.find(building => building.catalogId === "laurent-manor");
 assert.equal(laurentManor.landmark, true);
 assert.equal(laurentManor.slotId, "");
+assert.equal(laurentManor.workers, 5);
+assert.equal(laurentManor.assignedPop, 5);
 assert.equal(deLaurent.slots.some(slot => slot.reservedByBuildingId === laurentManor.id), false);
 assert.equal(deLaurentSummary.manpowerCap, 309);
 assert.equal(deLaurentSummary.manpowerReserve, 209);
 assert.equal(deLaurentSummary.manpowerRecovery, 31);
 assert.equal(deLaurentSummary.troopManpowerUsed, 100);
 assert.equal(deLaurentSummary.civilianPopulation, 309);
-assert.equal(deLaurentSummary.freePop, 241);
+assert.equal(deLaurentSummary.freePop, 236);
+assert.equal(deLaurentSummary.militaryCapacity, 350);
+assert.equal(api.buildWarnings(deLaurent, catalogWorld, deLaurentSummary).some(warning => warning.includes("Laurent Manor")), false);
 assert.ok(deLaurentSummary.netIncome > 0);
 assert.ok(deLaurentSummary.foodBalance > 0);
 
@@ -303,6 +322,7 @@ api.updateTroop(armyData, {
 assert.equal(regiment.count, 7, "players cannot restore casualties without replenishment");
 const crownBeforeReplenish = armySettlement.treasure;
 const manpowerBeforeReplenish = armySettlement.manpowerReserve;
+infantryYard.recruitPerLevel = 1;
 api.queueReplenishment(armyData, {
   settlementId: armySettlement.id,
   troopId: regiment.id,
@@ -315,6 +335,7 @@ assert.equal(armySettlement.recruitment.at(-1).kind, "replenishment");
 await api.processTurn(armyData, {}, gm);
 assert.equal(regiment.count, 10);
 assert.equal(regiment.maxCount, 10);
+assert.equal(armySettlement.recruitment.at(-1).status, "completed", "replenishment must finish despite source capacity 1");
 
 // Army manpower never subtracts civilian POP, and army Food is charged separately.
 const armySummary = api.calculateSettlement(armySettlement, armyData);
@@ -474,12 +495,17 @@ assert.match(hbs, /Settlement Policy/);
 assert.doesNotMatch(hbs, /<details class="ds-overview-slot/);
 assert.match(hbs, /data-overview-slot-id/);
 assert.match(hbs, /ds-district-branch-overlay/);
+assert.match(hbs, /ds-branch-workspace/);
+assert.match(hbs, /data-branch-detail-content/);
+assert.match(hbs, /Month-End Replenishment/);
 assert.match(hbs, /Narrative Only/);
 assert.match(css, /\.ds-unit-recruit-grid,[\s\S]*grid-template-columns:\s*repeat\(2,/);
 assert.match(css, /\.ds-overview-slot-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,/);
 assert.match(css, /\.ds-overview-districts\s*\{[\s\S]*align-content:\s*start/);
 assert.match(css, /\.ds-root button\.ds-overview-slot\s*\{/);
+assert.match(css, /\.ds-district-branch-overlay\s*\{[\s\S]*background-color:\s*#090d0a\s*!important/);
+assert.match(css, /\.ds-branch-detail-panel\s*\{/);
 assert.match(css, /\.ds-branch-green/);
 assert.match(css, /\.ds-node-tooltip/);
 
-console.log("DS v0.1.9 logic tests passed");
+console.log("DS v0.1.10 logic tests passed");

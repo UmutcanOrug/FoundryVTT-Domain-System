@@ -107,11 +107,11 @@ Askeri aileler kirmizi renkle gosterilir:
 - `Defense`: Watch Post -> Palisade -> Stone Walls -> Citadel -> Grand Fortress.
 - `Siege`: Engineer Camp -> Siege Yard -> Siege Workshop -> Royal Arsenal -> Grand Arsenal.
 
-`Laurent Manor`, De Laurent'e ait tek bir tierless Landmark'tir. Normal slota yerlesmez, worker istemez ve T1-T5 upgrade zinciri yoktur. Sabit recruitment, Defense, Public Order ve bonus slot etkileri verir. Eski Laurent Estate tierleri veri gecisinde bu tek Landmark'a birlestirilir.
+`Laurent Manor`, De Laurent'e ait tek bir tierless Landmark'tir. Normal slota yerlesmez, 5 POP ister ve T1-T5 upgrade zinciri yoktur. Tam staffed iken recruitment, Military Capacity, Defense, Public Order ve bonus slot etkileri verir. Eski Laurent Estate tierleri veri gecisinde bu tek Landmark'a birlestirilir.
 
 Bir familyada `One family per settlement` isaretliyse ayni yerleskede o aileden bir yol bulunur. Bir dugumun dallari ayni slotta birbirini dislar; farkli yol gerekiyorsa GM Content Library'de bu limiti degistirebilir veya uygun ozel bina yaratabilir.
 
-Construction ve Content Library ekranlarinda aileler yukaridan asagi T1-T5 olarak cizilir. Ayni tierdaki secenekler yan yana durur. Bir dugumun uzerine gelince aciklama, parent, maliyet, output ve `Allows recruitment of` bilgileri gorulur.
+Overview branch paneli tamamen opak bir zeminde acilir. T1-T5 dugumleri solda kalir; secilen veya uzerine gelinen binanin aciklamasi, maliyeti, output'u, gereksinimi ve `Allows recruitment of` bilgisi sagdaki sabit Building Details panelinde gorulur. Construction ve Content Library ekranlarinda da aileler yukaridan asagi T1-T5 olarak cizilir.
 
 ## Construction ve CP
 
@@ -176,9 +176,9 @@ Her unitte tek bir `Power` degeri bulunur. `Regiment Power = Current Strength x 
 Regiment `Current Strength / Maximum Strength` olarak tutulur. 70 kisilik birlik savasta 12 kayip verirse Current Strength 58 yapilir; Maximum Strength 70 kalir. Recruitment ekranindaki Replenishment cubugu kaybi tamamlar.
 
 - Kaybi basabilen aktif ve staffed bir askeri bina gerekir.
-- Her replacement 1 Manpower Reserve, 1 Force Capacity ve aylik recruitment capacity kullanir.
+- Her replacement 1 Manpower Reserve ve 1 Force Capacity kullanir; bina recruitment capacity'sini kullanmaz.
 - Varsayilan bedel normal recruit fiyatinin yuzde 35'idir; recruitment discount uygulanabilir.
-- Replenishment Maximum Strength'i buyutmez, yalnizca Current Strength'i eski limite getirir.
+- Replenishment emri ay sonunda tek seferde tamamlanir. Maximum Strength'i buyutmez, yalnizca Current Strength'i eski limite getirir.
 - Her asker unit tierine gore Food tuketir.
 
 Unit sablonuna veya tek bir regiment/recruitment kaydina Foundry Actor UUID atanabilir. Actor, UUID alanina suruklenip birakilabilir. Karttaki Actor dugmesi bagli Actor sheetini acar. Regiment resmi ve Actor baglantisi global unit sablonundan bagimsiz degistirilebilir.
@@ -231,10 +231,11 @@ Yerleske ay sirasi:
 3. Free POP ve bina bonusu CP olarak aktif insaatlara dagitilir.
 4. Net Crown, Food ve Materials uygulanir.
 5. Food acigi varsa Public Order dusurulur.
-6. Recruitment kuyruklari bina kapasitesine gore ilerler.
-7. Growth uygulanir ve suresi biten aktif modifierlar kaldirilir.
-8. 1d100 ay sonu olayi secilir ve GM onayina birakilir.
-9. Islem Chronicle'a yazilir ve yerleske o ay icin processed olur.
+6. Replenishment emirleri bina recruitment capacity'sini harcamadan tamamlanir.
+7. Normal recruitment kuyruklari bina kapasitesine gore ilerler.
+8. Growth uygulanir ve suresi biten aktif modifierlar kaldirilir.
+9. 1d100 ay sonu olayi secilir ve GM onayina birakilir.
+10. Islem Chronicle'a yazilir ve yerleske o ay icin processed olur.
 
 d100 sonucu:
 
@@ -287,7 +288,7 @@ Building kutuphanesinin ust kismi branchleri renkli T1-T5 agacinda gosterir; alt
 
 ## Veri Gecisi
 
-v0.1.8 ve daha eski veriler schema v5'e otomatik tasinir.
+v0.1.9 ve daha eski veriler schema v6'ya otomatik tasinir.
 
 - Yerleske kimligi, sahiplik, bina instance'lari, regimentler, kuyruklar, notlar ve loglar korunur.
 - Eski built-in bina kimlikleri yeni ailelerdeki en yakin dugume eslenir.
@@ -295,7 +296,8 @@ v0.1.8 ve daha eski veriler schema v5'e otomatik tasinir.
 - Professional/Militia ve yedi combat alani tek Military Capacity ve Power sistemine tasinir.
 - Regimentlere Maximum Strength, settlementlara policy ve tier bazli gelir alanlari eklenir.
 - Metropolis'ten dusurulen yerleskelerde bos eski slotlar yeni tier azamisine kadar daralir; dolu slotlar korunur.
-- De Laurent'in bilinen eski Estate dugumleri tek tierless Laurent Manor Landmark'ina birlestirilir; normal district ve worker kullanmaz.
+- De Laurent'in bilinen eski Estate dugumleri tek tierless Laurent Manor Landmark'ina birlestirilir; normal district kullanmaz ve 5 POP ile tam staffed hale getirilir.
+- v0.1.9 dunyalarinda Laurent Manor'un sifira kilitlenen POP degeri 5/5 olarak onarilir; GM'in ozel ekonomi ve Rules degerleri korunur.
 - Food, Materials, Public Order, Manpower Reserve, aktif modifier, event, policy, replenishment ve snapshot alanlari eksik kayitlara eklenir.
 - Hazir Hamlet-Town sablonlari dunya verisine eklenir.
 - De Laurent mevcut oyuncu kaydi olarak kalir.
@@ -317,5 +319,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Download:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.9.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.10.zip
 ```

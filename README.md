@@ -22,16 +22,16 @@ DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, econ
 - Real multi-slot buildings, building-granted bonus slots, purchasable districts, category restrictions, and GM locks.
 - Staffing ratios that scale output, recruitment, capacity, defense, public order, and building bonuses.
 - Building-specific unit rosters, strategic resource tags, one military capacity pool, a monthly recovering manpower reserve, and per-unit limits.
-- One readable Power value per unit, Current / Maximum regiment strength, troop Food use, partial-cost replenishment, custom regiment images, and optional Foundry Actor UUID links.
+- One readable Power value per unit, Current / Maximum regiment strength, troop Food use, and month-end replenishment that spends manpower without consuming recruitment-building capacity.
 - One active settlement policy with tier-gated tradeoffs for growth, taxation, army upkeep, Food, manpower, Public Order, and d100 events.
 - Tier-based Free POP Crown income of 10/20/30/40/50 from Hamlet through Metropolis, with profitable staffed economic buildings and separated Food/Materials output.
-- A paged 4x2 Overview district board, vertical Total War-style branch overlays, hover infoboxes, branch colors, and player rosters that hide locked units.
+- A paged 4x2 Overview district board, opaque Total War-style branch overlays, a fixed readable building-detail panel, branch colors, and player rosters that hide locked units.
 - GM-editable building, unit, and d100 event libraries with timed income, upkeep, output, construction, recruitment, growth, and Public Order modifiers.
 - GM Direct building placement, recruitment records, regiment creation, queue repair, resource correction, and manual tier controls.
 - Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town templates plus custom template creation.
 - Individual settlement processing, pending-only global month close, duplicate-process protection, and restorable pre-turn snapshots.
-- De Laurent remains an ordinary player settlement; Laurent Manor is a single tierless landmark and is never used as a reusable template.
-- Schema v5 migration preserves settlement identity, ownership, custom images, regiments, notes, and logs while repairing stale branches, old Laurent stages, manpower reserves, and event data.
+- De Laurent remains an ordinary player settlement; Laurent Manor is a single tierless, 5-POP landmark and is never used as a reusable template.
+- Schema v6 migration preserves settlement identity, ownership, custom images, regiments, notes, rules, and logs while repairing Laurent Manor staffing without resetting GM balance settings.
 
 See `KULLANIM-KILAVUZU.md` for the complete Turkish workflow and rule reference.
 
@@ -52,5 +52,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.9.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.10.zip
 ```

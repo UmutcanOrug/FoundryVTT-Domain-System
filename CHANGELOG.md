@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.10
+
+- Fixed Laurent Manor assignments being forced back to zero; it now requires and preserves 5 assigned POP, and its recruitment, Military Capacity, Defense, Public Order, and bonus-slot effects work at full staffing.
+- Added a targeted schema v6 repair that converts v0.1.9 Laurent Manor instances to 5/5 staffing without resetting custom GM economy or rules values.
+- Fixed the misleading military-capacity warning caused by the inactive Manor effects in migrated De Laurent settlements.
+- Rebuilt the Overview branch picker on a fully opaque surface with higher-contrast nodes and a fixed Building Details panel; hover/focus updates the panel instead of opening overlapping tooltips.
+- Separated replenishment from normal recruitment orders in the UI and month processor.
+- Replenishment now resolves at month end without spending building recruitment capacity, while retaining its manpower reservation, partial Crown cost, source-building, and Military Capacity requirements.
+- Expanded migration, capacity-bypass, branch-detail, and rendered-template regression coverage.
+
 ## 0.1.9
 
 - Rebuilt Overview as a stable paged 4x2 district board over the settlement background; selecting a slot now opens a separate Total War-style branch overlay instead of expanding the card column.
