@@ -60,8 +60,31 @@ vm.runInContext(`${source}\n;globalThis.__preview = { defaultWorldData, buildCon
 context.__preview.registerHandlebarsHelpers();
 const render = Handlebars.compile(template);
 const data = context.__preview.defaultWorldData();
-data.settlements[0].treasure = 25000;
+data.settlements[0].treasure = 250000;
 data.settlements[0].ownerUserIds = [player.id];
+data.settlements[0].pendingEvents = [{
+  id: "preview-event",
+  eventId: "merchant-caravan",
+  month: data.month,
+  rawRoll: 73,
+  modifier: 2,
+  finalRoll: 75,
+  name: "Merchant Caravan",
+  description: "A wealthy caravan chooses the settlement as its seasonal market.",
+  severity: "opportunity",
+  effects: { crown: 25000, food: 0, materials: 250, population: 0, publicOrder: 2 },
+  mitigationText: "Market security prevented losses.",
+  status: "pending",
+  imageUrl: "",
+  created: Date.now()
+}];
+data.settlements[0].turnSnapshots = [{
+  id: "preview-snapshot",
+  month: data.month,
+  created: Date.now(),
+  reason: `Before Month ${data.month}`,
+  state: structuredClone(data.settlements[0])
+}];
 
 const previews = [
   ["overview", "buildings"],
@@ -71,6 +94,7 @@ const previews = [
   ["rules", "buildings"],
   ["catalog-buildings", "buildings"],
   ["catalog-units", "units"],
+  ["catalog-events", "events"],
   ["gm", "buildings"]
 ];
 
@@ -81,7 +105,7 @@ for (const [name, catalogKind] of previews) {
   fs.writeFileSync(path.join(testDir, `ui-preview-${name}.html`), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css">
-<style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"◆";font-size:.72em}</style>
+<style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"+";font-size:.72em}</style>
 </head><body><div class="ds-window"><div class="window-content">${html}</div></div></body></html>`, "utf8");
 }
 
@@ -92,7 +116,7 @@ for (const name of ["player-construction", "player-recruitment"]) {
   fs.writeFileSync(path.join(testDir, `ui-preview-${name}.html`), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css">
-<style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"◆";font-size:.72em}</style>
+<style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"+";font-size:.72em}</style>
 </head><body><div class="ds-window"><div class="window-content">${html}</div></div></body></html>`, "utf8");
 }
 

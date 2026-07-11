@@ -12,9 +12,11 @@
       <div class="ds-resource-strip">
         <div class="ds-resource"><i class="fa-solid fa-users"></i><span>Total POP</span><strong>{{selected.summary.totalPop}}</strong></div>
         <div class="ds-resource"><i class="fa-solid fa-person-digging"></i><span>Free POP</span><strong>{{selected.summary.freePop}}</strong></div>
-        <div class="ds-resource"><i class="fa-solid fa-hammer"></i><span>Construction CP</span><strong>{{selected.summary.cpThisMonth}}</strong></div>
+        <div class="ds-resource"><i class="fa-solid fa-person-rifle"></i><span>Manpower</span><strong>{{selected.summary.manpowerAvailable}}</strong></div>
         <div class="ds-resource"><i class="fa-solid fa-vault"></i><span>Treasure</span><strong>{{selected.treasure}}</strong></div>
-        <div class="ds-resource"><i class="fa-solid fa-shield-halved"></i><span>Army Upkeep</span><strong>{{selected.summary.militaryCost}}</strong></div>
+        <div class="ds-resource"><i class="fa-solid fa-wheat-awn"></i><span>Food</span><strong>{{selected.food}}</strong></div>
+        <div class="ds-resource"><i class="fa-solid fa-cubes-stacked"></i><span>Materials</span><strong>{{selected.materials}}</strong></div>
+        <div class="ds-resource"><i class="fa-solid fa-shield-halved"></i><span>Army Power</span><strong>{{selected.summary.armyPower}}</strong></div>
         <div class="ds-resource"><i class="fa-solid fa-scale-balanced"></i><span>Net</span><strong>{{selected.summary.netIncome}}</strong></div>
       </div>
     {{/if}}
@@ -77,11 +79,11 @@
 
             <section class="ds-metrics-grid ds-overview-metrics">
               <div><span>Gross Income</span><strong>{{selected.summary.grossIncome}}</strong></div>
-              <div><span>Building Upkeep</span><strong>{{selected.summary.buildingUpkeep}}</strong></div>
-              <div><span>Army Upkeep</span><strong>{{selected.summary.militaryCost}}</strong></div>
-              <div><span>Growth</span><strong>{{selected.summary.growthRate}}</strong></div>
-              <div><span>Recruitment / Month</span><strong>{{selected.summary.recruitmentCapacity}}</strong></div>
-              <div><span>Next POP</span><strong>{{selected.summary.projectedPop}}</strong></div>
+              <div><span>Food / Month</span><strong>{{selected.summary.foodBalance}}</strong></div>
+              <div><span>Materials / Month</span><strong>{{selected.summary.materialsBalance}}</strong></div>
+              <div><span>Public Order</span><strong>{{selected.summary.publicOrder}}</strong></div>
+              <div><span>Construction CP</span><strong>{{selected.summary.cpThisMonth}}</strong></div>
+              <div><span>Defense</span><strong>{{selected.summary.defense}}</strong></div>
             </section>
 
             <section class="ds-command-grid">
@@ -99,31 +101,55 @@
               </div>
             </section>
 
-            <section class="ds-section">
+            <section class="ds-section ds-overview-districts" style="{{selected.districtStyle}}">
               <div class="ds-section-heading"><h2>Settlement Districts</h2><span>{{selected.summary.usedSlots}} used / {{selected.summary.unlockedSlots}} unlocked</span></div>
-              <div class="ds-slot-mini-grid">
+              <div class="ds-overview-slot-grid">
                 {{#each selected.slots}}
-                  <article class="ds-slot-mini {{#if locked}}locked{{/if}} {{#if occupied}}{{building.category}}{{/if}}">
-                    {{#if locked}}
-                      <i class="fa-solid fa-lock"></i><strong>{{label}}</strong><small>{{unlockCostDisplay}} Crown</small>
-                    {{else if hasProject}}
-                      <i class="fa-solid fa-hammer"></i><strong>{{project.name}}</strong><small>{{project.progressPercent}}%</small>
-                    {{else if occupied}}
-                      {{#if building.hasImage}}<img src="{{building.imageUrl}}" alt="{{building.name}}">{{else}}<i class="fa-solid {{building.categoryIcon}}"></i>{{/if}}
-                      <strong>{{building.name}}</strong><small>Tier {{building.nodeTier}}{{#if building.special}} / Special{{/if}}</small>
-                    {{else}}
-                      <i class="fa-solid fa-plus"></i><strong>{{label}}</strong><small>Empty district</small>
-                    {{/if}}
-                  </article>
+                  <details class="ds-overview-slot {{#if locked}}locked{{/if}} {{#if occupied}}{{building.category}}{{/if}}">
+                    <summary>
+                      {{#if locked}}
+                        <i class="fa-solid fa-lock"></i><strong>{{label}}</strong><small>{{unlockCostDisplay}} Crown</small>
+                      {{else if supportSlot}}
+                        <i class="fa-solid fa-link"></i><strong>{{label}}</strong><small>{{supportLabel}}</small>
+                      {{else if hasProject}}
+                        {{#if project.hasImage}}<img src="{{project.imageUrl}}" alt="{{project.name}}">{{else}}<i class="fa-solid fa-hammer"></i>{{/if}}<strong>{{project.name}}</strong><small>{{project.progressPercent}}% / {{project.statusLabel}}</small>
+                      {{else if occupied}}
+                        {{#if building.hasImage}}<img src="{{building.imageUrl}}" alt="{{building.name}}">{{else}}<i class="fa-solid {{building.categoryIcon}}"></i>{{/if}}
+                        <strong>{{building.name}}</strong><small>Tier {{building.nodeTier}} / {{building.staffingPercent}}% staffed</small>
+                      {{else}}
+                        <i class="fa-solid fa-plus"></i><strong>{{label}}</strong><small>Choose district</small>
+                      {{/if}}
+                    </summary>
+                    <div class="ds-overview-slot-menu">
+                      {{#if locked}}
+                        <button type="button" data-click-action="unlockSlot" data-settlement-id="{{@root.selected.id}}" data-slot-id="{{id}}" {{#unless canUnlock}}disabled{{/unless}}><i class="fa-solid fa-unlock"></i><span>Unlock District</span></button>
+                      {{else if supportSlot}}
+                        <p>{{supportLabel}}</p>
+                      {{else if hasProject}}
+                        <p>{{project.cpPaidDisplay}} / {{project.requiredCpDisplay}} CP</p>
+                      {{else if hasChoices}}
+                        {{#each choices}}
+                          <form class="ds-overview-build-choice {{#if blocked}}locked{{/if}}" data-action-form="queueConstruction">
+                            <input type="hidden" name="settlementId" value="{{@root.selected.id}}"><input type="hidden" name="slotId" value="{{slotId}}"><input type="hidden" name="catalogId" value="{{id}}">
+                            <div>{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div>
+                            <span><strong>{{name}}</strong><small>{{crownCostDisplay}} Crown / {{materialCostDisplay}} Materials / {{cpCostDisplay}} CP</small><small>{{#if blocked}}{{blockReason}}{{else}}{{requirementDisplay}}{{/if}}</small></span>
+                            <button type="submit" {{#unless canQueue}}disabled{{/unless}} title="{{blockReason}}"><i class="fa-solid fa-hammer"></i></button>
+                          </form>
+                        {{/each}}
+                      {{else}}
+                        <p>No further branch is available at this tier.</p>
+                      {{/if}}
+                    </div>
+                  </details>
                 {{/each}}
               </div>
             </section>
 
             <section class="ds-section">
-              <div class="ds-section-heading"><h2>Raised Forces</h2><span>{{selected.summary.mpUsed}} manpower</span></div>
+              <div class="ds-section-heading"><h2>Raised Forces</h2><span>{{selected.summary.armyPower}} army power / {{selected.summary.troopManpowerUsed}} POP</span></div>
               <div class="ds-regiment-strip">
                 {{#each selected.troops}}
-                  <article class="ds-regiment-chip">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{displayName}}">{{else}}<i class="fa-solid fa-shield-halved"></i>{{/if}}<div><strong>{{displayName}}</strong><small>{{count}} / {{mode}} / {{cost}} upkeep</small></div></article>
+                  <article class="ds-regiment-chip">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{displayName}}">{{else}}<i class="fa-solid fa-shield-halved"></i>{{/if}}<div><strong>{{displayName}}</strong><small>{{count}} / Power {{power}} / {{cost}} upkeep</small></div></article>
                 {{else}}<div class="ds-inline-empty">No raised forces.</div>{{/each}}
               </div>
             </section>
@@ -136,7 +162,7 @@
               <div class="ds-tier-current"><span>Current Settlement</span><strong>{{selected.progression.current.name}}</strong><small>{{selected.progression.current.coreName}} / {{selected.progression.current.openSlots}} open slots</small></div>
               <div class="ds-tier-track"><div style="width: {{selected.progression.populationProgress}}%"></div></div>
               {{#if selected.progression.hasNext}}
-                <div class="ds-tier-next"><span>Next Settlement</span><strong>{{selected.progression.next.name}}</strong><small>{{selected.progression.next.minPopulationDisplay}} POP / {{selected.progression.next.promotionCostDisplay}} Crown / {{selected.progression.next.promotionCpDisplay}} CP</small></div>
+                <div class="ds-tier-next"><span>Next Settlement</span><strong>{{selected.progression.next.name}}</strong><small>{{selected.progression.next.minPopulationDisplay}} POP / {{selected.progression.next.promotionCostDisplay}} Crown / {{selected.progression.next.promotionMaterialsDisplay}} Materials / {{selected.progression.next.promotionFoodDisplay}} Food / {{selected.progression.next.promotionCpDisplay}} CP</small></div>
                 <form data-action-form="queueSettlementUpgrade">
                   <input type="hidden" name="settlementId" value="{{selected.id}}">
                   <button type="submit" class="ds-primary" {{#unless selected.progression.canQueue}}disabled{{/unless}} title="{{selected.progression.blockedReason}}"><i class="fa-solid fa-landmark"></i><span>Develop {{selected.progression.next.coreName}}</span></button>
@@ -161,8 +187,13 @@
                 <div class="ds-panel-heading"><h2>Population and Growth</h2></div>
                 <div class="ds-metrics-grid">
                   <div><span>Total POP</span><strong>{{selected.summary.totalPop}}</strong></div>
-                  <div><span>Assigned</span><strong>{{selected.summary.economicWorkers}} / {{selected.summary.militaryWorkers}}</strong></div>
+                  <div><span>Civilian Population</span><strong>{{selected.summary.civilianPopulation}}</strong></div>
+                  <div><span>Economic Workers</span><strong>{{selected.summary.economicWorkers}}</strong></div>
+                  <div><span>Military Staff</span><strong>{{selected.summary.militaryWorkers}}</strong></div>
                   <div><span>Free POP</span><strong>{{selected.summary.freePop}}</strong></div>
+                  <div><span>Army POP</span><strong>{{selected.summary.troopManpowerUsed}}</strong></div>
+                  <div><span>Manpower Pool</span><strong>{{selected.summary.manpowerPool}}</strong></div>
+                  <div><span>Available Manpower</span><strong>{{selected.summary.manpowerAvailable}}</strong></div>
                   <div><span>Monthly Change</span><strong>{{selected.summary.popChange}}</strong></div>
                 </div>
                 {{#if isGM}}
@@ -173,8 +204,14 @@
                     <label><span>Food Bonus</span><input type="number" step="0.01" name="foodBonus" value="{{selected.growth.foodBonus}}"></label>
                     <label><span>Migration</span><input type="number" step="0.01" name="migrationBonus" value="{{selected.growth.migrationBonus}}"></label>
                     <label><span>War</span><input type="number" step="0.01" name="warPenalty" value="{{selected.growth.warPenalty}}"></label>
+                    <label><span>Famine</span><input type="number" step="0.01" name="faminePenalty" value="{{selected.growth.faminePenalty}}"></label>
+                    <label><span>Plague</span><input type="number" step="0.01" name="plaguePenalty" value="{{selected.growth.plaguePenalty}}"></label>
+                    <label><span>Tax</span><input type="number" step="0.01" name="taxPenalty" value="{{selected.growth.taxPenalty}}"></label>
+                    <label><span>Raid</span><input type="number" step="0.01" name="raidPenalty" value="{{selected.growth.raidPenalty}}"></label>
                     <label><span>Other</span><input type="number" step="0.01" name="otherModifier" value="{{selected.growth.otherModifier}}"></label>
-                    <input type="hidden" name="faminePenalty" value="{{selected.growth.faminePenalty}}"><input type="hidden" name="plaguePenalty" value="{{selected.growth.plaguePenalty}}"><input type="hidden" name="taxPenalty" value="{{selected.growth.taxPenalty}}"><input type="hidden" name="raidPenalty" value="{{selected.growth.raidPenalty}}"><input type="hidden" name="overrideRate" value="{{selected.growth.overrideRate}}"><input type="hidden" name="overridePopChange" value="{{selected.growth.overridePopChange}}"><input type="hidden" name="roundDown" value="true">
+                    <label><span>Override Rate</span><input type="number" step="0.01" name="overrideRate" value="{{selected.growth.overrideRate}}"></label>
+                    <label><span>Override POP Change</span><input type="number" name="overridePopChange" value="{{selected.growth.overridePopChange}}"></label>
+                    <label class="ds-toggle"><input type="checkbox" name="roundDown" data-bool {{#if selected.growth.roundDown}}checked{{/if}}><span>Round growth down</span></label>
                     <div class="ds-record-actions ds-full"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Growth</span></button></div>
                   </form>
                 {{/if}}
@@ -188,13 +225,13 @@
                   <details class="ds-record-card">
                     <summary>
                       <div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div>
-                      <div><h3>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark" title="Special"></i>{{/if}}</h3><p>{{categoryLabel}} / Tier {{nodeTier}}</p><small>{{assignedPop}} / {{workerCapacity}} POP / Output {{output}} / Upkeep {{buildingUpkeepDisplay}}</small></div>
+                      <div><h3>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark" title="Special"></i>{{/if}}</h3><p>{{categoryLabel}} / Tier {{nodeTier}} / {{staffingPercent}}% staffed</p><small>Crown {{output}} / Food {{foodOutputDisplay}} / Materials {{materialsOutputDisplay}} / Upkeep {{buildingUpkeepDisplay}}</small></div>
                       <i class="fa-solid fa-chevron-down"></i>
                     </summary>
                     <form class="ds-editor-body" data-action-form="updateBuilding">
                       <input type="hidden" name="settlementId" value="{{@root.selected.id}}"><input type="hidden" name="buildingId" value="{{id}}">
                       <div class="ds-form-grid">
-                        <label><span>Assigned POP</span><input type="number" name="assignedPop" value="{{assignedPop}}" min="0" {{#unless canEditAssignments}}disabled{{/unless}}></label>
+                        <label><span>Assigned POP</span><input type="number" name="assignedPop" value="{{assignedPop}}" min="0" max="{{workers}}" {{#unless canEditAssignments}}disabled{{/unless}}></label>
                         {{#if @root.isGM}}
                           <label><span>Name</span><input name="name" value="{{name}}"></label>
                           <label><span>Category</span><select name="category">{{#each categoryOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
@@ -202,6 +239,16 @@
                           <label><span>GP / Worker</span><input type="number" name="rate" value="{{rate}}" min="0"></label>
                           <label><span>Flat Output</span><input type="number" name="flatOutput" value="{{flatOutput}}"></label>
                           <label><span>Building Upkeep</span><input type="number" name="buildingUpkeep" value="{{buildingUpkeep}}" min="0"></label>
+                          <label><span>Food Output</span><input type="number" name="foodOutput" value="{{foodOutput}}"></label>
+                          <label><span>Materials Output</span><input type="number" name="materialsOutput" value="{{materialsOutput}}"></label>
+                          <label><span>Food Upkeep</span><input type="number" name="foodUpkeep" value="{{foodUpkeep}}" min="0"></label>
+                          <label><span>Materials Upkeep</span><input type="number" name="materialsUpkeep" value="{{materialsUpkeep}}" min="0"></label>
+                          <label><span>Public Order</span><input type="number" name="publicOrder" value="{{publicOrder}}"></label>
+                          <label><span>Defense</span><input type="number" name="defense" value="{{defense}}" min="0"></label>
+                          <label><span>Event Roll Bonus</span><input type="number" name="eventRollBonus" value="{{eventRollBonus}}"></label>
+                          <label><span>Slot Use</span><input type="number" name="slotUse" value="{{slotUse}}" min="1"></label>
+                          <label><span>Economic Bonus Slots</span><input type="number" name="bonusEconomicSlots" value="{{bonusEconomicSlots}}"></label>
+                          <label><span>Military Bonus Slots</span><input type="number" name="bonusMilitarySlots" value="{{bonusMilitarySlots}}"></label>
                           <label><span>Construction Bonus</span><input type="number" name="constructionBonus" value="{{constructionBonus}}" min="0"></label>
                           <label><span>Recruit / Month</span><input type="number" name="recruitPerLevel" value="{{recruitPerLevel}}" min="0"></label>
                           <label><span>Professional Capacity</span><input type="number" name="professionalCapacity" value="{{professionalCapacity}}" min="0"></label>
@@ -209,11 +256,16 @@
                           <label><span>Recruit Discount %</span><input type="number" name="recruitmentDiscount" value="{{recruitmentDiscount}}" min="0" max="90"></label>
                           <label><span>Upkeep Discount %</span><input type="number" name="upkeepDiscount" value="{{upkeepDiscount}}" min="0" max="90"></label>
                           <label><span>Growth %</span><input type="number" step="0.01" name="growth" value="{{growth}}"></label>
+                          <label><span>Max per Settlement</span><input type="number" name="maxPerSettlement" value="{{maxPerSettlement}}" min="0"></label>
+                          <label class="ds-full"><span>Granted Tags</span><input name="grantsTags" value="{{grantsTagsText}}"></label>
+                          <label class="ds-full"><span>Required Tags (Any)</span><input name="requiredTagsAny" value="{{requiredTagsAnyText}}"></label>
+                          <label class="ds-full"><span>Event Mitigation Tags</span><input name="mitigationTags" value="{{mitigationTagsText}}"></label>
                           <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']" title="Pick Image"><i class="fa-solid fa-image"></i></button></div></label>
                           <label class="ds-toggle"><input type="checkbox" name="active" data-bool {{activeChecked}}><span>Active</span></label>
                           <label class="ds-toggle"><input type="checkbox" name="special" data-bool {{specialChecked}}><span>Special</span></label>
                           <label class="ds-toggle"><input type="checkbox" name="gmOnly" data-bool {{gmOnlyChecked}}><span>GM Only</span></label>
                           <label class="ds-toggle"><input type="checkbox" name="canRecruit" data-bool {{canRecruitChecked}}><span>Can Recruit Units</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="uniqueChain" data-bool {{uniqueChainChecked}}><span>One family per settlement</span></label>
                           <fieldset class="ds-check-grid ds-full"><legend>Recruitable Units</legend><input type="hidden" name="recruitableUnitIds" value="">{{#each unlockUnitOptions}}<label><input type="checkbox" name="recruitableUnitIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{name}}</label>{{/each}}</fieldset>
                         {{/if}}
                         <label class="ds-full"><span>Notes</span><textarea name="notes" rows="2">{{notes}}</textarea></label>
@@ -235,7 +287,7 @@
                 {{#each selected.activeProjects}}
                   <article class="ds-queue-card">
                     <div class="ds-queue-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div>
-                    <div class="ds-queue-copy"><div><span class="ds-order-badge">#{{queueNumber}}</span><h3>{{name}}</h3><small>{{statusLabel}}</small></div><p>{{cpPaidDisplay}} / {{requiredCpDisplay}} CP / {{cpRate}} expected CP / ETA {{months}} month(s)</p><div class="ds-progress"><span style="width: {{progressPercent}}%"></span></div></div>
+                    <div class="ds-queue-copy"><div><span class="ds-order-badge">#{{queueNumber}}</span><h3>{{name}}</h3><small>{{statusLabel}}</small></div><p>{{cpPaidDisplay}} / {{requiredCpDisplay}} CP / {{requiredCrownDisplay}} Crown / {{requiredMaterialsDisplay}} Materials / ETA {{months}} month(s)</p><div class="ds-progress"><span style="width: {{progressPercent}}%"></span></div></div>
                     {{#if canManage}}<div class="ds-queue-actions"><form class="ds-hire-cp" data-action-form="hireConstructionCp"><input type="hidden" name="settlementId" value="{{@root.selected.id}}"><input type="hidden" name="projectId" value="{{id}}"><input type="number" name="cp" value="10" min="1" title="{{hireCostPerCp}} Crown per CP"><button type="submit" {{#unless canHireCp}}disabled{{/unless}} title="Hire one-use CP; {{hiredCpPending}} currently pending"><i class="fa-solid fa-person-digging"></i></button></form><div class="ds-icon-actions"><button type="button" data-click-action="moveProject" data-direction="up" data-settlement-id="{{@root.selected.id}}" data-project-id="{{id}}" title="Move Up" {{#unless canMoveUp}}disabled{{/unless}}><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-click-action="moveProject" data-direction="down" data-settlement-id="{{@root.selected.id}}" data-project-id="{{id}}" title="Move Down" {{#unless canMoveDown}}disabled{{/unless}}><i class="fa-solid fa-arrow-down"></i></button><button type="button" class="ds-danger" data-click-action="cancelProject" data-settlement-id="{{@root.selected.id}}" data-project-id="{{id}}" data-confirm="Cancel this project and refund its Crown?" title="Cancel"><i class="fa-solid fa-xmark"></i></button></div></div>{{/if}}
                   </article>
                 {{else}}<div class="ds-inline-empty">Construction queue is empty.</div>{{/each}}
@@ -258,6 +310,8 @@
                     {{#if locked}}
                       <div class="ds-slot-empty"><i class="fa-solid fa-lock"></i><strong>{{unlockCostDisplay}} Crown</strong><small>{{#if gmLocked}}GM locked{{else}}Purchasable district{{/if}}</small></div>
                       <button type="button" data-click-action="unlockSlot" data-settlement-id="{{@root.selected.id}}" data-slot-id="{{id}}" {{#unless canUnlock}}disabled{{/unless}}><i class="fa-solid fa-unlock"></i><span>Unlock</span></button>
+                    {{else if supportSlot}}
+                      <div class="ds-slot-empty"><i class="fa-solid fa-link"></i><strong>Support District</strong><small>{{supportLabel}}</small></div>
                     {{else if hasProject}}
                       <div class="ds-slot-building">{{#if project.hasImage}}<img src="{{project.imageUrl}}" alt="{{project.name}}">{{else}}<i class="fa-solid fa-hammer"></i>{{/if}}<strong>{{project.name}}</strong><small>{{project.progressPercent}}% / {{project.statusLabel}}</small></div>
                     {{else if occupied}}
@@ -274,7 +328,7 @@
                             <form class="ds-build-choice {{category}} {{#if blocked}}locked{{/if}}" data-action-form="queueConstruction">
                               <input type="hidden" name="settlementId" value="{{@root.selected.id}}"><input type="hidden" name="slotId" value="{{slotId}}"><input type="hidden" name="catalogId" value="{{id}}">
                               <div class="ds-choice-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div>
-                              <div><strong>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark"></i>{{/if}}</strong><small>{{nodeTierLabel}} / {{crownCostDisplay}} Crown / {{cpCostDisplay}} CP</small><p>{{#if blocked}}{{blockReason}}{{else}}{{requirementDisplay}}{{/if}}</p></div>
+                              <div><strong>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark"></i>{{/if}}</strong><small>{{nodeTierLabel}} / {{crownCostDisplay}} Crown / {{materialCostDisplay}} Materials / {{cpCostDisplay}} CP</small><p>{{#if blocked}}{{blockReason}}{{else}}{{requirementDisplay}}{{/if}}</p></div>
                               <button type="submit" class="ds-primary" {{#unless canQueue}}disabled{{/unless}} title="{{blockReason}}"><i class="fa-solid fa-hammer"></i></button>
                             </form>
                           {{/each}}
@@ -294,7 +348,7 @@
               <div class="ds-section-heading"><h2>Building Branches</h2><span>Built and queued nodes are marked</span></div>
               <div class="ds-chain-list">
                 {{#each selected.buildingChains}}
-                  <article class="ds-chain-row {{category}}"><header><strong>{{name}}</strong><span>{{category}}</span></header><div class="ds-chain-nodes">{{#each nodes}}<div class="ds-chain-node {{#if built}}built{{/if}} {{#if queued}}queued{{/if}}" title="{{parentNames}}"><span>Tier {{nodeTier}}</span><strong>{{name}}</strong><small>{{crownCostDisplay}} / {{cpCostDisplay}} CP{{#if unlockNames}} / {{unlockNames}}{{/if}}</small></div>{{/each}}</div></article>
+                  <article class="ds-chain-row {{category}}"><header><strong>{{name}}</strong><span>{{category}}</span></header><div class="ds-chain-nodes">{{#each nodes}}<div class="ds-chain-node {{#if built}}built{{/if}} {{#if queued}}queued{{/if}}" title="{{parentNames}}"><span>Tier {{nodeTier}}</span><strong>{{name}}</strong><small>{{#if isRoot}}Chain Root{{else}}From {{parentNames}}{{/if}}</small><small>{{crownCostDisplay}} Crown / {{materialCostDisplay}} Materials / {{cpCostDisplay}} CP{{#if unlockNames}} / {{unlockNames}}{{/if}}</small></div>{{/each}}</div></article>
                 {{/each}}
               </div>
             </section>
@@ -306,10 +360,12 @@
             <section class="ds-metrics-grid">
               <div><span>Professional</span><strong>{{selected.summary.professionalSoldiers}} / {{selected.summary.professionalCapacity}}</strong></div>
               <div><span>Militia</span><strong>{{selected.summary.militia}} / {{selected.summary.militiaCapacity}}</strong></div>
-              <div><span>Manpower</span><strong>{{selected.summary.mpRemaining}}</strong></div>
+              <div><span>Manpower Pool</span><strong>{{selected.summary.manpowerPool}}</strong></div>
+              <div><span>Queued Manpower</span><strong>{{selected.summary.manpowerQueued}}</strong></div>
+              <div><span>Available Manpower</span><strong>{{selected.summary.manpowerAvailable}}</strong></div>
               <div><span>Recruit / Month</span><strong>{{selected.summary.recruitmentCapacity}}</strong></div>
-              <div><span>Recruit Discount</span><strong>{{selected.summary.recruitmentDiscount}}</strong></div>
-              <div><span>Upkeep Discount</span><strong>{{selected.summary.upkeepDiscount}}</strong></div>
+              <div><span>Army Power</span><strong>{{selected.summary.armyPower}}</strong></div>
+              <div><span>Strategic Resources</span><strong>{{selected.summary.strategicTags}}</strong></div>
             </section>
 
             <section class="ds-section">
@@ -319,7 +375,7 @@
                   <form class="ds-recruit-card {{#if blocked}}locked{{/if}}" data-action-form="queueRecruitment">
                     <input type="hidden" name="settlementId" value="{{@root.selected.id}}"><input type="hidden" name="unitId" value="{{id}}"><input type="hidden" name="regimentName" value="{{name}}">
                     <div class="ds-recruit-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid fa-shield-halved"></i>{{/if}}<span>{{roleLabel}}</span></div>
-                    <div class="ds-recruit-copy"><h3>{{name}}</h3><p>{{description}}</p><small>{{recruitCostDisplay}} Crown each / Garrison {{garrisonDisplay}} / Campaign {{campaignDisplay}}</small><small>{{sourceSummary}}</small>{{#if blocked}}<p class="ds-block-reason">{{blockReason}}</p>{{/if}}</div>
+                    <div class="ds-recruit-copy"><h3>{{name}}</h3><p>{{description}}</p><small>{{qualityLabel}} / Combat {{combatRating}} / Manpower {{manpowerCostDisplay}}</small><div class="ds-unit-statline"><span>M {{melee}}</span><span>R {{ranged}}</span><span>D {{defense}}</span><span>Mor {{morale}}</span><span>Mob {{mobility}}</span><span>Ch {{charge}}</span><span>Sg {{siege}}</span></div><small>{{recruitCostDisplay}} Crown each / Garrison {{garrisonDisplay}} / Campaign {{campaignDisplay}}</small><small>{{sourceSummary}}</small>{{#if blocked}}<p class="ds-block-reason">{{blockReason}}</p>{{/if}}</div>
                     <div class="ds-recruit-controls"><select name="sourceBuildingId">{{#each sourceOptions}}<option value="{{id}}">{{name}}</option>{{/each}}</select><input type="number" name="targetCount" value="{{defaultCount}}" min="1" max="{{maxRecruit}}"><button type="submit" class="ds-primary" {{#unless canQueue}}disabled{{/unless}}><i class="fa-solid fa-user-plus"></i></button></div>
                   </form>
                 {{/each}}
@@ -345,10 +401,13 @@
                       <label><span>Count</span><input type="number" name="count" value="{{count}}" min="0" {{#unless @root.isGM}}disabled{{/unless}}></label>
                       <label><span>Mode</span><select name="mode" {{#unless canEditAssignments}}disabled{{/unless}}><option value="garrison" {{#if garrisonSelected}}selected{{/if}}>Garrison</option><option value="campaign" {{#if campaignSelected}}selected{{/if}}>Campaign</option></select></label>
                       {{#if @root.isGM}}<label><span>Unit Type</span><select name="type">{{#each typeOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><label><span>Role</span><select name="role">{{#each roleOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label><label><span>Garrison Upkeep</span><input type="number" name="garrisonCost" value="{{garrisonCost}}" min="0"></label><label><span>Campaign Upkeep</span><input type="number" name="campaignCost" value="{{campaignCost}}" min="0"></label>{{/if}}
+                      {{#if @root.isGM}}<label class="ds-toggle"><input type="checkbox" name="useRuleUpkeep" data-bool {{useRuleUpkeepChecked}}><span>Use world upkeep percentages</span></label>{{/if}}
                       <label class="ds-full"><span>Regiment Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}" {{#unless canEditAssignments}}disabled{{/unless}}><button type="button" data-file-picker="[name='imageUrl']" title="Pick Image" {{#unless canEditAssignments}}disabled{{/unless}}><i class="fa-solid fa-image"></i></button></div></label>
+                      <label class="ds-full"><span>Foundry Actor UUID</span><div class="ds-input-action"><input name="actorUuid" value="{{actorUuid}}" data-actor-drop {{#unless canEditAssignments}}disabled{{/unless}}><button type="button" data-open-actor="{{actorUuid}}" title="Open linked Actor" {{#unless hasActor}}disabled{{/unless}}><i class="fa-solid fa-address-card"></i></button></div></label>
+                      <div class="ds-unit-statline ds-full"><span>{{qualityLabel}}</span><span>Power {{power}}</span><span>M {{melee}}</span><span>R {{ranged}}</span><span>D {{defense}}</span><span>Mor {{morale}}</span><span>Mob {{mobility}}</span><span>Ch {{charge}}</span><span>Sg {{siege}}</span></div>
                       <label class="ds-full"><span>Notes</span><textarea name="notes" rows="2" {{#unless canEditAssignments}}disabled{{/unless}}>{{notes}}</textarea></label>
                     </div>
-                    <footer><span>{{cost}} Crown / month</span><button type="submit" {{#unless canEditAssignments}}disabled{{/unless}}><i class="fa-solid fa-floppy-disk"></i></button>{{#if @root.isGM}}<button type="button" class="ds-danger" data-click-action="deleteTroop" data-settlement-id="{{@root.selected.id}}" data-troop-id="{{id}}" data-confirm="Delete this regiment?"><i class="fa-solid fa-trash"></i></button>{{/if}}</footer>
+                    <footer><span>Power {{power}} / {{manpowerUse}} POP / {{cost}} Crown per month</span><button type="submit" {{#unless canEditAssignments}}disabled{{/unless}}><i class="fa-solid fa-floppy-disk"></i></button>{{#if @root.isGM}}<button type="button" class="ds-danger" data-click-action="deleteTroop" data-settlement-id="{{@root.selected.id}}" data-troop-id="{{id}}" data-confirm="Delete this regiment?"><i class="fa-solid fa-trash"></i></button>{{/if}}</footer>
                   </form>
                 {{else}}<div class="ds-inline-empty">No regiments raised.</div>{{/each}}
               </div>
@@ -366,19 +425,21 @@
 
         {{#if (eq activeTab "rules")}}
           <section class="ds-pane">
-            <section class="ds-section"><div class="ds-section-heading"><h2>Settlement Hierarchy</h2><span>Population unlocks progression; Crown and CP complete it</span></div><div class="ds-rules-tier-grid">{{#each tierRules}}<article><span>{{id}}</span><h3>{{name}}</h3><p>{{minPopulationDisplay}} POP</p><small>{{openSlots}} open / {{maxSlots}} maximum slots</small><small>{{promotionCostDisplay}} Crown / {{promotionCpDisplay}} CP</small></article>{{/each}}</div></section>
+            <section class="ds-section"><div class="ds-section-heading"><h2>Settlement Hierarchy</h2><span>Every building tier matches its settlement tier</span></div><div class="ds-rules-tier-grid">{{#each tierRules}}<article><span>Tier {{id}}</span><h3>{{name}}</h3><p>{{minPopulationDisplay}} POP</p><small>{{openSlots}} open / {{maxSlots}} maximum slots</small><small>{{promotionCostDisplay}} Crown / {{promotionMaterialsDisplay}} Materials / {{promotionFoodDisplay}} Food / {{promotionCpDisplay}} CP</small></article>{{/each}}</div></section>
             <section class="ds-rules-grid">
-              <div class="ds-section"><div class="ds-section-heading"><h2>Economy</h2></div><dl class="ds-rule-list"><div><dt>Tax per Free POP</dt><dd>{{rules.economy.taxPerFreePop}}</dd></div><div><dt>Income Multiplier</dt><dd>{{rules.economy.incomeMultiplier}}</dd></div><div><dt>Hired CP Cost</dt><dd>{{rules.economy.constructionHireCostPerCp}}</dd></div></dl></div>
+              <div class="ds-section"><div class="ds-section-heading"><h2>Economy</h2></div><dl class="ds-rule-list"><div><dt>Tax per Free POP</dt><dd>{{rules.economy.taxPerFreePop}}</dd></div><div><dt>Food per POP</dt><dd>{{rules.economy.foodPerPop}}</dd></div><div><dt>Subsistence Food</dt><dd>{{rules.economy.subsistenceFoodPerFreePop}}</dd></div><div><dt>Hired CP Cost</dt><dd>{{rules.economy.constructionHireCostPerCp}}</dd></div></dl></div>
               <div class="ds-section"><div class="ds-section-heading"><h2>Construction</h2></div><dl class="ds-rule-list"><div><dt>CP per Free POP</dt><dd>{{rules.construction.cpPerFreePop}}</dd></div><div><dt>CP Overflow</dt><dd>{{#if rules.construction.overflowToNextProject}}Enabled{{else}}Disabled{{/if}}</dd></div><div><dt>Current Base CP</dt><dd>{{selected.summary.cpThisMonth}}</dd></div></dl></div>
-              <div class="ds-section"><div class="ds-section-heading"><h2>Military</h2></div><dl class="ds-rule-list"><div><dt>Professional Garrison</dt><dd>{{rules.military.professionalGarrisonPercent}}%</dd></div><div><dt>Professional Campaign</dt><dd>{{rules.military.professionalCampaignPercent}}%</dd></div><div><dt>Militia Garrison</dt><dd>{{rules.military.militiaGarrisonPercent}}%</dd></div><div><dt>Militia Campaign</dt><dd>{{rules.military.militiaCampaignPercent}}%</dd></div></dl></div>
+              <div class="ds-section"><div class="ds-section-heading"><h2>Military</h2></div><dl class="ds-rule-list"><div><dt>Manpower Rate</dt><dd>{{rules.military.manpowerRate}}%</dd></div><div><dt>Professional Garrison</dt><dd>{{rules.military.professionalGarrisonPercent}}%</dd></div><div><dt>Professional Campaign</dt><dd>{{rules.military.professionalCampaignPercent}}%</dd></div><div><dt>Militia Garrison</dt><dd>{{rules.military.militiaGarrisonPercent}}%</dd></div><div><dt>Militia Campaign</dt><dd>{{rules.military.militiaCampaignPercent}}%</dd></div></dl></div>
             </section>
             {{#if isGM}}
               <section class="ds-section"><div class="ds-section-heading"><h2>Edit World Rules</h2></div><div class="ds-rules-editor-grid">
-                <form class="ds-panel" data-action-form="updateRulesEconomy"><div class="ds-panel-heading"><h2>Economy</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Tax / Free POP</span><input type="number" step="0.01" name="taxPerFreePop" value="{{rules.economy.taxPerFreePop}}"></label><label><span>Income Multiplier</span><input type="number" step="0.01" name="incomeMultiplier" value="{{rules.economy.incomeMultiplier}}"></label><label><span>Hired CP Cost</span><input type="number" name="constructionHireCostPerCp" value="{{rules.economy.constructionHireCostPerCp}}"></label></form>
-                <form class="ds-panel" data-action-form="updateRulesConstruction"><div class="ds-panel-heading"><h2>Construction</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>CP / Free POP</span><input type="number" step="0.01" name="cpPerFreePop" value="{{rules.construction.cpPerFreePop}}"></label><label class="ds-toggle"><input type="checkbox" name="overflowToNextProject" data-bool {{#if rules.construction.overflowToNextProject}}checked{{/if}}><span>Overflow to next project</span></label></form>
-                <form class="ds-panel" data-action-form="updateRulesMilitary"><div class="ds-panel-heading"><h2>Military</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Professional Garrison %</span><input type="number" name="professionalGarrisonPercent" value="{{rules.military.professionalGarrisonPercent}}"></label><label><span>Professional Campaign %</span><input type="number" name="professionalCampaignPercent" value="{{rules.military.professionalCampaignPercent}}"></label><label><span>Militia Garrison %</span><input type="number" name="militiaGarrisonPercent" value="{{rules.military.militiaGarrisonPercent}}"></label><label><span>Militia Campaign %</span><input type="number" name="militiaCampaignPercent" value="{{rules.military.militiaCampaignPercent}}"></label></form>
+                <form class="ds-panel" data-action-form="updateRulesEconomy"><div class="ds-panel-heading"><h2>Economy</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Tax / Free POP</span><input type="number" step="0.01" name="taxPerFreePop" value="{{rules.economy.taxPerFreePop}}"></label><label><span>Income Multiplier</span><input type="number" step="0.01" name="incomeMultiplier" value="{{rules.economy.incomeMultiplier}}"></label><label><span>Hired CP Cost</span><input type="number" name="constructionHireCostPerCp" value="{{rules.economy.constructionHireCostPerCp}}"></label><label><span>Food / POP</span><input type="number" step="0.01" name="foodPerPop" value="{{rules.economy.foodPerPop}}"></label><label><span>Subsistence Food / Free POP</span><input type="number" step="0.01" name="subsistenceFoodPerFreePop" value="{{rules.economy.subsistenceFoodPerFreePop}}"></label><label><span>Recruit Discount Cap %</span><input type="number" name="recruitmentDiscountCap" value="{{rules.economy.recruitmentDiscountCap}}"></label><label><span>Upkeep Discount Cap %</span><input type="number" name="upkeepDiscountCap" value="{{rules.economy.upkeepDiscountCap}}"></label></form>
+                <form class="ds-panel" data-action-form="updateRulesConstruction"><div class="ds-panel-heading"><h2>Construction</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>CP / Free POP</span><input type="number" step="0.01" name="cpPerFreePop" value="{{rules.construction.cpPerFreePop}}"></label><label><span>Cancellation Refund %</span><input type="number" name="cancellationRefundPercent" value="{{rules.construction.cancellationRefundPercent}}"></label><label><span>Turn Snapshots</span><input type="number" name="snapshotLimit" value="{{rules.construction.snapshotLimit}}" min="1" max="20"></label><label class="ds-toggle"><input type="checkbox" name="overflowToNextProject" data-bool {{#if rules.construction.overflowToNextProject}}checked{{/if}}><span>Overflow to next project</span></label></form>
+                <form class="ds-panel" data-action-form="updateRulesMilitary"><div class="ds-panel-heading"><h2>Military</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Manpower Rate %</span><input type="number" name="manpowerRate" value="{{rules.military.manpowerRate}}"></label><label><span>Professional Garrison %</span><input type="number" name="professionalGarrisonPercent" value="{{rules.military.professionalGarrisonPercent}}"></label><label><span>Professional Campaign %</span><input type="number" name="professionalCampaignPercent" value="{{rules.military.professionalCampaignPercent}}"></label><label><span>Militia Garrison %</span><input type="number" name="militiaGarrisonPercent" value="{{rules.military.militiaGarrisonPercent}}"></label><label><span>Militia Campaign %</span><input type="number" name="militiaCampaignPercent" value="{{rules.military.militiaCampaignPercent}}"></label></form>
+                <form class="ds-panel" data-action-form="updateRulesGrowth"><div class="ds-panel-heading"><h2>Growth</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Minimum Monthly %</span><input type="number" step="0.01" name="minimumRate" value="{{rules.growth.minimumRate}}"></label><label><span>Maximum Monthly %</span><input type="number" step="0.01" name="maximumRate" value="{{rules.growth.maximumRate}}"></label></form>
+                <form class="ds-panel" data-action-form="updateRulesEvents"><div class="ds-panel-heading"><h2>Month Events</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Public Order per Roll Modifier</span><input type="number" name="publicOrderRollStep" value="{{rules.events.publicOrderRollStep}}"></label><label><span>Food Shortage Penalty</span><input type="number" name="foodShortagePenalty" value="{{rules.events.foodShortagePenalty}}"></label><label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{#if rules.events.enabled}}checked{{/if}}><span>Roll 1d100 each month</span></label></form>
               </div></section>
-              <section class="ds-section"><div class="ds-section-heading"><h2>Edit Settlement Tiers</h2></div><div class="ds-tier-editor-list">{{#each tierRules}}<form data-action-form="updateRuleTier"><input type="hidden" name="tierId" value="{{id}}"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Core Building</span><input name="coreName" value="{{coreName}}"></label><label><span>Minimum POP</span><input type="number" name="minPopulation" value="{{minPopulation}}"></label><label><span>Open Slots</span><input type="number" name="openSlots" value="{{openSlots}}"></label><label><span>Maximum Slots</span><input type="number" name="maxSlots" value="{{maxSlots}}"></label><label><span>Promotion Crown</span><input type="number" name="promotionCost" value="{{promotionCost}}"></label><label><span>Promotion CP</span><input type="number" name="promotionCp" value="{{promotionCp}}"></label><label><span>Slot Unlock Crown</span><input type="number" name="slotUnlockCost" value="{{slotUnlockCost}}"></label><label><span>Active Projects</span><input type="number" name="activeProjects" value="{{activeProjects}}" min="1" max="5"></label><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></form>{{/each}}</div></section>
+              <section class="ds-section"><div class="ds-section-heading"><h2>Edit Settlement Tiers</h2></div><div class="ds-tier-editor-list">{{#each tierRules}}<form data-action-form="updateRuleTier"><input type="hidden" name="tierId" value="{{id}}"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Core Building</span><input name="coreName" value="{{coreName}}"></label><label><span>Minimum POP</span><input type="number" name="minPopulation" value="{{minPopulation}}"></label><label><span>Open Slots</span><input type="number" name="openSlots" value="{{openSlots}}"></label><label><span>Maximum Slots</span><input type="number" name="maxSlots" value="{{maxSlots}}"></label><label><span>Promotion Crown</span><input type="number" name="promotionCost" value="{{promotionCost}}"></label><label><span>Promotion Materials</span><input type="number" name="promotionMaterials" value="{{promotionMaterials}}"></label><label><span>Promotion Food</span><input type="number" name="promotionFood" value="{{promotionFood}}"></label><label><span>Promotion CP</span><input type="number" name="promotionCp" value="{{promotionCp}}"></label><label><span>Slot Unlock Crown</span><input type="number" name="slotUnlockCost" value="{{slotUnlockCost}}"></label><label><span>Active Projects</span><input type="number" name="activeProjects" value="{{activeProjects}}" min="1" max="5"></label><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></form>{{/each}}</div></section>
             {{/if}}
           </section>
         {{/if}}
@@ -386,11 +447,132 @@
         {{#if (eq activeTab "catalog")}}
           <section class="ds-pane">
             <section class="ds-section">
-              <div class="ds-section-heading"><div><h2>Content Library</h2><p>Building nodes and unit templates</p></div><div class="ds-section-actions"><div class="ds-segmented"><button type="button" data-catalog-kind="buildings" class="{{#if catalogBuildingsActive}}active{{/if}}"><i class="fa-solid fa-building"></i> Buildings</button><button type="button" data-catalog-kind="units" class="{{#if catalogUnitsActive}}active{{/if}}"><i class="fa-solid fa-shield-halved"></i> Units</button></div><input type="search" data-search-catalog value="{{catalogSearch}}" placeholder="Search library">{{#if catalogBuildingsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogBuilding"><i class="fa-solid fa-plus"></i><span>Building</span></button>{{else}}<button type="button" class="ds-primary" data-click-action="addCatalogUnit"><i class="fa-solid fa-plus"></i><span>Unit</span></button>{{/if}}</div></div>
+              <div class="ds-section-heading"><div><h2>Content Library</h2><p>Five-tier building families, unit templates, and d100 events</p></div><div class="ds-section-actions"><div class="ds-segmented"><button type="button" data-catalog-kind="buildings" class="{{#if catalogBuildingsActive}}active{{/if}}"><i class="fa-solid fa-building"></i> Buildings</button><button type="button" data-catalog-kind="units" class="{{#if catalogUnitsActive}}active{{/if}}"><i class="fa-solid fa-shield-halved"></i> Units</button><button type="button" data-catalog-kind="events" class="{{#if catalogEventsActive}}active{{/if}}"><i class="fa-solid fa-dice-d20"></i> Events</button></div><input type="search" data-search-catalog value="{{catalogSearch}}" placeholder="Search library">{{#if catalogBuildingsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogBuilding"><i class="fa-solid fa-plus"></i><span>Building</span></button>{{else if catalogUnitsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogUnit"><i class="fa-solid fa-plus"></i><span>Unit</span></button>{{else}}<button type="button" class="ds-primary" data-click-action="addCatalogEvent"><i class="fa-solid fa-plus"></i><span>Event</span></button>{{/if}}</div></div>
               {{#if catalogBuildingsActive}}
-                <div class="ds-editor-list">{{#each catalogBuildings}}<details class="ds-record-card"><summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div><div><h3>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark"></i>{{/if}}</h3><p>{{categoryLabel}} / {{chainId}} / Tier {{nodeTier}}</p><small>{{parentNames}} / {{settlementTierLabel}}</small></div><i class="fa-solid fa-chevron-down"></i></summary><form class="ds-editor-body" data-action-form="updateCatalogBuilding"><input type="hidden" name="catalogId" value="{{id}}"><div class="ds-form-grid"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Category</span><select name="category">{{#each categoryOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label><label><span>Chain ID</span><input name="chainId" value="{{chainId}}"></label><label><span>Node Tier</span><input type="number" name="nodeTier" value="{{nodeTier}}" min="1"></label><label class="ds-full"><span>Parent Node IDs</span><input name="parentIds" value="{{parentIdsText}}"></label><label><span>Settlement Tier</span><select name="settlementTier">{{#each settlementTierOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label><label><span>Terrain</span><input name="terrain" value="{{terrain}}"></label><label><span>Crown Cost</span><input type="number" name="crownCost" value="{{crownCost}}" min="0"></label><label><span>CP Cost</span><input type="number" name="cpCost" value="{{cpCost}}" min="0"></label><label><span>Workers</span><input type="number" name="workers" value="{{workers}}" min="0"></label><label><span>GP / Worker</span><input type="number" name="rate" value="{{rate}}" min="0"></label><label><span>Flat Output</span><input type="number" name="flatOutput" value="{{flatOutput}}"></label><label><span>Building Upkeep</span><input type="number" name="buildingUpkeep" value="{{buildingUpkeep}}" min="0"></label><label><span>Construction Bonus</span><input type="number" name="constructionBonus" value="{{constructionBonus}}" min="0"></label><label><span>Recruit / Month</span><input type="number" name="recruitPerLevel" value="{{recruitPerLevel}}" min="0"></label><label><span>Professional Capacity</span><input type="number" name="professionalCapacity" value="{{professionalCapacity}}" min="0"></label><label><span>Militia Capacity</span><input type="number" name="militiaCapacity" value="{{militiaCapacity}}" min="0"></label><label><span>Recruit Discount %</span><input type="number" name="recruitmentDiscount" value="{{recruitmentDiscount}}" min="0" max="90"></label><label><span>Upkeep Discount %</span><input type="number" name="upkeepDiscount" value="{{upkeepDiscount}}" min="0" max="90"></label><label><span>Growth %</span><input type="number" step="0.01" name="growth" value="{{growth}}"></label><label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label><label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label><label class="ds-toggle"><input type="checkbox" name="special" data-bool {{specialChecked}}><span>Special</span></label><label class="ds-toggle"><input type="checkbox" name="gmOnly" data-bool {{gmOnlyChecked}}><span>GM Only</span></label><label class="ds-toggle"><input type="checkbox" name="canRecruit" data-bool {{canRecruitChecked}}><span>Can Recruit Units</span></label><fieldset class="ds-check-grid ds-full"><legend>Recruitable Units</legend><input type="hidden" name="recruitableUnitIds" value="">{{#each unitOptions}}<label><input type="checkbox" name="recruitableUnitIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{name}}</label>{{/each}}</fieldset><label class="ds-full"><span>Notes</span><textarea name="notes" rows="2">{{notes}}</textarea></label></div><div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Node</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogBuilding" data-catalog-id="{{id}}" data-confirm="Delete this unused building node?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div></form></details>{{/each}}</div>
+                <div class="ds-editor-list">
+                  {{#each catalogBuildings}}
+                    <details class="ds-record-card">
+                      <summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div><div><h3>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark"></i>{{/if}}</h3><p>{{categoryLabel}} / {{chainId}} / Tier {{nodeTier}}</p><small>{{parentNames}} / {{settlementTierLabel}} / {{crownCost}} Crown / {{materialCost}} Materials</small></div><i class="fa-solid fa-chevron-down"></i></summary>
+                      <form class="ds-editor-body" data-action-form="updateCatalogBuilding">
+                        <input type="hidden" name="catalogId" value="{{id}}">
+                        <div class="ds-form-grid">
+                          <label><span>Name</span><input name="name" value="{{name}}"></label>
+                          <label><span>Category</span><select name="category">{{#each categoryOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+                          <label><span>Family ID</span><input name="chainId" value="{{chainId}}"></label>
+                          <label><span>Tier (1-5)</span><input type="number" name="nodeTier" value="{{nodeTier}}" min="1" max="5"></label>
+                          <label class="ds-full"><span>Parent Node IDs</span><input name="parentIds" value="{{parentIdsText}}"></label>
+                          <label><span>Settlement Tier</span><input value="{{settlementTierLabel}}" disabled></label>
+                          <label><span>Terrain</span><input name="terrain" value="{{terrain}}"></label>
+                          <label><span>Crown Cost</span><input type="number" name="crownCost" value="{{crownCost}}" min="0"></label>
+                          <label><span>Materials Cost</span><input type="number" name="materialCost" value="{{materialCost}}" min="0"></label>
+                          <label><span>Food Cost</span><input type="number" name="foodCost" value="{{foodCost}}" min="0"></label>
+                          <label><span>CP Cost</span><input type="number" name="cpCost" value="{{cpCost}}" min="0"></label>
+                          <label><span>Workers</span><input type="number" name="workers" value="{{workers}}" min="0"></label>
+                          <label><span>Crown / Worker</span><input type="number" name="rate" value="{{rate}}" min="0"></label>
+                          <label><span>Flat Crown</span><input type="number" name="flatOutput" value="{{flatOutput}}"></label>
+                          <label><span>Crown Upkeep</span><input type="number" name="buildingUpkeep" value="{{buildingUpkeep}}" min="0"></label>
+                          <label><span>Food Output</span><input type="number" name="foodOutput" value="{{foodOutput}}"></label>
+                          <label><span>Materials Output</span><input type="number" name="materialsOutput" value="{{materialsOutput}}"></label>
+                          <label><span>Food Upkeep</span><input type="number" name="foodUpkeep" value="{{foodUpkeep}}" min="0"></label>
+                          <label><span>Materials Upkeep</span><input type="number" name="materialsUpkeep" value="{{materialsUpkeep}}" min="0"></label>
+                          <label><span>Public Order</span><input type="number" name="publicOrder" value="{{publicOrder}}"></label>
+                          <label><span>Defense</span><input type="number" name="defense" value="{{defense}}" min="0"></label>
+                          <label><span>Event Roll Bonus</span><input type="number" name="eventRollBonus" value="{{eventRollBonus}}"></label>
+                          <label><span>Construction CP</span><input type="number" name="constructionBonus" value="{{constructionBonus}}" min="0"></label>
+                          <label><span>Recruit / Month</span><input type="number" name="recruitPerLevel" value="{{recruitPerLevel}}" min="0"></label>
+                          <label><span>Professional Capacity</span><input type="number" name="professionalCapacity" value="{{professionalCapacity}}" min="0"></label>
+                          <label><span>Militia Capacity</span><input type="number" name="militiaCapacity" value="{{militiaCapacity}}" min="0"></label>
+                          <label><span>Recruit Discount %</span><input type="number" name="recruitmentDiscount" value="{{recruitmentDiscount}}" min="0" max="100"></label>
+                          <label><span>Upkeep Discount %</span><input type="number" name="upkeepDiscount" value="{{upkeepDiscount}}" min="0" max="100"></label>
+                          <label><span>Growth %</span><input type="number" step="0.01" name="growth" value="{{growth}}"></label>
+                          <label><span>Slot Use</span><input type="number" name="slotUse" value="{{slotUse}}" min="1"></label>
+                          <label><span>Economic Bonus Slots</span><input type="number" name="bonusEconomicSlots" value="{{bonusEconomicSlots}}"></label>
+                          <label><span>Military Bonus Slots</span><input type="number" name="bonusMilitarySlots" value="{{bonusMilitarySlots}}"></label>
+                          <label><span>Max per Settlement</span><input type="number" name="maxPerSettlement" value="{{maxPerSettlement}}" min="0"></label>
+                          <label class="ds-full"><span>Granted Tags</span><input name="grantsTags" value="{{grantsTagsText}}"></label>
+                          <label class="ds-full"><span>Required Tags (Any)</span><input name="requiredTagsAny" value="{{requiredTagsAnyText}}"></label>
+                          <label class="ds-full"><span>Event Mitigation Tags</span><input name="mitigationTags" value="{{mitigationTagsText}}"></label>
+                          <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                          <label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="special" data-bool {{specialChecked}}><span>Special</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="gmOnly" data-bool {{gmOnlyChecked}}><span>GM Only</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="uniqueChain" data-bool {{uniqueChainChecked}}><span>One family per settlement</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="canRecruit" data-bool {{canRecruitChecked}}><span>Can Recruit Units</span></label>
+                          <fieldset class="ds-check-grid ds-full"><legend>Recruitable Units</legend><input type="hidden" name="recruitableUnitIds" value="">{{#each unitOptions}}<label><input type="checkbox" name="recruitableUnitIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{name}}</label>{{/each}}</fieldset>
+                          <label class="ds-full"><span>Notes</span><textarea name="notes" rows="2">{{notes}}</textarea></label>
+                        </div>
+                        <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Node</span></button><button type="button" data-click-action="applyCatalogBuilding" data-catalog-id="{{id}}" data-confirm="Apply this template to every existing instance?"><i class="fa-solid fa-arrows-rotate"></i><span>Apply Existing</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogBuilding" data-catalog-id="{{id}}" data-confirm="Delete this unused building node?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
+                      </form>
+                    </details>
+                  {{/each}}
+                </div>
+              {{else if catalogUnitsActive}}
+                <div class="ds-editor-list">
+                  {{#each catalogUnits}}
+                    <details class="ds-record-card">
+                      <summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid fa-shield-halved"></i>{{/if}}</div><div><h3>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark"></i>{{/if}}</h3><p>{{roleLabel}} / Tier {{tier}} / {{qualityLabel}}</p><small>{{recruitCostDisplay}} Crown / Combat {{combatRating}} / {{garrisonDisplay}} garrison / {{campaignDisplay}} campaign</small></div><i class="fa-solid fa-chevron-down"></i></summary>
+                      <form class="ds-editor-body" data-action-form="updateCatalogUnit">
+                        <input type="hidden" name="unitId" value="{{id}}">
+                        <div class="ds-form-grid">
+                          <label><span>Name</span><input name="name" value="{{name}}"></label>
+                          <label><span>Role</span><select name="role">{{#each roleOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+                          <label><span>Building Tier</span><input type="number" name="tier" value="{{tier}}" min="1" max="5"></label>
+                          <label><span>Quality</span><select name="quality">{{#each qualityOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+                          <label><span>Recruit Cost / Troop</span><input type="number" name="recruitCost" value="{{recruitCost}}" min="0"></label>
+                          <label><span>Garrison Upkeep</span><input type="number" name="garrison" value="{{garrison}}" min="0"></label>
+                          <label><span>Campaign Upkeep</span><input type="number" name="campaign" value="{{campaign}}" min="0"></label>
+                          <label><span>Manpower / Troop</span><input type="number" step="0.1" name="manpowerCost" value="{{manpowerCost}}" min="0"></label>
+                          <label><span>Melee</span><input type="number" name="melee" value="{{melee}}" min="0" max="10"></label>
+                          <label><span>Ranged</span><input type="number" name="ranged" value="{{ranged}}" min="0" max="10"></label>
+                          <label><span>Defense</span><input type="number" name="defense" value="{{defense}}" min="0" max="10"></label>
+                          <label><span>Morale</span><input type="number" name="morale" value="{{morale}}" min="0" max="10"></label>
+                          <label><span>Mobility</span><input type="number" name="mobility" value="{{mobility}}" min="0" max="10"></label>
+                          <label><span>Charge</span><input type="number" name="charge" value="{{charge}}" min="0" max="10"></label>
+                          <label><span>Siege</span><input type="number" name="siege" value="{{siege}}" min="0" max="10"></label>
+                          <label><span>Power Modifier</span><input type="number" step="0.1" name="powerModifier" value="{{powerModifier}}"></label>
+                          <label><span>Max per Settlement</span><input type="number" name="maxPerSettlement" value="{{maxPerSettlement}}" min="0"></label>
+                          <label class="ds-full"><span>Required Strategic Tags</span><input name="requiredTags" value="{{requiredTagsText}}"></label>
+                          <label class="ds-full"><span>Foundry Actor UUID</span><div class="ds-input-action"><input name="actorUuid" value="{{actorUuid}}" data-actor-drop><button type="button" data-open-actor="{{actorUuid}}" {{#unless actorUuid}}disabled{{/unless}}><i class="fa-solid fa-address-card"></i></button></div></label>
+                          <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                          <label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="special" data-bool {{specialChecked}}><span>Special Unit</span></label>
+                          <label class="ds-toggle"><input type="checkbox" name="useRuleUpkeep" data-bool {{useRuleUpkeepChecked}}><span>Use world upkeep percentages</span></label>
+                          <label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label>
+                        </div>
+                        <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Unit</span></button><button type="button" data-click-action="applyCatalogUnit" data-unit-id="{{id}}"><i class="fa-solid fa-arrows-rotate"></i><span>Apply Existing</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogUnit" data-unit-id="{{id}}" data-confirm="Delete this unused unit template?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
+                      </form>
+                    </details>
+                  {{/each}}
+                </div>
               {{else}}
-                <div class="ds-editor-list">{{#each catalogUnits}}<details class="ds-record-card"><summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid fa-shield-halved"></i>{{/if}}</div><div><h3>{{name}}</h3><p>{{roleLabel}} / Tier {{tier}}</p><small>{{recruitCostDisplay}} Crown / {{garrisonDisplay}} garrison / {{campaignDisplay}} campaign</small></div><i class="fa-solid fa-chevron-down"></i></summary><form class="ds-editor-body" data-action-form="updateCatalogUnit"><input type="hidden" name="unitId" value="{{id}}"><div class="ds-form-grid"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Role</span><select name="role">{{#each roleOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label><label><span>Tier</span><input type="number" name="tier" value="{{tier}}" min="1"></label><label><span>Recruit Cost</span><input type="number" name="recruitCost" value="{{recruitCost}}" min="0"></label><label><span>Garrison Upkeep</span><input type="number" name="garrison" value="{{garrison}}" min="0"></label><label><span>Campaign Upkeep</span><input type="number" name="campaign" value="{{campaign}}" min="0"></label><label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label><label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label><label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label></div><div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Unit</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogUnit" data-unit-id="{{id}}" data-confirm="Delete this unused unit template?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div></form></details>{{/each}}</div>
+                <div class="ds-editor-list">
+                  {{#each catalogEvents}}
+                    <details class="ds-record-card">
+                      <summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid fa-dice-d20"></i>{{/if}}</div><div><h3>{{name}}</h3><p>{{severityLabel}} / d100 {{minRoll}}-{{maxRoll}}</p><small>{{effectsText}}</small></div><i class="fa-solid fa-chevron-down"></i></summary>
+                      <form class="ds-editor-body" data-action-form="updateCatalogEvent">
+                        <input type="hidden" name="eventId" value="{{id}}">
+                        <div class="ds-form-grid">
+                          <label><span>Name</span><input name="name" value="{{name}}"></label>
+                          <label><span>Severity</span><select name="severity">{{#each severityOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+                          <label><span>Minimum Roll</span><input type="number" name="minRoll" value="{{minRoll}}" min="1" max="100"></label>
+                          <label><span>Maximum Roll</span><input type="number" name="maxRoll" value="{{maxRoll}}" min="1" max="100"></label>
+                          <label><span>Crown</span><input type="number" name="crown" value="{{effects.crown}}"></label>
+                          <label><span>Food</span><input type="number" name="food" value="{{effects.food}}"></label>
+                          <label><span>Materials</span><input type="number" name="materials" value="{{effects.materials}}"></label>
+                          <label><span>Population</span><input type="number" name="population" value="{{effects.population}}"></label>
+                          <label><span>Public Order</span><input type="number" name="publicOrder" value="{{effects.publicOrder}}"></label>
+                          <label><span>Defense Divisor</span><input type="number" name="defenseDivisor" value="{{defenseDivisor}}" min="0"></label>
+                          <label class="ds-full"><span>Tags</span><input name="tags" value="{{tagsText}}"></label>
+                          <label class="ds-full"><span>Mitigation Tags</span><input name="mitigationTags" value="{{mitigationTagsText}}"></label>
+                          <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                          <label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label>
+                          <label class="ds-full"><span>Description</span><textarea name="description" rows="3">{{description}}</textarea></label>
+                        </div>
+                        <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Event</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogEvent" data-event-id="{{id}}" data-confirm="Delete this month event?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
+                      </form>
+                    </details>
+                  {{/each}}
+                </div>
               {{/if}}
             </section>
           </section>
@@ -400,18 +582,161 @@
           <section class="ds-pane">
             <section class="ds-gm-command-grid">
               <form class="ds-panel" data-action-form="setMonth"><div class="ds-panel-heading"><div><h2>World Month</h2><p>{{processedSettlementCount}} processed / {{pendingSettlementCount}} pending</p></div><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><span>Current Month</span><input type="number" name="month" value="{{month}}" min="1"></label></form>
-              <form class="ds-panel" data-action-form="processSettlement"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><div><h2>Selected Settlement</h2><p>{{selected.processStatusLabel}}</p></div></div><label><span>GM Turn Note</span><textarea name="gmTurnNote" rows="2"></textarea></label><div class="ds-record-actions"><button type="submit" class="ds-primary" {{#if selected.processedThisMonth}}disabled{{/if}}><i class="fa-solid fa-forward-step"></i><span>Process {{selected.name}}</span></button><button type="button" class="ds-danger" data-click-action="processSettlement" data-settlement-id="{{selected.id}}" data-force="true" data-confirm="Process this settlement again for the same month?"><i class="fa-solid fa-rotate"></i><span>Force</span></button></div></form>
-              <form class="ds-panel" data-action-form="processTurn" data-confirm="Process every pending settlement and close this month?"><div class="ds-panel-heading"><div><h2>Close Global Month</h2><p>Only pending settlements are processed</p></div></div><label><span>GM Turn Note</span><textarea name="gmTurnNote" rows="2"></textarea></label><button type="submit" class="ds-danger"><i class="fa-solid fa-forward-fast"></i><span>Close Month {{month}}</span></button></form>
+              <form class="ds-panel" data-action-form="processSettlement"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><div><h2>Selected Settlement</h2><p>{{selected.processStatusLabel}}{{#if selected.hasPendingEvents}} / Resolve pending event first{{/if}}</p></div></div><label><span>GM Turn Note</span><textarea name="gmTurnNote" rows="2"></textarea></label><div class="ds-record-actions"><button type="submit" class="ds-primary" {{#unless selected.canProcessThisMonth}}disabled{{/unless}}><i class="fa-solid fa-forward-step"></i><span>Process {{selected.name}}</span></button><button type="button" class="ds-danger" data-click-action="processSettlement" data-settlement-id="{{selected.id}}" data-force="true" data-confirm="Process this settlement again for the same month?" {{#if selected.hasPendingEvents}}disabled{{/if}}><i class="fa-solid fa-rotate"></i><span>Force</span></button></div></form>
+              <form class="ds-panel" data-action-form="processTurn" data-confirm="Process every pending settlement and close this month?"><div class="ds-panel-heading"><div><h2>Close Global Month</h2><p>{{#if hasWorldPendingEvents}}Resolve {{pendingWorldEventCount}} pending event(s) first{{else}}Only pending settlements are processed{{/if}}</p></div></div><label><span>GM Turn Note</span><textarea name="gmTurnNote" rows="2"></textarea></label><button type="submit" class="ds-danger" {{#if hasWorldPendingEvents}}disabled{{/if}}><i class="fa-solid fa-forward-fast"></i><span>Close Month {{month}}</span></button></form>
               <form class="ds-panel" data-action-form="addSettlement"><div class="ds-panel-heading"><h2>Create Settlement</h2><button type="submit"><i class="fa-solid fa-plus"></i></button></div><label><span>Name</span><input name="name" value="New Settlement"></label><label><span>Template</span><select name="templateId">{{#each settlementTemplates}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label></form>
             </section>
 
-            <form class="ds-panel" data-action-form="updatePopulation"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Settlement Values</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><div class="ds-form-grid"><label><span>Population</span><input type="number" name="population" value="{{selected.population}}" min="0"></label><label><span>Treasure</span><input type="number" name="treasure" value="{{selected.treasureValue}}"></label><label><span>Bonus Slots</span><input type="number" name="slotBonus" value="{{selected.slotBonus}}" min="0"></label></div></form>
+            <section class="ds-gm-command-grid">
+              <form class="ds-panel" data-action-form="updatePopulation">
+                <input type="hidden" name="settlementId" value="{{selected.id}}">
+                <div class="ds-panel-heading"><div><h2>Settlement Ledger</h2><p>GM corrections apply immediately</p></div><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div>
+                <div class="ds-form-grid">
+                  <label><span>Population</span><input type="number" name="population" value="{{selected.population}}" min="0"></label>
+                  <label><span>Treasure</span><input type="number" name="treasure" value="{{selected.treasureValue}}"></label>
+                  <label><span>Food</span><input type="number" name="food" value="{{selected.foodValue}}" min="0"></label>
+                  <label><span>Materials</span><input type="number" name="materials" value="{{selected.materialsValue}}" min="0"></label>
+                  <label><span>Public Order</span><input type="number" name="publicOrder" value="{{selected.publicOrderValue}}" min="0" max="100"></label>
+                  <label><span>Manpower Bonus</span><input type="number" name="manpowerBonus" value="{{selected.manpowerBonus}}"></label>
+                  <label><span>Manpower Override</span><input type="number" name="manpowerOverride" value="{{selected.manpowerOverride}}" placeholder="Automatic"></label>
+                  <label><span>Bonus Slots</span><input type="number" name="slotBonus" value="{{selected.slotBonus}}" min="0"></label>
+                </div>
+              </form>
+              <form class="ds-panel" data-action-form="setSettlementTier">
+                <input type="hidden" name="settlementId" value="{{selected.id}}">
+                <div class="ds-panel-heading"><div><h2>Settlement Rank</h2><p>Current: {{selected.tierLabel}}</p></div><button type="submit"><i class="fa-solid fa-arrow-up-right-dots"></i></button></div>
+                <label><span>Set Rank Directly</span><select name="tier">{{#each selected.tierOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+                <label><span>GM Note</span><textarea name="note" rows="3" placeholder="Reason for manual change"></textarea></label>
+                <p class="ds-callout">This bypasses progression costs and population requirements, then recalculates district slots.</p>
+              </form>
+            </section>
 
-            <form class="ds-panel" data-action-form="updateVisuals"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Presentation and Ownership</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><div class="ds-form-grid"><label class="ds-full"><span>Settlement Image</span><div class="ds-input-action"><input name="imageUrl" value="{{selected.imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label><label class="ds-full"><span>Advisor Portrait</span><div class="ds-input-action"><input name="portraitUrl" value="{{selected.portraitUrl}}"><button type="button" data-file-picker="[name='portraitUrl']"><i class="fa-solid fa-image"></i></button></div></label><label><span>Governor</span><input name="governorName" value="{{selected.governorName}}"></label><label class="ds-full"><span>Biome Description</span><textarea name="biomeDescription" rows="2">{{selected.biomeDescription}}</textarea></label><label class="ds-full"><span>System Notes</span><textarea name="systemNotes" rows="2">{{selected.systemNotes}}</textarea></label><fieldset class="ds-check-grid ds-full"><legend>Assigned Players</legend>{{#each userOptions}}<label><input type="checkbox" name="ownerUserIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{name}}</label>{{/each}}</fieldset></div></form>
+            <form class="ds-panel" data-action-form="updateVisuals">
+              <input type="hidden" name="settlementId" value="{{selected.id}}">
+              <div class="ds-panel-heading"><div><h2>Presentation and Ownership</h2><p>The Overview district board uses its own background</p></div><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div>
+              <div class="ds-form-grid">
+                <label class="ds-full"><span>Settlement Hero Image</span><div class="ds-input-action"><input name="imageUrl" value="{{selected.imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                <label class="ds-full"><span>District Board Background</span><div class="ds-input-action"><input name="districtBackgroundUrl" value="{{selected.districtBackgroundUrl}}"><button type="button" data-file-picker="[name='districtBackgroundUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                <label><span>Background Shade %</span><input type="number" name="backgroundOverlay" value="{{selected.backgroundOverlay}}" min="0" max="90"></label>
+                <label><span>Governor</span><input name="governorName" value="{{selected.governorName}}"></label>
+                <label class="ds-full"><span>Advisor Portrait</span><div class="ds-input-action"><input name="portraitUrl" value="{{selected.portraitUrl}}"><button type="button" data-file-picker="[name='portraitUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                <label class="ds-full"><span>Biome Description</span><textarea name="biomeDescription" rows="2">{{selected.biomeDescription}}</textarea></label>
+                <label class="ds-full"><span>System Notes</span><textarea name="systemNotes" rows="2">{{selected.systemNotes}}</textarea></label>
+                <fieldset class="ds-check-grid ds-full"><legend>Assigned Players</legend>{{#each userOptions}}<label><input type="checkbox" name="ownerUserIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{name}}</label>{{/each}}</fieldset>
+              </div>
+            </form>
+
+            <section class="ds-gm-command-grid">
+              <form class="ds-panel" data-action-form="addBuilding">
+                <input type="hidden" name="settlementId" value="{{selected.id}}">
+                <div class="ds-panel-heading"><div><h2>Direct Building Placement</h2><p>No cost or prerequisite check</p></div><button type="submit"><i class="fa-solid fa-building-circle-check"></i></button></div>
+                <label><span>Building Node</span><select name="catalogId">{{#each gmBuildingOptions}}<option value="{{id}}">{{label}}</option>{{/each}}</select></label>
+                <label><span>Empty District</span><select name="slotId"><option value="">First compatible empty district</option>{{#each selected.slots}}{{#if availableForDirectAdd}}<option value="{{id}}">{{label}} / {{allowedCategory}}</option>{{/if}}{{/each}}</select></label>
+                <label><span>Assigned Workers</span><input type="number" name="assignedPop" value="0" min="0"></label>
+              </form>
+              <section class="ds-panel">
+                <div class="ds-panel-heading"><div><h2>Direct Military Tools</h2><p>GM bypasses recruitment-building requirements</p></div></div>
+                <div class="ds-command-stack">
+                  <button type="button" data-click-action="addRecruitment" data-settlement-id="{{selected.id}}"><i class="fa-solid fa-user-plus"></i><span>Add editable recruitment order</span></button>
+                  <button type="button" data-click-action="addTroop" data-settlement-id="{{selected.id}}"><i class="fa-solid fa-shield-halved"></i><span>Add regiment immediately</span></button>
+                  <p class="ds-callout">Use the Recruitment tab to set the unit template, count, image, Actor link, and campaign state.</p>
+                </div>
+              </section>
+            </section>
+
+            <section class="ds-section ds-event-workbench">
+              <div class="ds-section-heading"><div><h2>Pending Month Events</h2><p>Rolls wait for a GM decision before changing the settlement</p></div></div>
+              {{#if selected.hasPendingEvents}}
+                <div class="ds-event-grid">
+                  {{#each selected.pendingEvents}}
+                    <form class="ds-event-card ds-severity-{{severity}}" data-action-form="resolveMonthEvent">
+                      <input type="hidden" name="settlementId" value="{{../selected.id}}">
+                      <input type="hidden" name="eventId" value="{{id}}">
+                      <input type="hidden" name="resolution" value="accept">
+                      <div class="ds-event-card-heading"><div><span class="ds-event-roll">{{rawRoll}} {{#if modifier}}({{modifier}}){{/if}} = {{finalRoll}}</span><h3>{{name}}</h3><small>Month {{month}} / {{severityLabel}}</small></div>{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid fa-dice-d20"></i>{{/if}}</div>
+                      <p>{{description}}</p>
+                      {{#if mitigationText}}<p class="ds-mitigation"><i class="fa-solid fa-shield"></i> {{mitigationText}}</p>{{/if}}
+                      <div class="ds-event-effect-grid">
+                        <label><span>Crown</span><input type="number" name="crown" value="{{effects.crown}}"></label>
+                        <label><span>Food</span><input type="number" name="food" value="{{effects.food}}"></label>
+                        <label><span>Materials</span><input type="number" name="materials" value="{{effects.materials}}"></label>
+                        <label><span>POP</span><input type="number" name="population" value="{{effects.population}}"></label>
+                        <label><span>Order</span><input type="number" name="publicOrder" value="{{effects.publicOrder}}"></label>
+                      </div>
+                      <label><span>Resolution Note</span><textarea name="gmNote" rows="2"></textarea></label>
+                      <div class="ds-record-actions"><button type="submit" class="ds-primary"><i class="fa-solid fa-check"></i><span>Apply</span></button><button type="button" data-click-action="rerollMonthEvent" data-settlement-id="{{../selected.id}}" data-event-id="{{id}}" data-confirm="Reroll and replace this event?"><i class="fa-solid fa-dice"></i><span>Reroll</span></button><button type="button" data-click-action="resolveMonthEvent" data-settlement-id="{{../selected.id}}" data-event-id="{{id}}" data-resolution="ignore"><i class="fa-solid fa-ban"></i><span>Ignore</span></button></div>
+                    </form>
+                  {{/each}}
+                </div>
+              {{else}}
+                <div class="ds-empty-state"><i class="fa-solid fa-calendar-check"></i><p>No month event is waiting for a decision.</p></div>
+              {{/if}}
+            </section>
+
+            <section class="ds-section">
+              <div class="ds-section-heading"><div><h2>Turn Recovery</h2><p>Snapshots are created immediately before settlement processing</p></div></div>
+              {{#if selected.hasTurnSnapshots}}
+                <div class="ds-snapshot-list">{{#each selected.turnSnapshots}}<article><div><strong>Month {{month}}</strong><span>{{reason}}</span><small>{{createdLabel}}</small></div><button type="button" data-click-action="undoSettlementTurn" data-settlement-id="{{../selected.id}}" data-snapshot-id="{{id}}" data-confirm="Restore this settlement snapshot? Later settlement changes will be replaced."><i class="fa-solid fa-clock-rotate-left"></i><span>Restore</span></button></article>{{/each}}</div>
+              {{else}}
+                <div class="ds-empty-state"><i class="fa-solid fa-clock-rotate-left"></i><p>No turn snapshot has been created yet.</p></div>
+              {{/if}}
+            </section>
 
             <section class="ds-gm-command-grid">
               <form class="ds-panel" data-action-form="updatePermissions"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Player Permissions</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><input type="checkbox" name="playersCanEditBasics" data-bool {{#if selected.permissions.playersCanEditBasics}}checked{{/if}}> Edit settlement profile</label><label><input type="checkbox" name="playersCanEditAssignments" data-bool {{#if selected.permissions.playersCanEditAssignments}}checked{{/if}}> Edit POP, regiment names and images</label><label><input type="checkbox" name="playersCanManageConstruction" data-bool {{#if selected.permissions.playersCanManageConstruction}}checked{{/if}}> Manage construction</label><label><input type="checkbox" name="playersCanManageRecruitment" data-bool {{#if selected.permissions.playersCanManageRecruitment}}checked{{/if}}> Recruit units</label><label><input type="checkbox" name="playersCanWriteTurnNotes" data-bool {{#if selected.permissions.playersCanWriteTurnNotes}}checked{{/if}}> Write turn notes</label></form>
               <form class="ds-panel" data-action-form="updateOverrides"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Rule Overrides</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><input type="checkbox" name="ignorePopulationLimits" data-bool {{#if selected.overrides.ignorePopulationLimits}}checked{{/if}}> Ignore population progression limits</label><label><input type="checkbox" name="ignoreManpowerLimits" data-bool {{#if selected.overrides.ignoreManpowerLimits}}checked{{/if}}> Ignore manpower limits</label><label><input type="checkbox" name="ignoreMilitaryCapacity" data-bool {{#if selected.overrides.ignoreMilitaryCapacity}}checked{{/if}}> Ignore military capacity</label><label><input type="checkbox" name="ignoreBuildingRequirements" data-bool {{#if selected.overrides.ignoreBuildingRequirements}}checked{{/if}}> Ignore building and terrain requirements</label><label><input type="checkbox" name="ignoreSlotLimits" data-bool {{#if selected.overrides.ignoreSlotLimits}}checked{{/if}}> Ignore slot limits</label><label><input type="checkbox" name="ignoreGrowthLimits" data-bool {{#if selected.overrides.ignoreGrowthLimits}}checked{{/if}}> Ignore growth clamp</label></form>
+            </section>
+
+            <section class="ds-section">
+              <div class="ds-section-heading"><div><h2>Queue Repair</h2><p>Advanced GM correction for interrupted or imported records</p></div></div>
+              <div class="ds-queue-repair-grid">
+                <details class="ds-panel">
+                  <summary><span><i class="fa-solid fa-hammer"></i> Construction Records</span><strong>{{selected.projects.length}}</strong></summary>
+                  <div class="ds-repair-list">
+                    {{#each selected.projects}}
+                      <form data-action-form="updateProject">
+                        <input type="hidden" name="settlementId" value="{{../selected.id}}"><input type="hidden" name="projectId" value="{{id}}"><input type="hidden" name="catalogId" value="{{catalogId}}">
+                        <div class="ds-panel-heading"><h3>{{name}}</h3><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div>
+                        <div class="ds-form-grid"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Status</span><select name="status">{{#each statusOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label><label><span>Target Tier</span><input type="number" name="targetLevel" value="{{targetLevel}}" min="1" max="5"></label><label><span>Slot Use</span><input type="number" name="targetSlotUse" value="{{targetSlotUse}}" min="1"></label><label><span>Crown Required</span><input type="number" name="requiredCrown" value="{{requiredCrown}}" min="0"></label><label><span>Crown Paid</span><input type="number" name="crownPaid" value="{{crownPaid}}" min="0"></label><label><span>Materials Required</span><input type="number" name="requiredMaterials" value="{{requiredMaterials}}" min="0"></label><label><span>Materials Paid</span><input type="number" name="materialsPaid" value="{{materialsPaid}}" min="0"></label><label><span>Food Required</span><input type="number" name="requiredFood" value="{{requiredFood}}" min="0"></label><label><span>Food Paid</span><input type="number" name="foodPaid" value="{{foodPaid}}" min="0"></label><label><span>CP Required</span><input type="number" name="requiredCp" value="{{requiredCp}}" min="0"></label><label><span>CP Paid</span><input type="number" name="cpPaid" value="{{cpPaid}}" min="0"></label><label><span>External CP / Month</span><input type="number" name="externalWorkers" value="{{externalWorkers}}" min="0"></label><label><span>One-time Bonus CP</span><input type="number" name="bonusCp" value="{{bonusCp}}" min="0"></label><label><span>CP Weight</span><input type="number" name="cpAllocation" value="{{cpAllocation}}" min="1"></label><label class="ds-full"><span>Notes</span><textarea name="notes" rows="2">{{notes}}</textarea></label></div>
+                        <button type="button" class="ds-danger" data-click-action="deleteProject" data-settlement-id="{{../selected.id}}" data-project-id="{{id}}" data-confirm="Delete this construction record?"><i class="fa-solid fa-trash"></i><span>Delete Record</span></button>
+                      </form>
+                    {{else}}<div class="ds-empty-state"><p>No construction records.</p></div>{{/each}}
+                  </div>
+                </details>
+                <details class="ds-panel">
+                  <summary><span><i class="fa-solid fa-people-pulling"></i> Recruitment Records</span><strong>{{selected.recruitment.length}}</strong></summary>
+                  <div class="ds-repair-list">
+                    {{#each selected.recruitment}}
+                      <form data-action-form="updateRecruitment">
+                        <input type="hidden" name="settlementId" value="{{../selected.id}}"><input type="hidden" name="recruitmentId" value="{{id}}">
+                        <div class="ds-panel-heading"><h3>{{troopTypeName}}</h3><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div>
+                        <div class="ds-form-grid"><label><span>Unit</span><select name="troopType">{{#each troopTypeOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><label><span>Source</span><select name="sourceBuildingId">{{#each sourceOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><label><span>Regiment Name</span><input name="regimentName" value="{{regimentName}}"></label><label><span>Status</span><select name="status">{{#each statusOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label><label><span>Target Count</span><input type="number" name="targetCount" value="{{targetCount}}" min="0"></label><label><span>Trained</span><input type="number" name="trained" value="{{trained}}" min="0"></label><label class="ds-full"><span>Actor UUID</span><div class="ds-input-action"><input name="actorUuid" value="{{actorUuid}}" data-actor-drop><button type="button" data-open-actor="{{actorUuid}}" {{#unless actorUuid}}disabled{{/unless}}><i class="fa-solid fa-address-card"></i></button></div></label><label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label><label class="ds-full"><span>Notes</span><textarea name="notes" rows="2">{{notes}}</textarea></label></div>
+                        <button type="button" class="ds-danger" data-click-action="deleteRecruitment" data-settlement-id="{{../selected.id}}" data-recruitment-id="{{id}}" data-confirm="Delete this recruitment record?"><i class="fa-solid fa-trash"></i><span>Delete Record</span></button>
+                      </form>
+                    {{else}}<div class="ds-empty-state"><p>No recruitment records.</p></div>{{/each}}
+                  </div>
+                </details>
+              </div>
+            </section>
+
+            <section class="ds-section">
+              <div class="ds-section-heading"><div><h2>Settlement Templates</h2><p>Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town are always available</p></div></div>
+              <div class="ds-gm-command-grid">
+                <form class="ds-panel" data-action-form="addSettlementTemplate"><div class="ds-panel-heading"><h3>Create Blank Template</h3><button type="submit"><i class="fa-solid fa-plus"></i></button></div><label><span>Template Name</span><input name="name" value="Custom Hamlet"></label></form>
+                <form class="ds-panel" data-action-form="saveSettlementAsTemplate"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h3>Save Current Settlement</h3><button type="submit"><i class="fa-solid fa-clone"></i></button></div><label><span>Template Name</span><input name="name" value="{{selected.name}} Template"></label><label><span>Description</span><input name="description" value="Saved from {{selected.name}}"></label></form>
+              </div>
+              <div class="ds-template-editor-list">
+                {{#each settlementTemplates}}
+                  <details class="ds-record-card">
+                    <summary><div><h3>{{name}}</h3><p>{{tier}} / {{population}} POP / {{buildingCount}} buildings</p></div><i class="fa-solid fa-chevron-down"></i></summary>
+                    <form class="ds-editor-body" data-action-form="updateSettlementTemplate">
+                      <input type="hidden" name="templateId" value="{{id}}">
+                      <div class="ds-form-grid"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Tier</span><select name="tier">{{#each tierOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><label><span>Population</span><input type="number" name="population" value="{{population}}" min="0"></label><label><span>Treasure</span><input type="number" name="treasure" value="{{treasure}}" min="0"></label><label><span>Food</span><input type="number" name="food" value="{{food}}" min="0"></label><label><span>Materials</span><input type="number" name="materials" value="{{materials}}" min="0"></label><label><span>Public Order</span><input type="number" name="publicOrder" value="{{publicOrder}}" min="0" max="100"></label><label><span>Manpower Bonus</span><input type="number" name="manpowerBonus" value="{{manpowerBonus}}"></label><label class="ds-full"><span>Terrain Tags</span><input name="terrainTags" value="{{terrainTagsText}}"></label><label class="ds-full"><span>Biome Tags</span><input name="biomeTags" value="{{biomeTagsText}}"></label><label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label></div>
+                      <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Template</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteSettlementTemplate" data-template-id="{{id}}" data-confirm="Delete this custom settlement template?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
+                    </form>
+                  </details>
+                {{/each}}
+              </div>
             </section>
 
             <section class="ds-danger-zone"><div><h2>Settlement Record</h2><p>De Laurent is never overwritten by settlement templates.</p></div><button type="button" class="ds-danger" data-click-action="deleteSettlement" data-settlement-id="{{selected.id}}" data-confirm="Delete this settlement?"><i class="fa-solid fa-trash"></i><span>Delete Settlement</span></button></section>

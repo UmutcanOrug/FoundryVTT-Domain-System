@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.7
+
+- Migrated world data to schema v3 with Crown, Food, Materials, Public Order, manpower, strategic tags, defense, army power, pending events, and turn snapshots.
+- Rebalanced the full economy for high-level campaigns where 20,000 Crown is a common player reward; City and Metropolis investments now extend into the millions.
+- Replaced the broad economic catalog with four readable five-tier families: Land, Resources, Commerce, and Civic development.
+- Rebuilt military development as five-tier Recruitment, Defense, Siege, and GM-only Laurent Estate families.
+- Added explicit Infantry, Archery, Stable, Cavalry, Marksmen, War College, Knightly Order, and Arsenal branch progression.
+- Aligned every building node tier with Hamlet, Village, Town, City, or Metropolis and enforced direct parent branches, unique families, limits, strategic resources, and multi-slot reservations.
+- Made Overview district cards clickable for root construction and branch development over an optional GM-configured settlement background.
+- Added Food and Materials construction costs, progress-sensitive cancellation refunds, staffed output scaling, bonus district slots, and clearer support-slot presentation.
+- Reworked manpower so raised troops consume population, recruitment orders reserve manpower, and the UI separately explains civilian workers, military staff, Army POP, pool, queued, and available values.
+- Added abstract unit Quality and seven 0-10 combat attributes with calculated unit combat and regiment power.
+- Added optional Foundry Actor UUID links for unit templates, recruitment records, and individual regiments, including Actor drag/drop and sheet opening.
+- Limited regiment management to two cards per row on wide screens and one on compact screens.
+- Added Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town templates plus custom template creation and save-current-settlement workflows.
+- Added direct GM settlement tier changes, resource/manpower corrections, building placement, regiment creation, recruitment records, queue repair, and settlement board appearance controls.
+- Added a GM-approved d100 month-event system with editable effects, Public Order and Food modifiers, Defense/mitigation reductions, Apply, Reroll, and Ignore decisions.
+- Added pre-turn settlement snapshots and GM restoration without rewinding the global month number.
+- Serialized module actions on the responsible GM to prevent overlapping saves from rapid or simultaneous controls.
+- Expanded schema migration, five-tier catalog, resources, staffing, branch, manpower, Actor, event, snapshot, and responsive UI regression tests.
+
 ## 0.1.6
 
 - Added schema v2 migration with persistent world Rules, settlement tiers, real district slots, and per-settlement month tracking.
