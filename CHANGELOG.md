@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.9
+
+- Rebuilt Overview as a stable paged 4x2 district board over the settlement background; selecting a slot now opens a separate Total War-style branch overlay instead of expanding the card column.
+- Added compact vertical T1-T5 branch trees with side-by-side choices, hover infoboxes, current/completed/future states, and direct comparisons against the currently owned node.
+- Converted Laurent Manor into one tierless, unstaffed Landmark that grants its fixed benefits without consuming a normal district; migrated all legacy Laurent Estate stages into the landmark.
+- Rebalanced Food development into meaningful Grain and Pastoral sidegrades: grain favors raw Food and famine security, while pastoral development favors Crown, growth, horses, and cavalry support.
+- Removed Public Order output from built-in Food buildings and clarified strategic descriptions across Food, Materials, Commerce, and Civic branches.
+- Replaced the derived manpower display with a persistent reserve. Recruitment and replenishment spend reserve, cancelled orders refund untrained reserve, and each processed month recovers 10% of manpower cap by default.
+- Added explicit Public Order bands with visible growth and d100 modifiers: Unrest, Unstable, Stable, Content, and Prosperous.
+- Added settlement-tier Defense targets, coverage states, garrison contribution, and capped raid/event mitigation so Defense has an inspectable gameplay purpose.
+- Replaced flat event resource grants and losses with GM-editable timed percentage modifiers for income, upkeep, Food, Materials, construction, recruitment, military upkeep, growth, and Public Order.
+- Added Apply Modifier, Narrative Only, Reroll, Ignore, active-modifier display, duration countdown, manual GM removal, and snapshot support for event modifiers.
+- Expanded Rules, GM rule editors, ledger controls, Content Library fields, migration coverage, and automated tests for the new reserve, landmark, branch, Defense, Public Order, and event contracts.
+
 ## 0.1.8
 
 - Migrated world data to schema v4 and force-refreshed stale built-in branch data so directly placed Infantry Yards correctly develop into Drill Hall or Stable Compound.

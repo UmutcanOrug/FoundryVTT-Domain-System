@@ -6,7 +6,7 @@ DS, Foundry VTT v13 build 351 icin Astargon yerleskelerini uzun vadeli bir Total
 
 - Oyuncu yalnizca kendisine atanmis yerleskeleri gorur.
 - GM her yerleske icin profil, isci, insaat, recruitment ve tur notu izinlerini ayri ayri verebilir.
-- `Overview`: yerleske ozeti, kuyruklar ve tiklanabilir district kutulari.
+- `Overview`: yerleske arka plani uzerinde sayfalanan 4x2 district tahtasi, kuyruklar, Landmark ve ordu ozeti.
 - `Town`: yerleske kademesi, profil, POP dagilimi, tamamlanmis binalar ve growth.
 - `Construction`: proje kuyrugu, district yonetimi ve bina ailelerinin tum dallari.
 - `Recruitment`: basabilir birlikler, recruitment kuyrugu ve regiment kartlari.
@@ -17,7 +17,7 @@ DS, Foundry VTT v13 build 351 icin Astargon yerleskelerini uzun vadeli bir Total
 
 ## Yerleske Hiyerarsisi
 
-Her bina dugumu 1-5 arasindadir ve bina tieri yerleske kademesiyle aynidir.
+Her normal bina dugumu 1-5 arasindadir ve bina tieri yerleske kademesiyle aynidir. Landmark binalari bu eslesmenin disindadir; tier ve normal district kullanmaz.
 
 | Kademe | Minimum POP | Acik / Azami Slot | Free POP Geliri | Crown | Materials | Food | CP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -39,13 +39,16 @@ Bir POP yaklasik 10 kisilik bir haneyi/topluluk payini temsil eder. Askerler siv
 Civilian POP = Total POP
 Free POP = Total POP - Economic Workers - Military Staff
 Manpower Cap = floor(Total POP x Manpower Rate) + Manpower Bonus
-Available Manpower = Manpower Cap - Current Army Strength - Queued Manpower
+Force Capacity = Manpower Cap - Current Army Strength - Queued Manpower
+Recruitable Now = min(Manpower Reserve, Force Capacity)
 ```
 
-Varsayilan Manpower Rate yuzde 100'dur. Bu nedenle 309 POP, normalde 309 askerlik manpower cap verir. GM bonus ekleyebilir veya `Manpower Override` ile cap degerini tamamen degistirebilir.
+Varsayilan Manpower Rate yuzde 100'dur. Bu nedenle 309 POP, normalde 309 askerlik manpower cap verir. Manpower Reserve ayrica saklanan bir kaynaktir; yeni recruitment ve replenishment bu rezervi harcar. GM bonus ekleyebilir veya `Manpower Override` ile cap degerini tamamen degistirebilir.
 
-- Her mevcut asker 1 manpower kullanir; recruitment ve replenishment kuyruklari tamamlanana kadar ayni miktari rezerve eder.
-- Bina isciligi ile ordu manpoweri birbirine karismaz. Town ekraninda Economic Workers, Military Staff, Free POP, Army Manpower, Manpower Cap ve Available Manpower ayri gorunur.
+- Her mevcut asker Force Capacity kullanir; kuyruktaki recruitment ve replenishment da tamamlanana kadar ayni kapasiteyi ayirir.
+- Bir emir verildiginde gereken manpower Reserve'den duser. Tamamlanmadan iptal edilen kismin rezervi iade edilir; savas kayiplari otomatik iade yaratmaz.
+- Her islenen ayin basinda rezerv, varsayilan olarak Manpower Cap'in yuzde 10'u kadar yenilenir ve cap'i asmaz. Oran Rules icinden GM tarafindan degistirilebilir.
+- Bina isciligi ile ordu manpoweri birbirine karismaz. Overview ve Recruitment ekranlari Cap, Reserve, aylik Recovery, Force Capacity ve Recruitable Now degerlerini ayri gosterir.
 - Bir binaya gereken iscinin yarisi atanirsa output, recruitment, capacity, defense, public order ve bonuslar yaklasik yuzde 50 calisir.
 - Hic isci atanmamis normal bir bina hicbir etki veya recruitment saglamaz. Sifir isci gerektiren binalar tam calisir.
 
@@ -67,7 +70,7 @@ Ay islenince Net Crown Treasure'a, Food Change Food deposuna ve Materials Change
 
 Fiyatlar yuksek seviye 5e oyunlarina gore ayarlanmistir. 20.000 Crown genellikle yalnizca bir Hamlet kok binasini karsilar. Town, City ve Metropolis yatirimlari yuz binlerce veya milyonlarca Crown ister. Tam staffed her ekonomik bina, ayni iscileri Free POP birakmaktan daha fazla net Crown ve/veya kendi ana kaynagini saglayacak sekilde dengelenmistir.
 
-GM `Settlement Ledger` icinden POP, Treasure, Food, Materials, Public Order, manpower ve bonus slotlari dogrudan duzeltebilir.
+GM `Settlement Ledger` icinden POP, Treasure, Food, Materials, Public Order, Manpower Reserve ve bonus slotlari dogrudan duzeltebilir.
 
 ## District Slotlari
 
@@ -80,17 +83,17 @@ Her bina gercek bir district slotunda bulunur.
 - `Slot Use`: bazi buyuk binalar bir ana slot ve bir veya daha fazla support slot rezerve eder.
 - `Bonus Slots`: bazi binalar yeni Economic veya Military slotlari verir.
 
-Overview'daki bos veya dolu district kutusuna tiklayarak o slota uygun kok bina ya da bir sonraki branch secilebilir. Construction ekrani ayni sistemi daha ayrintili gereksinim ve kuyruk bilgileriyle gosterir.
+Overview her sayfada sekiz districti 4x2 olarak gosterir. Bos veya dolu kutuya tiklaninca kart uzamaz; ayri bir branch paneli acilir. Bos slotta uygun kok bina, dolu slotta mevcut dugumden ilerleyen T1-T5 secenekleri gorulur. Construction ekrani ayni sistemi daha ayrintili gereksinim ve kuyruk bilgileriyle gosterir.
 
 GM her slotun adini, acma bedelini, kategorisini ve kilidini degistirebilir. `Direct Building Placement`, secilen bina dugumunu ucret ve gereksinim aramadan bos bir slota koyar.
 
 ## Bes Tierli Bina Aileleri
 
-`Special` ayri bir kategori degildir. Her bina Economic veya Military olur; benzersiz dugumler ayrica Special yildizi tasiyabilir.
+`Special` ayri bir kategori degildir. Her normal bina Economic veya Military olur; benzersiz dugumler ayrica Special yildizi tasiyabilir. Landmark ise GM'in tier ve district disi benzersiz yapilari icin ayri bir isarettir.
 
 Ekonomik aileler ve renkleri:
 
-- Yesil `Food`: Land Clearance -> Farmstead -> Grain Estate veya Pastoral Ranch -> Grand Granary/Royal Stockyards -> Agrarian Heartland/Royal Pastures.
+- Yesil `Food`: Land Clearance -> Farmstead -> Grain Estate veya Pastoral Ranch -> Grand Granary/Royal Stockyards -> Agrarian Heartland/Royal Pastures. Grain yolu daha fazla Food ve kitlik korumasi; Pastoral yolu daha fazla Crown, growth, horses ve cavalry destegi verir.
 - Gumus `Materials`: Survey Camp -> Stone Quarry veya Iron Mine -> Masonry/Ironworks -> Builders Guild/Grand Foundry -> Metropolis uretim dugumleri.
 - Sari `Commerce`: Trading Post -> Market District veya River Jetty -> Guild ya da Harbor dallari.
 - Turkuaz `Civic`: Village Commons -> Tavern Quarter veya Shrine District -> kultur ya da inanc/egitim dallari.
@@ -103,7 +106,8 @@ Askeri aileler kirmizi renkle gosterilir:
 - Metropolis sonlari War College, Knightly Order ve Imperial Marksmen Academy'dir.
 - `Defense`: Watch Post -> Palisade -> Stone Walls -> Citadel -> Grand Fortress.
 - `Siege`: Engineer Camp -> Siege Yard -> Siege Workshop -> Royal Arsenal -> Grand Arsenal.
-- `Laurent Estate`: De Laurent icin GM-only, bes tierli ozel estate ailesidir.
+
+`Laurent Manor`, De Laurent'e ait tek bir tierless Landmark'tir. Normal slota yerlesmez, worker istemez ve T1-T5 upgrade zinciri yoktur. Sabit recruitment, Defense, Public Order ve bonus slot etkileri verir. Eski Laurent Estate tierleri veri gecisinde bu tek Landmark'a birlestirilir.
 
 Bir familyada `One family per settlement` isaretliyse ayni yerleskede o aileden bir yol bulunur. Bir dugumun dallari ayni slotta birbirini dislar; farkli yol gerekiyorsa GM Content Library'de bu limiti degistirebilir veya uygun ozel bina yaratabilir.
 
@@ -143,7 +147,7 @@ Recruitment emrinde kontrol edilenler:
 - Kaynak bina aktif, yeterince staffed ve ilgili uniti aciyor mu?
 - Aylik recruit kapasitesi yeterli mi?
 - Toplam Military Capacity dolu mu?
-- Available Manpower yeterli mi?
+- Hem Manpower Reserve hem de Force Capacity yeterli mi?
 - Unitin `horses` veya `iron` gibi strategic resource etiketi var mi?
 - Unitin settlement maksimum adedi asiliyor mu?
 - Treasure toplam recruitment bedelini karsiliyor mu?
@@ -172,14 +176,14 @@ Her unitte tek bir `Power` degeri bulunur. `Regiment Power = Current Strength x 
 Regiment `Current Strength / Maximum Strength` olarak tutulur. 70 kisilik birlik savasta 12 kayip verirse Current Strength 58 yapilir; Maximum Strength 70 kalir. Recruitment ekranindaki Replenishment cubugu kaybi tamamlar.
 
 - Kaybi basabilen aktif ve staffed bir askeri bina gerekir.
-- Her replacement 1 manpower ve aylik recruitment capacity kullanir.
+- Her replacement 1 Manpower Reserve, 1 Force Capacity ve aylik recruitment capacity kullanir.
 - Varsayilan bedel normal recruit fiyatinin yuzde 35'idir; recruitment discount uygulanabilir.
 - Replenishment Maximum Strength'i buyutmez, yalnizca Current Strength'i eski limite getirir.
 - Her asker unit tierine gore Food tuketir.
 
 Unit sablonuna veya tek bir regiment/recruitment kaydina Foundry Actor UUID atanabilir. Actor, UUID alanina suruklenip birakilabilir. Karttaki Actor dugmesi bagli Actor sheetini acar. Regiment resmi ve Actor baglantisi global unit sablonundan bagimsiz degistirilebilir.
 
-`Direct GM`, bina, resource, capacity, manpower ve Crown kontrollerini atlar. GM ayrica aninda bos regiment veya duzenlenebilir recruitment kaydi ekleyebilir.
+`Direct GM`, bina, resource, capacity, Manpower Reserve ve Crown kontrollerini atlar. GM ayrica aninda bos regiment veya duzenlenebilir recruitment kaydi ekleyebilir.
 
 ## Growth, Public Order ve Defense
 
@@ -187,9 +191,16 @@ Growth; Base, Safety, Food, Migration, War, Famine, Plague, Tax, Raid, Other, bi
 
 - Varsayilan dunya siniri ayda yuzde -5 ile +5'tir.
 - GM yuzdeyi veya dogrudan POP degisimini override edebilir.
-- Public Order 0-100 arasindadir. Staffed civic ve defense binalari etkin degeri degistirir.
-- Defense, staffed bina defense degeri ile garrison regiment powerinin bir bolumunden gelir.
-- Defense ve mitigation etiketleri uygun negatif d100 olay kayiplarini azaltabilir.
+- Public Order 0-100 arasindadir. Staffed civic ve defense binalari etkin degeri degistirir. Built-in Food binalari Public Order vermez.
+- `Unrest` 0-24: growth -0,75 ve d100 -5.
+- `Unstable` 25-49: growth -0,25 ve d100 -2.
+- `Stable` 50-74: ek modifier yoktur.
+- `Content` 75-89: growth +0,25 ve d100 +2.
+- `Prosperous` 90-100: growth +0,5 ve d100 +4.
+- Defense = staffed bina Defense toplami + garrison regiment Power degerinin yuzde 50'sidir.
+- Tier hedefleri Hamlet 20, Village 60, Town 160, City 420 ve Metropolis 1.100'dur. Rules icinden degistirilebilir.
+- Coverage, hedefe oranla `Exposed`, `Guarded`, `Fortified` veya `Fortress` olarak gosterilir. Zararli defense-event etkisi hedef oranina gore azalir; azaltma en fazla yuzde 50'dir.
+- Mitigation tag'i eslesen bir bina negatif event modifierlarini ayrica yariya indirebilir.
 
 ### Settlement Policy
 
@@ -216,13 +227,14 @@ GM Controls icinde:
 Yerleske ay sirasi:
 
 1. Tur oncesi snapshot alinir.
-2. Free POP ve bina bonusu CP olarak aktif insaatlara dagitilir.
-3. Net Crown, Food ve Materials uygulanir.
-4. Food durumuna gore Public Order ayarlanir.
-5. Recruitment kuyruklari bina kapasitesine gore ilerler.
-6. Growth uygulanir.
-7. 1d100 ay sonu olayi secilir ve GM onayina birakilir.
-8. Islem Chronicle'a yazilir ve yerleske o ay icin processed olur.
+2. Manpower Reserve, Rules oranina gore yenilenir.
+3. Free POP ve bina bonusu CP olarak aktif insaatlara dagitilir.
+4. Net Crown, Food ve Materials uygulanir.
+5. Food acigi varsa Public Order dusurulur.
+6. Recruitment kuyruklari bina kapasitesine gore ilerler.
+7. Growth uygulanir ve suresi biten aktif modifierlar kaldirilir.
+8. 1d100 ay sonu olayi secilir ve GM onayina birakilir.
+9. Islem Chronicle'a yazilir ve yerleske o ay icin processed olur.
 
 d100 sonucu:
 
@@ -230,11 +242,14 @@ d100 sonucu:
 Final Roll = 1d100 + Public Order Modifier + Building/Policy Bonus - Food Shortage Penalty
 ```
 
-Final Roll 1-100 arasinda tutulur. GM `Pending Month Events` kartinda Crown, Food, Materials, POP ve Public Order etkilerini degistirebilir:
+Final Roll 1-100 arasinda tutulur. Eventler dogrudan Crown, Food, Materials veya POP eklemez. GM `Pending Month Events` kartinda Income, Building Upkeep, Food Output, Materials Output, Construction, Recruitment Cost, Military Upkeep, Growth ve Public Order modifierlarini ve 0-12 aylik suresini duzenleyebilir:
 
-- `Apply`: duzenlenmis etkileri uygular.
+- `Apply Modifier`: yuzdesel/puan modifierini belirtilen sureyle Active Modifiers listesine ekler.
+- `Narrative Only`: olayi Chronicle'a yazar fakat mekanik etki uygulamaz.
 - `Reroll`: ayni ay icin yeni olay atar ve karti degistirir.
-- `Ignore`: olayi kayda alir fakat etki uygulamaz.
+- `Ignore`: olayi etkisiz olarak kayda alir.
+
+Aktif modifierlar sonraki ay hesaplarina uygulanir ve her islenen ay sonunda bir sure kaybeder. GM aktif modifieri GM Controls icinden erken kaldirabilir. Bu model, tek zarla sabit ve kirik miktarda para verilmesini onler; olay sonucunun anlatidaki ayrintisini GM belirler.
 
 Content Library'deki event araliklari cakistirilabilir; ayni sonucu karsilayan birden fazla event varsa sistem uygunlar arasindan birini secer.
 Bekleyen bir olay cozulmeden ilgili yerleske yeniden islenemez ve global ay kapatilamaz. Boylece olaylar sessizce ust uste birikmez.
@@ -243,7 +258,7 @@ Bekleyen bir olay cozulmeden ilgili yerleske yeniden islenemez ve global ay kapa
 
 Her settlement islemi oncesinde snapshot alinir. `Turn Recovery` listesinden eski snapshot geri yuklenebilir.
 
-Snapshot; tier, POP, Treasure, Food, Materials, Public Order, binalar, regimentler, recruitment, projeler, slotlar, growth, notlar, pending events ve Chronicle kaydini geri getirir. Dunya ay numarasini geri almaz; gerekirse GM World Month'u ayri duzeltir.
+Snapshot; tier, POP, Treasure, Food, Materials, Public Order, Manpower Reserve, aktif modifierlar, binalar, regimentler, recruitment, projeler, slotlar, growth, notlar, pending events ve Chronicle kaydini geri getirir. Dunya ay numarasini geri almaz; gerekirse GM World Month'u ayri duzeltir.
 
 Varsayilan saklama sayisi 5'tir ve Rules ekranindan 1-20 arasinda degistirilir.
 
@@ -262,17 +277,17 @@ De Laurent bir sablon degildir. Normal oyuncu yerleskesidir ve sablon islemleri 
 
 ## Content Library - GM
 
-Building node alanlari arasinda category, renkli branch, Special, family, tier, parent IDs, settlement tieri, aciklama, terrain, Crown/Materials/Food/CP maliyetleri, workers, tum output/upkeep degerleri, Public Order, Defense, event bonusu, strategic ve mitigation tags, slot use, bonus slots, Military Capacity, recruitment listesi ve resim bulunur.
+Building node alanlari arasinda category, renkli branch, Special, Landmark, family, tier, parent IDs, settlement tieri, aciklama, terrain, Crown/Materials/Food/CP maliyetleri, workers, tum output/upkeep degerleri, Public Order, Defense, event bonusu, strategic ve mitigation tags, slot use, bonus slots, Military Capacity, recruitment listesi ve resim bulunur.
 
 Unit alanlari arasinda tier, recruit cost, Power, Food consumption, strategic tag, settlement limiti, Special, Actor UUID, aciklama ve resim bulunur. Upkeep dunya yuzdelerinden hesaplanir.
 
-Event alanlari arasinda d100 minimum/maksimum, severity, aciklama, bes kaynak etkisi, defense divisor, mitigation tags ve resim bulunur.
+Event alanlari arasinda d100 minimum/maksimum, severity, aciklama, sure, dokuz ekonomi/askeri modifier, Defense kullanimi, mitigation tags ve resim bulunur.
 
 Building kutuphanesinin ust kismi branchleri renkli T1-T5 agacinda gosterir; alttaki editorler ayni branch basliklari altinda gruplanir. `Apply Existing`, bir building veya unit sablonundaki guncel degerleri mevcut instance'lara uygular. Bu dugme geri donusu genis bir islem oldugu icin kullanmadan once ilgili dunya yedegini tutmak iyi bir uygulamadir.
 
 ## Veri Gecisi
 
-v0.1.7 ve daha eski veriler schema v4'e otomatik tasinir.
+v0.1.8 ve daha eski veriler schema v5'e otomatik tasinir.
 
 - Yerleske kimligi, sahiplik, bina instance'lari, regimentler, kuyruklar, notlar ve loglar korunur.
 - Eski built-in bina kimlikleri yeni ailelerdeki en yakin dugume eslenir.
@@ -280,8 +295,8 @@ v0.1.7 ve daha eski veriler schema v4'e otomatik tasinir.
 - Professional/Militia ve yedi combat alani tek Military Capacity ve Power sistemine tasinir.
 - Regimentlere Maximum Strength, settlementlara policy ve tier bazli gelir alanlari eklenir.
 - Metropolis'ten dusurulen yerleskelerde bos eski slotlar yeni tier azamisine kadar daralir; dolu slotlar korunur.
-- De Laurent'in bilinen eski binalari Village icin T1-T2 Food, Materials, Commerce ve Estate dugumlerine eslenir; eski T3 ornek projesi iade edilerek kaldirilir.
-- Food, Materials, Public Order, manpower, event, policy, replenishment ve snapshot alanlari eksik kayitlara eklenir.
+- De Laurent'in bilinen eski Estate dugumleri tek tierless Laurent Manor Landmark'ina birlestirilir; normal district ve worker kullanmaz.
+- Food, Materials, Public Order, Manpower Reserve, aktif modifier, event, policy, replenishment ve snapshot alanlari eksik kayitlara eklenir.
 - Hazir Hamlet-Town sablonlari dunya verisine eklenir.
 - De Laurent mevcut oyuncu kaydi olarak kalir.
 
@@ -302,5 +317,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Download:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.8.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.9.zip
 ```

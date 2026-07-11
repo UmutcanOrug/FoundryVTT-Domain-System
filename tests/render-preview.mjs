@@ -73,7 +73,8 @@ data.settlements[0].pendingEvents = [{
   name: "Merchant Caravan",
   description: "A wealthy caravan chooses the settlement as its seasonal market.",
   severity: "opportunity",
-  effects: { crown: 25000, food: 0, materials: 250, population: 0, publicOrder: 2 },
+  effects: { incomePercent: 15, recruitmentCostPercent: -5 },
+  duration: 2,
   mitigationText: "Market security prevented losses.",
   status: "pending",
   imageUrl: "",
@@ -89,6 +90,7 @@ data.settlements[0].turnSnapshots = [{
 
 const previews = [
   ["overview", "buildings"],
+  ["overview-picker", "buildings"],
   ["town", "buildings"],
   ["construction", "buildings"],
   ["recruitment", "buildings"],
@@ -100,12 +102,13 @@ const previews = [
 ];
 
 for (const [name, catalogKind] of previews) {
-  context.__preview.uiState.activeTab = name.startsWith("catalog") ? "catalog" : name;
+  context.__preview.uiState.activeTab = name.startsWith("catalog") ? "catalog" : name.startsWith("overview") ? "overview" : name;
   context.__preview.uiState.catalogKind = catalogKind;
+  context.__preview.uiState.selectedDistrictSlotId = name === "overview-picker" ? data.settlements[0].buildings.find(item => item.catalogId === "farmstead")?.slotId || "slot-4" : "";
   const html = render(context.__preview.buildContext(data));
   fs.writeFileSync(path.join(testDir, `ui-preview-${name}.html`), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=018c">
+<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=019b">
 <style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"+";font-size:.72em}</style>
 </head><body><div class="ds-window"><div class="window-content">${html}</div></div></body></html>`, "utf8");
 }
@@ -116,7 +119,7 @@ for (const name of ["player-construction", "player-recruitment"]) {
   const html = render(context.__preview.buildContext(data));
   fs.writeFileSync(path.join(testDir, `ui-preview-${name}.html`), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=018c">
+<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=019b">
 <style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"+";font-size:.72em}</style>
 </head><body><div class="ds-window"><div class="window-content">${html}</div></div></body></html>`, "utf8");
 }
