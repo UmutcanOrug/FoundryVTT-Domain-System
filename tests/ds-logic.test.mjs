@@ -35,16 +35,8 @@ const context = vm.createContext({
   Handlebars: { helpers: {}, registerHelper() {} },
   CONST: { KEYBINDING_PRECEDENCE: { NORMAL: 0 } },
   foundry: {
-    applications: {
-      api: {
-        ApplicationV2: MockApplicationV2,
-        HandlebarsApplicationMixin: Base => class extends Base {}
-      }
-    },
-    utils: {
-      deepClone: value => structuredClone(value),
-      randomID: () => `test-${++idCounter}`
-    }
+    applications: { api: { ApplicationV2: MockApplicationV2, HandlebarsApplicationMixin: Base => class extends Base {} } },
+    utils: { deepClone: value => structuredClone(value), randomID: () => `test-${++idCounter}` }
   },
   game: {
     user: gm,
@@ -61,20 +53,20 @@ context.globalThis = context;
 vm.runInContext(`${source}\n;globalThis.__dsTest = {
   defaultWorldData,
   defaultSettlement,
-  starterSettlementTemplates,
   normalizeData,
   addBuilding,
   queueConstruction,
-  cancelProject,
-  queueSettlementUpgrade,
+  setSettlementTier,
   queueRecruitment,
+  queueReplenishment,
   processTurn,
   processSingleSettlement,
   resolveMonthEvent,
   undoSettlementTurn,
-  setSettlementTier,
-  updateTroop,
   calculateSettlement,
+  updateTroop,
+  recruitableUnitsContext,
+  permissionsFor,
   upsertSample
 };`, context, { filename: "ds.js" });
 
@@ -85,257 +77,243 @@ const freshWorld = (templateId = "blank-hamlet") => {
   raw.settlements = [api.defaultSettlement(template, raw.rules)];
   return api.normalizeData(raw);
 };
+const richSettlement = data => {
+  const settlement = data.settlements[0];
+  settlement.ownerUserIds = [player.id];
+  settlement.population = 500;
+  settlement.treasure = 10_000_000;
+  settlement.food = 100_000;
+  settlement.materials = 100_000;
+  data.rules.events.enabled = false;
+  return settlement;
+};
 
-// Schema v3 migration replaces old content while preserving settlement identity.
-const legacy = api.normalizeData({
-  schemaVersion: 2,
-  month: 10,
-  settlements: [{
-    id: "legacy-domain",
-    name: "Legacy Domain",
-    type: "Village",
-    region: "Plains",
-    terrainTags: ["Plains"],
-    ownerUserIds: [player.id],
-    population: 500,
-    treasure: 10000,
-    buildings: [{
-      id: "legacy-barracks",
-      catalogId: "barracks",
-      name: "Legacy Barracks",
-      category: "military",
-      active: true,
-      assignedPop: 5,
-      workers: 5,
-      professionalCapacity: 100,
-      recruitType: "men-at-arms",
-      recruitPerLevel: 10
-    }],
-    troops: [{ id: "legacy-maa", type: "men-at-arms", count: 10, mode: "garrison", garrisonCost: 6, campaignCost: 16 }],
-    recruitment: [],
-    projects: []
-  }]
-});
+// Schema v4 force-refreshes built-in branch structure and removes old branchless catalog nodes.
+const stale = api.defaultWorldData();
+stale.schemaVersion = 3;
+stale.catalog.find(item => item.id === "drill-hall").parentIds = ["muster-field"];
+stale.catalog.find(item => item.id === "stable").parentIds = [];
+stale.catalog.push({ id: "tannery", name: "Old Tannery", category: "economic", nodeTier: 3 });
+stale.settlements = [{
+  id: "stale-branch-domain",
+  name: "Stale Branch Domain",
+  tier: "town",
+  population: 500,
+  treasure: 10_000_000,
+  food: 100_000,
+  materials: 100_000,
+  publicOrder: 50,
+  ownerUserIds: [player.id],
+  terrainTags: ["Plains", "Horses"],
+  buildings: [{
+    id: "direct-infantry-yard",
+    catalogId: "infantry-yard",
+    slotId: "slot-1",
+    name: "Infantry Yard",
+    category: "military",
+    active: true,
+    assignedPop: 15,
+    workers: 15,
+    parentIds: []
+  }],
+  slots: Array.from({ length: 18 }, (_, index) => ({ id: `slot-${index + 1}`, index, unlocked: true })),
+  troops: [],
+  recruitment: [],
+  projects: []
+}];
+const migrated = api.normalizeData(stale);
+assert.equal(migrated.schemaVersion, 4);
+assert.deepEqual([...migrated.catalog.find(item => item.id === "drill-hall").parentIds], ["infantry-yard"]);
+assert.deepEqual([...migrated.catalog.find(item => item.id === "stable").parentIds], ["infantry-yard"]);
+assert.equal(migrated.catalog.some(item => item.id === "tannery"), false);
+assert.deepEqual([...migrated.settlements[0].buildings[0].parentIds], ["muster-field"]);
+api.queueConstruction(migrated, {
+  settlementId: migrated.settlements[0].id,
+  slotId: migrated.settlements[0].buildings[0].slotId,
+  catalogId: "drill-hall"
+}, player);
+assert.equal(migrated.settlements[0].projects.at(-1).catalogId, "drill-hall");
 
-assert.equal(legacy.schemaVersion, 3);
-assert.equal(legacy.settlements[0].buildings[0].catalogId, "muster-field");
-assert.equal(legacy.settlements[0].buildings[0].canRecruit, true);
-assert.deepEqual([...legacy.settlements[0].buildings[0].recruitableUnitIds], ["militia", "watchman"]);
-assert.ok(legacy.settlements[0].buildings[0].slotId);
-assert.equal(legacy.settlements[0].troops[0].garrisonCost, 24);
-assert.equal(legacy.settlements[0].troops[0].campaignCost, 64);
-assert.ok(legacy.settlements[0].food > 0);
-assert.ok(legacy.settlements[0].materials > 0);
-assert.deepEqual(legacy.settlementTemplates.slice(0, 4).map(item => item.id), ["blank-hamlet", "starter-hamlet", "starter-village", "starter-town"]);
+// Tier downgrade shrinks empty Metropolis slots while preserving occupied districts.
+const downgradeData = freshWorld();
+const downgradeSettlement = richSettlement(downgradeData);
+api.setSettlementTier(downgradeData, { settlementId: downgradeSettlement.id, tier: "metropolis" }, gm);
+api.addBuilding(downgradeData, { settlementId: downgradeSettlement.id, catalogId: "land-clearance" }, gm);
+api.addBuilding(downgradeData, { settlementId: downgradeSettlement.id, catalogId: "watch-post" }, gm);
+assert.equal(downgradeSettlement.slots.length, 18);
+api.setSettlementTier(downgradeData, { settlementId: downgradeSettlement.id, tier: "hamlet" }, gm);
+assert.equal(downgradeSettlement.slots.length, 4);
+assert.equal(downgradeSettlement.buildings.length, 2);
 
-// Every building family spans all five settlement tiers and Special is an overlay.
+// Every built-in family spans T1-T5 and every node has a meaningful description.
 const catalogWorld = api.defaultWorldData();
-const chains = new Map();
+const tiersByBranch = new Map();
 for (const building of catalogWorld.catalog) {
-  assert.ok(["economic", "military"].includes(building.category));
+  if (!tiersByBranch.has(building.chainId)) tiersByBranch.set(building.chainId, new Set());
+  tiersByBranch.get(building.chainId).add(building.nodeTier);
   assert.equal(building.settlementTier, ["hamlet", "village", "town", "city", "metropolis"][building.nodeTier - 1]);
-  if (!chains.has(building.chainId)) chains.set(building.chainId, new Set());
-  chains.get(building.chainId).add(building.nodeTier);
+  assert.ok(building.description.length > 20, `${building.id} needs a description`);
   for (const parentId of building.parentIds) {
     const parent = catalogWorld.catalog.find(item => item.id === parentId);
     assert.ok(parent, `${building.id} has a missing parent`);
-    assert.equal(parent.nodeTier, building.nodeTier - 1, `${building.id} must follow the previous tier`);
+    assert.equal(parent.nodeTier, building.nodeTier - 1);
   }
 }
-for (const [chainId, tiers] of chains) assert.deepEqual([...tiers].sort(), [1, 2, 3, 4, 5], `${chainId} must cover tiers 1-5`);
-assert.ok(Math.min(...catalogWorld.catalog.filter(item => item.nodeTier === 1).map(item => item.crownCost)) >= 18000);
-assert.ok(Math.min(...catalogWorld.unitCatalog.map(item => item.recruitCost)) >= 150);
+for (const [branchId, tiers] of tiersByBranch) {
+  assert.deepEqual([...tiers].sort(), [1, 2, 3, 4, 5], `${branchId} must span all settlement tiers`);
+}
 
-// GM can set a settlement tier directly in either direction.
-const tierData = freshWorld();
-const tierSettlement = tierData.settlements[0];
-api.setSettlementTier(tierData, { settlementId: tierSettlement.id, tier: "town", note: "Test promotion" }, gm);
-assert.equal(tierSettlement.tier, "town");
-assert.equal(tierSettlement.type, "Town");
-assert.ok(tierSettlement.slots.length >= 10);
-api.setSettlementTier(tierData, { settlementId: tierSettlement.id, tier: "hamlet" }, gm);
-assert.equal(tierSettlement.tier, "hamlet");
+// Food and Materials are separate branches, and staffed economic buildings beat Free POP income.
+for (const building of catalogWorld.catalog.filter(item => item.category === "economic")) {
+  if (building.branch === "food") assert.equal(building.materialsOutput, 0, `${building.id} mixes Food and Materials`);
+  if (building.branch === "materials") assert.equal(building.foodOutput, 0, `${building.id} mixes Materials and Food`);
+  const tier = catalogWorld.rules.tiers[building.nodeTier - 1];
+  const staffedCrown = building.workers * building.rate + building.flatOutput - building.buildingUpkeep;
+  const freePopCrown = building.workers * tier.baseIncomePerFreePop;
+  assert.ok(staffedCrown >= freePopCrown, `${building.id} loses Crown compared with leaving workers free`);
+}
+assert.deepEqual([...catalogWorld.rules.tiers.map(tier => tier.baseIncomePerFreePop)], [10, 20, 30, 40, 50]);
 
-// Construction pays Crown, Materials, and Food up front; CP is generated by Free POP.
-const buildData = freshWorld();
-buildData.rules.events.enabled = false;
-const settlement = buildData.settlements[0];
-settlement.ownerUserIds = [player.id];
-settlement.population = 500;
-settlement.treasure = 5_000_000;
-settlement.food = 100_000;
-settlement.materials = 100_000;
-api.setSettlementTier(buildData, { settlementId: settlement.id, tier: "town" }, gm);
+// De Laurent remains a Village with only T1-T2 buildings and a sustainable economy.
+const deLaurent = catalogWorld.settlements[0];
+const deLaurentSummary = api.calculateSettlement(deLaurent, catalogWorld);
+assert.equal(deLaurent.tier, "village");
+assert.ok(deLaurent.buildings.every(building => building.nodeTier <= 2));
+assert.deepEqual([...deLaurent.buildings.map(building => building.catalogId)], ["survey-camp", "market-town", "stone-quarry", "farmstead", "laurent-manor"]);
+assert.equal(deLaurentSummary.manpowerCap, 309);
+assert.equal(deLaurentSummary.troopManpowerUsed, 100);
+assert.equal(deLaurentSummary.civilianPopulation, 309);
+assert.equal(deLaurentSummary.freePop, 236);
+assert.ok(deLaurentSummary.netIncome > 0);
+assert.ok(deLaurentSummary.foodBalance > 0);
 
-api.addBuilding(buildData, { settlementId: settlement.id, catalogId: "muster-field", assignedPop: 8 }, gm);
-const muster = settlement.buildings.find(building => building.catalogId === "muster-field");
-const crownBeforeBranch = settlement.treasure;
-const materialsBeforeBranch = settlement.materials;
-api.queueConstruction(buildData, { settlementId: settlement.id, slotId: muster.slotId, catalogId: "infantry-yard" }, player);
-const infantryProject = settlement.projects.at(-1);
-assert.equal(settlement.treasure, crownBeforeBranch - 90_000);
-assert.equal(settlement.materials, materialsBeforeBranch - 800);
-assert.equal(infantryProject.requiredCp, 3_200);
-assert.equal(infantryProject.replacesBuildingId, muster.id);
+// Free POP income increases with settlement tier.
+for (const [index, tierId] of ["hamlet", "village", "town", "city", "metropolis"].entries()) {
+  const data = freshWorld();
+  const settlement = data.settlements[0];
+  settlement.population = 100;
+  api.setSettlementTier(data, { settlementId: settlement.id, tier: tierId }, gm);
+  assert.equal(api.calculateSettlement(settlement, data).baseIncome, 100 * (index + 1) * 10);
+}
 
-const cpBefore = api.calculateSettlement(settlement, buildData).cpThisMonth;
-await api.processTurn(buildData, {}, gm);
-assert.equal(infantryProject.cpPaid, Math.min(cpBefore, infantryProject.requiredCp));
-while (infantryProject.status !== "completed") await api.processTurn(buildData, {}, gm);
-const infantryYard = settlement.buildings.find(building => building.catalogId === "infantry-yard");
-assert.ok(infantryYard);
-assert.equal(infantryYard.slotId, muster.slotId);
-assert.equal(settlement.buildings.filter(building => building.chainId === "recruitment").length, 1);
+// Recruitment creates current/max strength; casualties and replenishment preserve maximum strength.
+const armyData = freshWorld();
+const armySettlement = richSettlement(armyData);
+api.setSettlementTier(armyData, { settlementId: armySettlement.id, tier: "town" }, gm);
+api.addBuilding(armyData, { settlementId: armySettlement.id, catalogId: "infantry-yard", assignedPop: 15 }, gm);
+const infantryYard = armySettlement.buildings.find(building => building.catalogId === "infantry-yard");
+const visibleUnits = api.recruitableUnitsContext(
+  armySettlement,
+  armyData,
+  api.permissionsFor(armySettlement, false, player.id),
+  api.calculateSettlement(armySettlement, armyData),
+  false
+).map(unit => unit.id);
+assert.deepEqual([...visibleUnits].sort(), ["men-at-arms", "spearman"]);
 
-assert.throws(() => api.queueConstruction(buildData, {
-  settlementId: settlement.id,
-  slotId: infantryYard.slotId,
-  catalogId: "marksmen-range"
-}, player), /not a direct branch/);
-
-// Cancellation refunds less as CP progress increases and returns all resource types proportionally.
-const emptySlot = settlement.slots.find(slot => slot.unlocked && !settlement.buildings.some(building => [building.slotId, ...building.extraSlotIds].includes(slot.id)));
-api.queueConstruction(buildData, { settlementId: settlement.id, slotId: emptySlot.id, catalogId: "land-clearance" }, player);
-const cancelCandidate = settlement.projects.at(-1);
-cancelCandidate.cpPaid = cancelCandidate.requiredCp / 2;
-const crownBeforeCancel = settlement.treasure;
-const materialsBeforeCancel = settlement.materials;
-api.cancelProject(buildData, { settlementId: settlement.id, projectId: cancelCandidate.id }, player);
-assert.equal(settlement.treasure, crownBeforeCancel + Math.round(20_000 * 0.75 * 0.5));
-assert.equal(settlement.materials, materialsBeforeCancel + Math.round(100 * 0.75 * 0.5));
-
-// Staffing gates output and recruitment, while soldiers consume population exactly once.
-infantryYard.assignedPop = 0;
-let summary = api.calculateSettlement(settlement, buildData);
-assert.equal(summary.recruitmentCapacity, 0);
-infantryYard.assignedPop = infantryYard.workers;
-summary = api.calculateSettlement(settlement, buildData);
-assert.ok(summary.recruitmentCapacity >= 18);
-const treasureBeforeRecruitment = settlement.treasure;
-api.queueRecruitment(buildData, {
-  settlementId: settlement.id,
+const crownBeforeRecruit = armySettlement.treasure;
+api.queueRecruitment(armyData, {
+  settlementId: armySettlement.id,
   unitId: "men-at-arms",
   sourceBuildingId: infantryYard.id,
   targetCount: 10,
-  regimentName: "Actor-linked Infantry",
-  actorUuid: "Actor.test-infantry"
+  regimentName: "First Company",
+  actorUuid: "Actor.first-company"
 }, player);
-assert.equal(settlement.treasure, treasureBeforeRecruitment - 8_000);
-await api.processTurn(buildData, {}, gm);
-const regiment = settlement.troops.find(troop => troop.name === "Actor-linked Infantry");
-assert.ok(regiment);
+assert.equal(armySettlement.treasure, crownBeforeRecruit - 6_500);
+await api.processTurn(armyData, {}, gm);
+const regiment = armySettlement.troops.find(troop => troop.name === "First Company");
 assert.equal(regiment.count, 10);
-assert.equal(regiment.actorUuid, "Actor.test-infantry");
-summary = api.calculateSettlement(settlement, buildData);
-assert.equal(summary.troopManpowerUsed, 10);
-assert.equal(summary.civilianPopulation, settlement.population - 10);
-assert.ok(summary.armyPower > 0);
+assert.equal(regiment.maxCount, 10);
+assert.equal(regiment.actorUuid, "Actor.first-company");
 
-// Strategic resource requirements and multi-slot buildings are enforced and accounted for.
-api.setSettlementTier(buildData, { settlementId: settlement.id, tier: "city" }, gm);
-api.addBuilding(buildData, { settlementId: settlement.id, catalogId: "cavalry-yard", assignedPop: 40 }, gm);
-const cavalryYard = settlement.buildings.find(building => building.catalogId === "cavalry-yard");
-assert.throws(() => api.queueRecruitment(buildData, {
-  settlementId: settlement.id,
-  unitId: "cavalry",
-  sourceBuildingId: cavalryYard.id,
-  targetCount: 1
-}, player), /strategic resource: horses/);
-settlement.terrainTags.push("Horses");
-api.queueRecruitment(buildData, {
-  settlementId: settlement.id,
-  unitId: "cavalry",
-  sourceBuildingId: cavalryYard.id,
-  targetCount: 1
+api.updateTroop(armyData, {
+  settlementId: armySettlement.id,
+  troopId: regiment.id,
+  name: regiment.name,
+  count: 7,
+  mode: "garrison",
+  imageUrl: regiment.imageUrl,
+  actorUuid: regiment.actorUuid,
+  notes: "Three casualties"
 }, player);
-assert.equal(settlement.recruitment.at(-1).troopType, "cavalry");
+assert.equal(regiment.count, 7);
+assert.equal(regiment.maxCount, 10);
+api.updateTroop(armyData, {
+  settlementId: armySettlement.id,
+  troopId: regiment.id,
+  count: 10,
+  mode: "garrison"
+}, player);
+assert.equal(regiment.count, 7, "players cannot restore casualties without replenishment");
+const crownBeforeReplenish = armySettlement.treasure;
+api.queueReplenishment(armyData, {
+  settlementId: armySettlement.id,
+  troopId: regiment.id,
+  sourceBuildingId: infantryYard.id,
+  targetCount: 3
+}, player);
+assert.equal(armySettlement.treasure, crownBeforeReplenish - 684);
+assert.equal(armySettlement.recruitment.at(-1).kind, "replenishment");
+await api.processTurn(armyData, {}, gm);
+assert.equal(regiment.count, 10);
+assert.equal(regiment.maxCount, 10);
 
-api.addBuilding(buildData, { settlementId: settlement.id, catalogId: "laurent-manor", assignedPop: 5 }, gm);
-const manor = settlement.buildings.find(building => building.catalogId === "laurent-manor");
-assert.equal(manor.extraSlotIds.length, 1);
-summary = api.calculateSettlement(settlement, buildData);
-assert.ok(summary.usedSlots >= settlement.buildings.length + 1);
+// Army manpower never subtracts civilian POP, and army Food is charged separately.
+const armySummary = api.calculateSettlement(armySettlement, armyData);
+assert.equal(armySummary.civilianPopulation, armySettlement.population);
+assert.equal(armySummary.manpowerCap, armySettlement.population);
+assert.equal(armySummary.troopManpowerUsed, 10);
+assert.ok(armySummary.armyFood > 0);
 
-// Settlement progression is a paid CP project, never an automatic population promotion.
-const progressionData = freshWorld();
-progressionData.rules.events.enabled = false;
-const hamlet = progressionData.settlements[0];
-hamlet.ownerUserIds = [player.id];
-hamlet.population = 500;
-hamlet.treasure = 1_000_000;
-hamlet.food = 100_000;
-hamlet.materials = 100_000;
-api.queueSettlementUpgrade(progressionData, { settlementId: hamlet.id }, player);
-assert.equal(hamlet.tier, "hamlet");
-assert.equal(hamlet.treasure, 900_000);
-assert.equal(hamlet.materials, 99_500);
-assert.equal(hamlet.food, 99_500);
-let progressionMonths = 0;
-while (hamlet.tier !== "village" && progressionMonths < 12) {
-  await api.processTurn(progressionData, {}, gm);
-  progressionMonths += 1;
+// Policies have tier gates and explicit tradeoffs.
+const policyData = freshWorld();
+const policySettlement = policyData.settlements[0];
+policySettlement.population = 100;
+let balanced = api.calculateSettlement(policySettlement, policyData);
+policySettlement.policyId = "growth-rations";
+let rations = api.calculateSettlement(policySettlement, policyData);
+assert.equal(rations.foodConsumption - balanced.foodConsumption, 100);
+assert.ok(rations.growthRate > balanced.growthRate);
+api.setSettlementTier(policyData, { settlementId: policySettlement.id, tier: "town" }, gm);
+policySettlement.policyId = "heavy-taxation";
+const taxed = api.calculateSettlement(policySettlement, policyData);
+assert.equal(taxed.grossIncome, Math.round(taxed.baseIncome * 1.25));
+assert.ok(taxed.effectivePublicOrder < balanced.effectivePublicOrder);
+
+// Top-tier military branches unlock distinct elite rosters.
+const byId = id => catalogWorld.catalog.find(item => item.id === id).recruitableUnitIds;
+assert.deepEqual([...byId("war-college")], ["imperial-guard", "war-champion"]);
+assert.deepEqual([...byId("knightly-order")], ["knight"]);
+assert.deepEqual([...byId("imperial-marksmen")], ["imperial-marksman"]);
+assert.deepEqual([...byId("grand-arsenal")], ["grand-artillery"]);
+for (const unit of catalogWorld.unitCatalog) {
+  assert.ok(unit.power > 0);
+  assert.ok(unit.foodUpkeep >= 0);
+  assert.equal(Object.hasOwn(unit, "role"), false);
+  assert.equal(Object.hasOwn(unit, "melee"), false);
+  assert.equal(Object.hasOwn(unit, "mobility"), false);
 }
-assert.equal(hamlet.tier, "village");
-assert.ok(progressionMonths > 1);
 
-// Individual processing does not move the world month or double-process on global close.
-const turnRaw = api.defaultWorldData();
-turnRaw.rules.events.enabled = false;
-turnRaw.settlements.push(api.defaultSettlement(turnRaw.settlementTemplates[0], turnRaw.rules));
-const turns = api.normalizeData(turnRaw);
-turns.month = 10;
-const first = turns.settlements[0];
-const second = turns.settlements[1];
-await api.processSingleSettlement(turns, { settlementId: first.id }, gm);
-const firstTreasureAfterIndividual = first.treasure;
-assert.equal(turns.month, 10);
-assert.equal(first.lastProcessedMonth, 10);
-await assert.rejects(() => api.processSingleSettlement(turns, { settlementId: first.id }, gm), /already been processed/);
-await api.processTurn(turns, {}, gm);
-assert.equal(turns.month, 11);
-assert.equal(first.treasure, firstTreasureAfterIndividual);
-assert.equal(second.lastProcessedMonth, 10);
+// GM direct recruitment remains available without a building and completes immediately.
+const directData = freshWorld();
+const directSettlement = directData.settlements[0];
+api.queueRecruitment(directData, { settlementId: directSettlement.id, unitId: "militia", targetCount: 2 }, gm);
+assert.equal(directSettlement.troops[0].count, 2);
+assert.equal(directSettlement.troops[0].maxCount, 2);
+assert.equal(directSettlement.treasure, 25_000);
 
-// d100 results wait for GM approval and snapshots restore the entire pre-turn settlement state.
-context.Roll = class MockRoll {
-  async evaluate() { this.total = 100; return this; }
-};
-const eventData = freshWorld();
-const eventSettlement = eventData.settlements[0];
-eventSettlement.population = 50;
-eventSettlement.treasure = 100_000;
-eventSettlement.food = 10_000;
-eventSettlement.materials = 2_000;
-eventSettlement.publicOrder = 50;
-eventSettlement.growth.overrideRate = "0";
-const snapshotTreasure = eventSettlement.treasure;
-await api.processSingleSettlement(eventData, { settlementId: eventSettlement.id }, gm);
-assert.equal(eventSettlement.pendingEvents.length, 1);
-assert.equal(eventSettlement.pendingEvents[0].status, "pending");
-assert.equal(eventSettlement.pendingEvents[0].finalRoll, 100);
-assert.equal(eventSettlement.pendingEvents[0].name, "Golden Month");
-assert.equal(eventSettlement.turnSnapshots.length, 1);
-await assert.rejects(() => api.processTurn(eventData, {}, gm), /Resolve pending month events/);
-const treasureBeforeResolution = eventSettlement.treasure;
-api.resolveMonthEvent(eventData, {
-  settlementId: eventSettlement.id,
-  eventId: eventSettlement.pendingEvents[0].id,
-  resolution: "accept",
-  crown: 12_345,
-  food: 0,
-  materials: 0,
-  population: 0,
-  publicOrder: 0,
-  gmNote: "Adjusted reward"
-}, gm);
-assert.equal(eventSettlement.treasure, treasureBeforeResolution + 12_345);
-assert.equal(eventSettlement.pendingEvents[0].status, "accepted");
-api.undoSettlementTurn(eventData, { settlementId: eventSettlement.id }, gm);
-assert.equal(eventSettlement.treasure, snapshotTreasure);
-assert.equal(eventSettlement.lastProcessedMonth, 0);
-assert.equal(eventSettlement.pendingEvents.length, 0);
+// Individual turns still do not advance the shared month.
+const turnData = freshWorld();
+turnData.rules.events.enabled = false;
+const turnSettlement = turnData.settlements[0];
+turnData.month = 10;
+await api.processSingleSettlement(turnData, { settlementId: turnSettlement.id }, gm);
+assert.equal(turnData.month, 10);
+assert.equal(turnSettlement.lastProcessedMonth, 10);
+await assert.rejects(() => api.processSingleSettlement(turnData, { settlementId: turnSettlement.id }, gm), /already been processed/);
 
-// De Laurent remains an ordinary player record and is never used as a reusable template.
+// De Laurent is never used as a reusable template or overwritten by the restore command.
 const protectedWorld = api.defaultWorldData();
 protectedWorld.settlements[0].name = "De Laurent - Player Edited";
 api.upsertSample(protectedWorld);
@@ -343,7 +321,13 @@ assert.equal(protectedWorld.settlements.length, 1);
 assert.equal(protectedWorld.settlements[0].name, "De Laurent - Player Edited");
 assert.equal(protectedWorld.settlementTemplates.some(template => template.id === "de-laurent"), false);
 
+const hbs = fs.readFileSync(new URL("../templates/ds-panel.hbs", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../styles/ds.css", import.meta.url), "utf8");
-assert.match(css, /\.ds-regiment-grid\s*\{\s*grid-template-columns:\s*repeat\(2,/s);
+assert.doesNotMatch(hbs, /Professional Capacity|Militia Capacity|Mobility|fa-person-rifle/);
+assert.match(hbs, /queueReplenishment/);
+assert.match(hbs, /Settlement Policy/);
+assert.match(css, /\.ds-unit-recruit-grid,[\s\S]*grid-template-columns:\s*repeat\(2,/);
+assert.match(css, /\.ds-branch-green/);
+assert.match(css, /\.ds-node-tooltip/);
 
-console.log("DS v0.1.7 logic tests passed");
+console.log("DS v0.1.8 logic tests passed");

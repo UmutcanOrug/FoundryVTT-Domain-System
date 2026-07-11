@@ -1893,3 +1893,304 @@
   .ds-event-effect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ds-snapshot-list article { align-items: stretch; flex-direction: column; }
 }
+
+/* v0.1.8 branch trees, policies, and regiment strength */
+.ds-branch-green { --ds-branch: #6ea878; }
+.ds-branch-silver { --ds-branch: #aeb7bc; }
+.ds-branch-gold { --ds-branch: #c9a64f; }
+.ds-branch-teal { --ds-branch: #55a59a; }
+.ds-branch-red { --ds-branch: #b45454; }
+
+.ds-record-card.ds-branch-green,
+.ds-record-card.ds-branch-silver,
+.ds-record-card.ds-branch-gold,
+.ds-record-card.ds-branch-teal,
+.ds-record-card.ds-branch-red,
+.ds-slot-card.ds-branch-green,
+.ds-slot-card.ds-branch-silver,
+.ds-slot-card.ds-branch-gold,
+.ds-slot-card.ds-branch-teal,
+.ds-slot-card.ds-branch-red,
+.ds-overview-slot.ds-branch-green,
+.ds-overview-slot.ds-branch-silver,
+.ds-overview-slot.ds-branch-gold,
+.ds-overview-slot.ds-branch-teal,
+.ds-overview-slot.ds-branch-red {
+  border-top: 3px solid var(--ds-branch);
+}
+
+.ds-build-choice.ds-branch-green,
+.ds-build-choice.ds-branch-silver,
+.ds-build-choice.ds-branch-gold,
+.ds-build-choice.ds-branch-teal,
+.ds-build-choice.ds-branch-red,
+.ds-overview-build-choice.ds-branch-green,
+.ds-overview-build-choice.ds-branch-silver,
+.ds-overview-build-choice.ds-branch-gold,
+.ds-overview-build-choice.ds-branch-teal,
+.ds-overview-build-choice.ds-branch-red {
+  border-left-color: var(--ds-branch);
+}
+
+.ds-effect-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin-top: 4px;
+}
+
+.ds-effect-badges em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 5px;
+  border: 1px solid var(--ds-border-soft);
+  border-radius: 4px;
+  background: #141815;
+  color: #d7d3c8;
+  font-size: 0.72em;
+  font-style: normal;
+  white-space: normal;
+}
+
+.ds-effect-badges .food { border-color: #537f5b; color: #b9d9bd; }
+.ds-effect-badges .materials { border-color: #79858c; color: #d4dadd; }
+.ds-effect-badges .crown { border-color: #8c7338; color: #e4ca83; }
+.ds-effect-badges .military { border-color: #8c4444; color: #e5aaaa; }
+.ds-effect-badges .civic { border-color: #3e7972; color: #a8d7d0; }
+.ds-effect-badges .upkeep { border-color: #75504b; color: #d8aaa2; }
+
+.ds-branch-tree-list,
+.ds-library-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ds-branch-tree {
+  min-width: 0;
+  border: 1px solid var(--ds-border-soft);
+  border-top: 3px solid var(--ds-branch);
+  border-radius: 6px;
+  background: rgba(24, 29, 25, 0.97);
+}
+
+.ds-branch-tree > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ds-border-soft);
+}
+
+.ds-branch-tree > header > i { color: var(--ds-branch); }
+.ds-branch-tree > header > span { margin-left: auto; color: var(--ds-muted); text-transform: capitalize; }
+.ds-branch-levels { display: grid; padding: 8px; }
+
+.ds-branch-level {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 74px;
+  padding: 7px 0;
+}
+
+.ds-branch-level:not(:last-child)::after {
+  position: absolute;
+  bottom: -5px;
+  left: 16px;
+  width: 2px;
+  height: 12px;
+  background: var(--ds-branch);
+  content: "";
+}
+
+.ds-tier-marker {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--ds-branch);
+  border-radius: 4px;
+  background: #101310;
+  color: var(--ds-branch);
+  font-weight: 700;
+}
+
+.ds-branch-level-nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  gap: 7px;
+}
+
+.ds-tree-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 6px;
+  border: 1px solid #454b47;
+  border-left: 3px solid var(--ds-branch);
+  background: #171c18;
+}
+
+.ds-tree-node > img,
+.ds-tree-node > i {
+  grid-row: 1 / span 2;
+  width: 34px;
+  height: 42px;
+  object-fit: cover;
+}
+
+.ds-tree-node > i { display: grid; place-items: center; color: var(--ds-branch); }
+.ds-tree-node > strong,
+.ds-tree-node > small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-tree-node > small { color: var(--ds-muted); font-size: 0.72em; }
+.ds-tree-node.built { border-color: #6ea878; background: #203126; }
+.ds-tree-node.queued { border-color: #c9a64f; background: #332d1d; }
+
+.ds-node-tooltip {
+  position: absolute;
+  z-index: 60;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  display: none;
+  width: min(330px, 72vw);
+  padding: 9px;
+  border: 1px solid var(--ds-branch);
+  border-radius: 5px;
+  background: #0d110e;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.62);
+  transform: translateX(-50%);
+}
+
+.ds-tree-node:hover .ds-node-tooltip,
+.ds-tree-node:focus .ds-node-tooltip,
+.ds-tree-node:focus-within .ds-node-tooltip { display: grid; gap: 6px; }
+.ds-node-tooltip h4,
+.ds-node-tooltip p { margin: 0; }
+.ds-node-tooltip p,
+.ds-node-tooltip small { color: var(--ds-muted); }
+
+.ds-library-branch {
+  border: 1px solid var(--ds-border-soft);
+  border-left: 4px solid var(--ds-branch);
+  border-radius: 6px;
+  background: #151a16;
+}
+
+.ds-library-branch > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ds-library-branch > summary::-webkit-details-marker { display: none; }
+.ds-library-branch > summary > span { margin-left: auto; color: var(--ds-muted); }
+.ds-library-branch > summary > i:first-child { color: var(--ds-branch); }
+.ds-library-branch[open] > summary > .fa-chevron-down { transform: rotate(180deg); }
+.ds-library-branch-body { display: grid; gap: 7px; padding: 0 8px 8px; }
+.ds-library-tree-grid { margin-bottom: 14px; }
+
+.ds-check-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ds-check-grid > label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ds-policy-panel p,
+.ds-rule-chapter > p { margin: 4px 0; color: var(--ds-muted); line-height: 1.45; }
+.ds-policy-list { display: grid; gap: 6px; }
+.ds-policy-list > div { padding: 7px; border-left: 3px solid var(--ds-teal); background: #171c19; }
+.ds-policy-list strong { margin-right: 7px; }
+.ds-policy-list span { color: var(--ds-gold-2); }
+.ds-policy-list p { margin: 3px 0 0; color: var(--ds-muted); }
+.ds-rules-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.ds-tier-editor-list form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ds-overview-slot > summary small {
+  min-height: 2.3em;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.ds-unit-recruit-grid,
+.ds-regiment-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ds-regiment-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ds-regiment-editor {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  padding: 9px;
+}
+
+.ds-regiment-body { display: grid; gap: 7px; min-width: 0; }
+.ds-regiment-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.ds-regiment-editor footer { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; color: var(--ds-muted); }
+.ds-regiment-editor footer > span { margin-right: auto; }
+.ds-strength { height: 8px; }
+
+.ds-replenish-bar {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(160px, 1fr) 74px 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  border-top: 1px solid #754747;
+  background: #211818;
+}
+
+.ds-replenish-bar > span { color: #dfb0aa; }
+.ds-replenish-bar button { width: 34px; min-width: 34px; padding: 0; }
+
+@media (max-width: 1100px) {
+  .ds-library-tree-grid,
+  .ds-branch-tree-list,
+  .ds-unit-recruit-grid,
+  .ds-regiment-grid { grid-template-columns: 1fr; }
+  .ds-check-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ds-tier-editor-list form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .ds-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ds-rules-grid { grid-template-columns: 1fr; }
+  .ds-check-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ds-regiment-editor { grid-template-columns: 84px minmax(0, 1fr); }
+  .ds-regiment-image { width: 84px; }
+  .ds-replenish-bar { grid-template-columns: 1fr 74px 34px; }
+  .ds-replenish-bar > span { grid-column: 1 / -1; }
+  .ds-tier-editor-list form { grid-template-columns: 1fr; }
+}

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.8
+
+- Migrated world data to schema v4 and force-refreshed stale built-in branch data so directly placed Infantry Yards correctly develop into Drill Hall or Stable Compound.
+- Fixed settlement downgrades retaining empty Metropolis districts; slots now shrink to the new tier while preserving occupied and required support slots.
+- Rebalanced every built-in economic building so full staffing is at least as profitable as leaving the same workers as Free POP, while keeping City and Metropolis investments expensive.
+- Added tier-based Free POP Crown income of 10/20/30/40/50 from Hamlet through Metropolis.
+- Replaced the old Land/Resources catalog with separated Food and Materials branches; built-in Food nodes no longer produce Materials and Materials nodes no longer produce Food.
+- Removed legacy branchless economic templates from the active catalog and expanded migration mappings for existing settlements and projects.
+- Replaced Professional/Militia capacity with one readable Military Capacity pool.
+- Replaced Quality and seven combat attributes with one GM-editable Power value per unit.
+- Added distinct T4-T5 elite rosters for War College, Knightly Order, Imperial Marksmen Academy, Royal Arsenal, and Grand Arsenal branches.
+- Changed manpower to use Total POP at a default 100% rate; soldiers no longer subtract civilian POP and 309 POP now normally provides 309 manpower cap.
+- Added Current/Maximum regiment strength, casualty editing, partial-cost replenishment orders, manpower reservation, and monthly recruitment-capacity processing.
+- Added per-soldier Food consumption and included Army Food in monthly settlement consumption.
+- Added tier-gated settlement policies for expanded rations, heavy taxation, war taxes, muster reserves, public festivals, and balanced administration.
+- Limited player recruitment cards to units unlocked by completed staffed buildings while retaining Direct GM recruitment as an explicit override.
+- Rebuilt Construction and Content Library around color-coded vertical T1-T5 branch trees with hover infoboxes, descriptions, effects, costs, parents, and recruited units.
+- Grouped Content Library building editors by Food, Materials, Commerce, Civic, Recruitment, Defense, Siege, and Laurent Estate branches.
+- Reworked regiment and recruitment cards into a maximum two-column layout with simplified Power, Food, cost, strength, Actor, image, and replenishment controls.
+- Replaced free-text terrain/biome entry with checkbox sets plus strategic-resource and custom-tag controls.
+- Expanded Rules into an in-module player handbook covering POP, income, Food, Materials, CP, branch construction, manpower, replenishment, Public Order, events, and policies.
+- Rebuilt De Laurent's default and migration data around Village-appropriate T1-T2 buildings and refunded its obsolete sample T3 project.
+
 ## 0.1.7
 
 - Migrated world data to schema v3 with Crown, Food, Materials, Public Order, manpower, strategic tags, defense, army power, pending events, and turn snapshots.
