@@ -16,6 +16,7 @@ DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, econ
 
 - Hamlet, Village, Town, City, and Metropolis progression with editable population, costs, CP, open slots, and maximum slots.
 - Default district limits of `2/3`, `3/4`, `4/6`, `6/8`, and `8/10` from Hamlet through Metropolis.
+- Default Crown promotion costs of `20,000/80,000/300,000/1,000,000` from Village through Metropolis.
 - Tier-based Free POP Crown income of `10/20/30/40/50`.
 - Pure Grain and Stone branches, hybrid Pastoral and Foundry branches, dedicated Commerce income, and Civic Order/Growth development.
 - Terrain and Biome gates are removed; settlement identity is carried by its region, description, background, buildings, and landmarks.
@@ -25,11 +26,13 @@ DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, econ
 - Exact Food Security bands from `-3%` Growth below 50% coverage to `+1.5%` Growth at 200% coverage.
 - Exact Public Order income modifiers of `-50/-25/0/+10/+20%`, plus Growth and event-roll effects.
 - Population pressure on both Growth and Public Order, configurable by the GM.
+- A visible Public Order equation showing Base, Buildings, Policy, Events, Population Pressure, and the resulting Effective Order.
+- Heroic Land Grants for early development: `+20 POP` each month with major Crown, Food, upkeep, and Order penalties that remain flat as the settlement grows.
 - One manpower cap based on Total POP, a recovering manpower reserve, and a separate pooled monthly Recruitment Capacity.
 - One unit upkeep value, defaulting to 20% of recruit price per month.
 - Defense buildings with explicit free auto-garrisons, Public Order, and Siege Event Mitigation percentages. Auto Garrison Power is a reference value; the current version does not auto-resolve sieges.
 - Current / Maximum regiment strength, per-regiment images and Actor UUID links, and building-free replenishment.
-- A paged 4x2 Overview district board, compact branch selector, aligned lineage trees, branch colors, and hidden locked player units.
+- A paged 4x2 Overview district board, compact branch selector, fixed-row lineage trees, branch colors, and hidden locked player units.
 - A scroll-safe Overview branch workspace that keeps Tier IV-V reachable at wide and narrow Foundry window sizes.
 - Tierless landmarks that consume no district, plus immediate or queued GM landmark placement.
 - Building-granted slots are generic district slots; Laurent Manor and Grand Fortress grant two, while Stone Walls grants one.
@@ -39,11 +42,11 @@ DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, econ
 - Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town templates.
 - Individual settlement processing, pending-only global month close, duplicate-process protection, and pre-turn snapshots.
 - De Laurent remains a player settlement and never becomes a reusable template.
-- Schema v10 migration preserves custom settlements, ownership, catalog entries, images, Actors, regiments, logs, customized Laurent Manor values, and custom tier rules while refreshing the revised economic and military identities.
+- Schema v11 migration preserves custom settlements, ownership, catalog entries, images, Actors, regiments, logs, customized Laurent Manor values, custom rank prices, and custom slot rules while refreshing old default Crown prices.
 
 ## Balance Reference
 
-The automated v0.1.14 City scenario uses `5,000 POP`, one Food district, seven other City districts, and Laurent Manor. It produces `249,150` gross Crown, pays `15,390` building upkeep, sustains approximately `2,365 Men-at-Arms`, and retains `145%` Food coverage. Separate upper-bound tests confirm that one suitable Food district sustains an army-free settlement through its tier; armies create the intended additional pressure.
+The automated v0.1.15 City scenario uses `5,000 POP`, one Food district, seven other City districts, and Laurent Manor. Monthly outputs remain deliberately unchanged by the capital-price pass: `249,150` gross Crown, `15,390` building upkeep, approximately `2,365 Men-at-Arms` sustainable, and `145%` Food coverage. A representative six-district T3 Town now has `285,000` Crown in final-node prices instead of `1,550,000`.
 
 See `KULLANIM-KILAVUZU.md` for the complete Turkish workflow and rule reference.
 
@@ -64,5 +67,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.14.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.15.zip
 ```

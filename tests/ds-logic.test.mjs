@@ -103,9 +103,9 @@ const prepareSettlement = (data, population = 500) => {
   return settlement;
 };
 
-// Schema v10 and settlement hierarchy defaults.
+// Schema v11 and settlement hierarchy defaults.
 const defaults = api.defaultWorldData();
-assert.equal(defaults.schemaVersion, 10);
+assert.equal(defaults.schemaVersion, 11);
 assert.deepEqual(
   [...defaults.rules.tiers.map(tier => [tier.openSlots, tier.maxSlots])],
   [[2, 3], [3, 4], [4, 6], [6, 8], [8, 10]]
@@ -113,6 +113,10 @@ assert.deepEqual(
 assert.equal(defaults.rules.military.upkeepPercent, 20);
 assert.equal(defaults.rules.military.manpowerRecoveryRate, 10);
 assert.equal(defaults.rules.economy.replenishmentCostPercent, 35);
+assert.deepEqual(
+  [...defaults.rules.tiers.map(tier => tier.promotionCost)],
+  [0, 20_000, 80_000, 300_000, 1_000_000]
+);
 
 // v0.1.12 data migrates once without overwriting custom Laurent values or custom slot rules.
 const stale = api.defaultWorldData();
@@ -131,7 +135,7 @@ staleManor.recruitPerLevel = 17;
 staleManor.imageUrl = "world/laurent-custom.webp";
 const migrated = api.normalizeData(stale);
 const migratedManor = migrated.settlements[0].buildings.find(building => building.catalogId === "laurent-manor");
-assert.equal(migrated.schemaVersion, 10);
+assert.equal(migrated.schemaVersion, 11);
 assert.equal(migrated.rules.tiers.find(tier => tier.id === "city").openSlots, 7);
 assert.equal(migrated.rules.tiers.find(tier => tier.id === "city").maxSlots, 9);
 assert.equal(migratedManor.workers, 20);
@@ -145,6 +149,23 @@ assert.equal(migrated.settlements[0].food, 0);
 assert.deepEqual([...migrated.settlements[0].biomeTags], []);
 assert.deepEqual([...migrated.settlements[0].terrainTags], []);
 assert.equal(migrated.settlementTemplates.find(template => template.id === "starter-village").buildings.find(building => building.catalogId === "farmstead").foodOutput, 500);
+
+// Schema v11 reprices old defaults while preserving deliberately customized rank costs.
+const stalePriceWorld = api.defaultWorldData();
+stalePriceWorld.schemaVersion = 10;
+for (const [tierId, crown] of Object.entries({ village: 100_000, town: 400_000, city: 1_500_000, metropolis: 5_000_000 })) {
+  stalePriceWorld.rules.tiers.find(tier => tier.id === tierId).promotionCost = crown;
+}
+stalePriceWorld.rules.tiers.find(tier => tier.id === "city").promotionCost = 777_777;
+stalePriceWorld.catalog.find(item => item.id === "merchants-guild").crownCost = 320_000;
+stalePriceWorld.catalog.find(item => item.id === "drill-hall").crownCost = 280_000;
+const repriced = api.normalizeData(stalePriceWorld);
+assert.equal(repriced.rules.tiers.find(tier => tier.id === "village").promotionCost, 20_000);
+assert.equal(repriced.rules.tiers.find(tier => tier.id === "town").promotionCost, 80_000);
+assert.equal(repriced.rules.tiers.find(tier => tier.id === "city").promotionCost, 777_777);
+assert.equal(repriced.rules.tiers.find(tier => tier.id === "metropolis").promotionCost, 1_000_000);
+assert.equal(repriced.catalog.find(item => item.id === "merchants-guild").crownCost, 35_000);
+assert.equal(repriced.catalog.find(item => item.id === "drill-hall").crownCost, 35_000);
 
 // Built-in trees are complete, described, and no longer depend on strategic resources.
 const catalogWorld = api.defaultWorldData();
@@ -204,6 +225,28 @@ assert.equal(byBuildingId("cultural-capital").incomeBonusPercent, 25);
 assert.equal(byBuildingId("sacred-university").publicOrder, 0);
 assert.equal(byBuildingId("sacred-university").growth, 3);
 assert.equal(byBuildingId("sacred-university").buildingUpkeepDiscount, 20);
+assert.equal(byBuildingId("merchants-guild").crownCost, 35_000);
+assert.equal(byBuildingId("drill-hall").crownCost, 35_000);
+assert.equal(byBuildingId("stable").crownCost, 40_000);
+assert.equal(byBuildingId("watch-post").crownCost * 2, byBuildingId("muster-field").crownCost);
+assert.equal(byBuildingId("palisade").crownCost * 2, byBuildingId("infantry-yard").crownCost);
+assert.equal(byBuildingId("stone-walls").crownCost * 2, byBuildingId("stable").crownCost);
+assert.equal(byBuildingId("citadel").crownCost * 2, byBuildingId("rangers-lodge").crownCost);
+assert.equal(byBuildingId("grand-fortress").crownCost * 2, byBuildingId("imperial-marksmen").crownCost);
+const townTier3Crown = ["merchants-guild", "grain-estate", "masonry-district", "festival-hall", "drill-hall", "stone-walls"]
+  .reduce((sum, id) => sum + byBuildingId(id).crownCost, 0);
+assert.equal(townTier3Crown, 285_000);
+
+const townBudgetData = freshWorld();
+const townBudgetSettlement = prepareSettlement(townBudgetData, 1_000);
+api.setSettlementTier(townBudgetData, { settlementId: townBudgetSettlement.id, tier: "town" }, gm);
+townBudgetSettlement.slots.forEach(slot => slot.unlocked = true);
+for (const catalogId of ["merchants-guild", "grain-estate", "masonry-district", "festival-hall", "drill-hall", "stone-walls"]) {
+  api.addBuilding(townBudgetData, { settlementId: townBudgetSettlement.id, catalogId }, gm);
+}
+const townBudgetSummary = api.calculateSettlement(townBudgetSettlement, townBudgetData);
+assert.ok(townBudgetSummary.netIncome >= 30_000);
+assert.ok(townTier3Crown / townBudgetSummary.netIncome <= 10, "a representative T3 Town should finance its final nodes in roughly ten months or less");
 
 // Labor is automatic and binary; halted or labor-starved buildings pay half upkeep.
 const laborData = freshWorld();
@@ -249,15 +292,15 @@ assert.equal(investmentSummary.constructionMaterialsDiscount, 5);
 assert.equal(investmentSummary.constructionCpPercent, 5);
 assert.equal(investmentSummary.cpThisMonth, Math.floor((500 - 20) * 1.05));
 const tradingPost = investmentData.catalog.find(item => item.id === "trading-post");
-assert.deepEqual({ ...api.constructionCost(tradingPost, investmentSettlement) }, { crown: 28_500, cp: 1_000, materials: 95, food: 0 });
+assert.deepEqual({ ...api.constructionCost(tradingPost, investmentSettlement) }, { crown: 1_900, cp: 1_000, materials: 95, food: 0 });
 const occupiedInvestmentSlots = new Set(investmentSettlement.buildings.map(building => building.slotId));
 const investmentSlot = investmentSettlement.slots.find(slot => slot.unlocked && !occupiedInvestmentSlots.has(slot.id));
 const investmentTreasure = investmentSettlement.treasure;
 const investmentMaterials = investmentSettlement.materials;
 api.queueConstruction(investmentData, { settlementId: investmentSettlement.id, slotId: investmentSlot.id, catalogId: tradingPost.id }, player);
-assert.equal(investmentSettlement.treasure, investmentTreasure - 28_500);
+assert.equal(investmentSettlement.treasure, investmentTreasure - 1_900);
 assert.equal(investmentSettlement.materials, investmentMaterials - 95);
-assert.equal(investmentSettlement.projects.at(-1).requiredCrown, 28_500);
+assert.equal(investmentSettlement.projects.at(-1).requiredCrown, 1_900);
 assert.equal(investmentSettlement.projects.at(-1).requiredMaterials, 95);
 
 // Food is a monthly flow. Stored values do not mask shortages or amplify abundance.
@@ -326,6 +369,22 @@ assert.equal(api.publicOrderPressureFor(100, orderData.rules), 0);
 assert.equal(api.publicOrderPressureFor(800, orderData.rules), -9);
 assert.equal(api.publicOrderPressureFor(1_000_000_000, orderData.rules), -25);
 assert.equal(api.populationPressureFor(800, orderData.rules), -0.75);
+
+// Heroic Land Grants accelerates early settlement growth through flat settlers and strong recurring costs.
+const heroData = freshWorld();
+const heroSettlement = prepareSettlement(heroData, 100);
+api.addBuilding(heroData, { settlementId: heroSettlement.id, catalogId: "watch-post" }, gm);
+const balancedSummary = api.calculateSettlement(heroSettlement, heroData);
+heroSettlement.policyId = "hero-land-grants";
+const heroSummary = api.calculateSettlement(heroSettlement, heroData);
+assert.equal(heroSummary.activePolicy.id, "hero-land-grants");
+assert.equal(heroSummary.policyFlatPopulation, 20);
+assert.equal(heroSummary.popChange, balancedSummary.popChange + 20);
+assert.equal(heroSummary.populationFood, balancedSummary.populationFood + 50);
+assert.equal(heroSummary.policyPublicOrder, -8);
+assert.equal(heroSummary.effectivePublicOrder, balancedSummary.effectivePublicOrder - 8);
+assert.equal(heroSummary.grossIncome, Math.round(balancedSummary.grossIncome * 0.6));
+assert.equal(heroSummary.buildingUpkeep, Math.round(balancedSummary.buildingUpkeep * 1.25));
 
 // One Total War-style upkeep is 20% of recruit cost regardless of old mode data.
 const menAtArms = catalogWorld.unitCatalog.find(unit => unit.id === "men-at-arms");
@@ -490,6 +549,7 @@ assert.equal(migratedUniqueData.catalog.find(item => item.id === "marksmen-range
 const treeLayout = api.treeLineageLayout(catalogWorld.catalog.filter(item => item.chainId === "recruitment"));
 assert.equal(treeLayout.columnCount, 3);
 assert.match(treeLayout.styles.get("muster-field"), /span 3/);
+assert.match(treeLayout.styles.get("muster-field"), /grid-row:\s*1/);
 assert.equal(treeLayout.styles.get("drill-hall"), treeLayout.styles.get("royal-barracks"));
 assert.equal(treeLayout.styles.get("stable"), treeLayout.styles.get("cavalry-yard"));
 assert.equal(treeLayout.styles.get("marksmen-range"), treeLayout.styles.get("rangers-lodge"));
@@ -602,6 +662,8 @@ assert.match(hbs, /does not resolve sieges, casualties, or battles/);
 assert.match(hbs, /no building or recruitment-capacity requirement/);
 assert.match(hbs, /Starvation below 50% gives -3% Growth/);
 assert.match(hbs, /Unrest 0-24 gives -50% Crown/);
+assert.match(hbs, /Base Public Order/);
+assert.match(hbs, /Public Order Breakdown/);
 assert.match(css, /\.ds-overview-districts:has\(\.ds-district-branch-overlay\)/);
 assert.match(css, /overscroll-behavior:\s*contain/);
 assert.match(css, /\.ds-regiment-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,/);
@@ -609,4 +671,4 @@ assert.match(css, /\.ds-regiment-strip\s*\{[\s\S]*grid-template-columns:\s*repea
 assert.match(css, /\.ds-regiment-settings-panel/);
 assert.match(css, /\.ds-slot-tree-nodes\s*\{[\s\S]*repeat\(var\(--tree-columns/);
 
-console.log("DS v0.1.14 logic tests passed");
+console.log("DS v0.1.15 logic tests passed");

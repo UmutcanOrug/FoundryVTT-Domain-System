@@ -22,14 +22,14 @@ Normal bina Tier 1-5, yerleske kademesiyle eslesir. Landmark tier kullanmaz ve n
 | Kademe | Minimum POP | Acik / Azami Slot | Free POP Geliri | Terfi Crown | Materials | CP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Hamlet | 0 | 2 / 3 | 10 | - | - | - |
-| Village | 100 | 3 / 4 | 20 | 100.000 | 500 | 3.000 |
-| Town | 500 | 4 / 6 | 30 | 400.000 | 2.500 | 12.000 |
-| City | 2.000 | 6 / 8 | 40 | 1.500.000 | 10.000 | 40.000 |
-| Metropolis | 8.000 | 8 / 10 | 50 | 5.000.000 | 35.000 | 120.000 |
+| Village | 100 | 3 / 4 | 20 | 20.000 | 500 | 3.000 |
+| Town | 500 | 4 / 6 | 30 | 80.000 | 2.500 | 12.000 |
+| City | 2.000 | 6 / 8 | 40 | 300.000 | 10.000 | 40.000 |
+| Metropolis | 8.000 | 8 / 10 | 50 | 1.000.000 | 35.000 | 120.000 |
 
 Food bir terfi veya insaat para birimi degildir. Terfi Crown ve Materials pesin odendikten sonra CP ile tamamlanir. GM `Settlement Rank` ile masrafsiz dogrudan kademe degistirebilir.
 
-GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v10 gecisi oyuncunun daha once degistirdigi custom slot degerlerini korur.
+GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v11 gecisi custom slot degerlerini ve varsayilandan farkli custom terfi fiyatlarini korur.
 
 ## Otomatik Is Gucu
 
@@ -64,6 +64,8 @@ Net Crown = Gross Crown - Building Upkeep - Army Upkeep
 - Commerce inland dali, tum yerleskenin Building Upkeep'ini yuzdesel azaltir.
 - Army upkeep indirimi ayri hesaplanir ve Building Upkeep'e uygulanmaz.
 - Ay sonunda Net Crown otomatik Treasure'a eklenir.
+
+v0.1.15 Crown fiyatlari yavas ilerleyen kampanya aylari icin yeniden olceklendi. Materials, CP, workforce, output ve upkeep ayni kaldi. Ornek T3 fiyatlari: Merchants Guild `35.000`, Drill Hall `35.000`, Stable Compound `40.000`, Festival Hall `75.000` ve Stone Walls `20.000` Crown. Merchants Guild + Grain Estate + Masonry District + Festival Hall + Drill Hall + Stone Walls son node toplami `285.000` Crown'dur.
 
 Oyuncu izinliyse Town icindeki `Treasury` panelinden Crown yatirabilir veya cekebilir. Her transfer Chronicle'a oyuncu adi, miktar ve kalan Treasury ile kaydedilir. Modul sistem bagimsiz oldugu icin karakter sheetindeki para otomatik degismez; oyuncu kendi sheet kaydini kampanya usulune gore duzeltir.
 
@@ -218,7 +220,7 @@ Eski belirsiz Defense target/coverage sistemi yoktur. Defense binalari somut gar
 
 ## Public Order
 
-Effective Order; GM base degeri, bina/policy/event bonuslari ve Population Order Pressure ile hesaplanir.
+Effective Order; Base Public Order, bina/policy/event bonuslari ve Population Order Pressure ile hesaplanir. Oyuncu Town ekranindaki `Public Order Breakdown` panelinde tum parcalari gorebilir. GM kalici baslangic degerini `GM Controls -> Settlement Ledger -> Base Public Order` alanindan degistirir.
 
 | Order | Durum | Crown | Growth | d100 |
 | --- | --- | ---: | ---: | ---: |
@@ -243,6 +245,7 @@ Growth icin ayri Population Pressure varsayilani her iki kat nufusta -0,25%, en 
 Her yerleskede ayni anda bir policy aktiftir.
 
 - `Balanced Administration`: modifier yok.
+- `Heroic Land Grants`: her ay duz +20 POP; -40% Crown, POP basina +0,5 Food, +25% Building Upkeep ve -8 Order. Bonus sabit kaldigi icin erken oyunda guclu, buyuk yerleskede verimsizdir.
 - `Expanded Rations`: POP basina +1 Food tuketimi, +0,75% Growth, +3 Order.
 - `Heavy Taxation`: +25% Crown, -0,5% Growth, -5 Order.
 - `War Taxes`: +10% Crown, -25% army upkeep, -0,75% Growth, -4 Order.
@@ -294,11 +297,11 @@ Laurent Manor:
 - Varsayilan +2 genel district slotu verir.
 - Varsayilan 20 Town Guard + 10 Men-at-Arms auto garrison verir.
 - Varsayilan +10% Siege Defense ve +6 Public Order verir.
-- Custom workers, upkeep, recruitment, resim ve not degerleri schema v10 gecisinde korunur.
+- Custom workers, upkeep, recruitment, resim ve not degerleri schema v11 gecisinde korunur.
 
-## Schema v10 Gecisi
+## Schema v11 Gecisi
 
-v0.1.13 ve daha eski dunya verileri otomatik tasinir.
+v0.1.14 ve daha eski dunya verileri otomatik tasinir.
 
 - Terrain ve Biome alanlari profil, sablon, bina editoru ve kurulum kosullarindan kaldirilir.
 - Iron/Horse resource ve unit gereksinimleri kaldirilir.
@@ -308,6 +311,9 @@ v0.1.13 ve daha eski dunya verileri otomatik tasinir.
 - Stone, Iron, Commerce, Civic ve Defense bonuslari v0.1.14 kimliklerine yenilenir; indirimler gercek kuyruk maliyetine ve aylik hesaplara uygulanir.
 - Built-in ust tier birlikler normal Infantry, Ranged, Cavalry ve Siege agaclarina tasinir. Gladiators ve Elven Guard Landmark-only Unique olarak eklenir.
 - Arena/Gladiator veya Elf adli custom Landmark'lar uygun Unique birimle otomatik eslestirilir.
+- Built-in bina Crown fiyatlari yeni 2-6 aylik yatirim egilimine yenilenir; mevcut aktif projelerin daha once odenmis bedeli degismez.
+- Eski varsayilan terfi fiyatlari bese bolunur. GM'in varsayilandan farkli custom terfi fiyatlari korunur.
+- Heroic Land Grants ve oyuncuya acik Public Order dokumu eklenir.
 - Manuel assignment yerine otomatik is gucu uygulanir.
 - Eski Garrison/Campaign upkeep tek %20 upkeep'e tasinir.
 - Settlement kimligi, owner, custom catalog, resim, regiment, Actor, log ve notlar korunur.
@@ -358,5 +364,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.14.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.15.zip
 ```

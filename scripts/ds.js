@@ -5,7 +5,7 @@ const SOCKET_NAME = `module.${MODULE_ID}`;
 const TEMPLATE_PATH = `modules/${MODULE_ID}/templates/ds-panel.hbs`;
 const ACTION_CONFIRM_TIMEOUT_MS = 15000;
 const DIRECT_RECRUITMENT_SOURCE = "__direct__";
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 const DISTRICT_PAGE_SIZE = 8;
 
 const TABS = [
@@ -96,6 +96,7 @@ const EVENT_EFFECT_KEYS = [
 
 const POLICY_OPTIONS = [
   policy("balanced", "Balanced Administration", "hamlet", "No modifier. The settlement follows the normal economy and growth rules."),
+  policy("hero-land-grants", "Heroic Land Grants", "hamlet", "The hero waives taxes and grants land to new households: +20 POP each month, -40% Crown income, +0.5 Food consumption per POP, +25% building upkeep, and -8 Public Order.", { incomeMultiplier: 0.6, buildingUpkeepMultiplier: 1.25, foodPerPop: 0.5, publicOrder: -8, flatPopulation: 20 }),
   policy("growth-rations", "Expanded Rations", "hamlet", "Each POP consumes 1 extra Food, but monthly growth gains +0.75% and Public Order gains +3.", { foodPerPop: 1, growth: 0.75, publicOrder: 3 }),
   policy("heavy-taxation", "Heavy Taxation", "village", "Crown income rises by 25%, while growth loses 0.5% and Public Order loses 5.", { incomeMultiplier: 1.25, growth: -0.5, publicOrder: -5 }),
   policy("war-taxes", "War Taxes", "town", "Crown income rises by 10% and army upkeep falls by 25%, but growth loses 0.75% and Public Order loses 4.", { incomeMultiplier: 1.1, militaryUpkeepMultiplier: 0.75, growth: -0.75, publicOrder: -4 }),
@@ -136,69 +137,69 @@ const TROOP_TYPES = [
 ];
 
 const BUILDING_CATALOG = [
-  eco("land-clearance", "Land Clearance", "Any", 10, 0, 20000, 800, { chainId: "food", nodeTier: 1, materialCost: 100, buildingUpkeep: 40, foodOutput: 120, description: "Opens the first agricultural district. It sustains a Hamlet and can later specialize in grain or pastoral development." }),
-  eco("farmstead", "Farmstead", "Any", 20, 0, 65000, 2500, { chainId: "food", nodeTier: 2, parentIds: ["land-clearance"], materialCost: 500, buildingUpkeep: 120, foodOutput: 500, growth: 0.1, description: "A mixed food district able to sustain a growing Village without requiring a second Food district. Armies still create additional demand." }),
-  eco("grain-estate", "Grain Estate", "Any", 35, 0, 220000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], materialCost: 1800, buildingUpkeep: 350, foodOutput: 2200, description: "The pure Town food branch provides the largest reserve for population growth and military supply." }),
-  eco("horse-ranch", "Pastoral Ranch", "Any", 30, 25, 240000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 500, materialCost: 1700, buildingUpkeep: 400, foodOutput: 1650, growth: 0.4, recruitmentDiscount: 2, description: "The hybrid Town branch still feeds its civilian population while trading reserve Food for Crown, Growth, and cheaper recruitment." }),
-  eco("grand-granary", "Grand Granary", "Any", 45, 0, 700000, 24000, { chainId: "food", nodeTier: 4, parentIds: ["grain-estate"], materialCost: 6000, buildingUpkeep: 1200, foodOutput: 8000, mitigationTags: ["famine"], description: "A City-scale grain system with enough civilian supply for growth and a deep margin for armies or shortages." }),
-  eco("royal-stud", "Royal Stockyards", "Any", 45, 45, 820000, 26000, { chainId: "food", nodeTier: 4, parentIds: ["horse-ranch"], flatOutput: 1000, materialCost: 6500, buildingUpkeep: 1500, foodOutput: 6200, growth: 0.8, recruitmentDiscount: 6, description: "Hybrid City stockyards cover civilian demand while exchanging military Food reserve for Crown, Growth, and recruitment savings." }),
-  eco("agrarian-heartland", "Agrarian Heartland", "Any", 70, 0, 2600000, 75000, { chainId: "food", nodeTier: 5, parentIds: ["grand-granary"], materialCost: 22000, buildingUpkeep: 4000, foodOutput: 18000, mitigationTags: ["famine", "migration"], special: true, description: "The pure metropolitan Food endpoint, designed to support a vast population and a substantial field army." }),
-  eco("imperial-stud", "Royal Pastures", "Any", 65, 70, 3000000, 85000, { chainId: "food", nodeTier: 5, parentIds: ["royal-stud"], flatOutput: 2500, materialCost: 25000, buildingUpkeep: 5000, foodOutput: 14000, growth: 1.25, recruitmentDiscount: 10, special: true, description: "The hybrid metropolitan endpoint keeps civilian supply secure while adding Crown, Growth, and major recruitment savings." }),
+  eco("land-clearance", "Land Clearance", "Any", 10, 0, 4000, 800, { chainId: "food", nodeTier: 1, materialCost: 100, buildingUpkeep: 40, foodOutput: 120, description: "Opens the first agricultural district. It sustains a Hamlet and can later specialize in grain or pastoral development." }),
+  eco("farmstead", "Farmstead", "Any", 20, 0, 12000, 2500, { chainId: "food", nodeTier: 2, parentIds: ["land-clearance"], materialCost: 500, buildingUpkeep: 120, foodOutput: 500, growth: 0.1, description: "A mixed food district able to sustain a growing Village without requiring a second Food district. Armies still create additional demand." }),
+  eco("grain-estate", "Grain Estate", "Any", 35, 0, 60000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], materialCost: 1800, buildingUpkeep: 350, foodOutput: 2200, description: "The pure Town food branch provides the largest reserve for population growth and military supply." }),
+  eco("horse-ranch", "Pastoral Ranch", "Any", 30, 25, 65000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 500, materialCost: 1700, buildingUpkeep: 400, foodOutput: 1650, growth: 0.4, recruitmentDiscount: 2, description: "The hybrid Town branch still feeds its civilian population while trading reserve Food for Crown, Growth, and cheaper recruitment." }),
+  eco("grand-granary", "Grand Granary", "Any", 45, 0, 220000, 24000, { chainId: "food", nodeTier: 4, parentIds: ["grain-estate"], materialCost: 6000, buildingUpkeep: 1200, foodOutput: 8000, mitigationTags: ["famine"], description: "A City-scale grain system with enough civilian supply for growth and a deep margin for armies or shortages." }),
+  eco("royal-stud", "Royal Stockyards", "Any", 45, 45, 250000, 26000, { chainId: "food", nodeTier: 4, parentIds: ["horse-ranch"], flatOutput: 1000, materialCost: 6500, buildingUpkeep: 1500, foodOutput: 6200, growth: 0.8, recruitmentDiscount: 6, description: "Hybrid City stockyards cover civilian demand while exchanging military Food reserve for Crown, Growth, and recruitment savings." }),
+  eco("agrarian-heartland", "Agrarian Heartland", "Any", 70, 0, 800000, 75000, { chainId: "food", nodeTier: 5, parentIds: ["grand-granary"], materialCost: 22000, buildingUpkeep: 4000, foodOutput: 18000, mitigationTags: ["famine", "migration"], special: true, description: "The pure metropolitan Food endpoint, designed to support a vast population and a substantial field army." }),
+  eco("imperial-stud", "Royal Pastures", "Any", 65, 70, 900000, 85000, { chainId: "food", nodeTier: 5, parentIds: ["royal-stud"], flatOutput: 2500, materialCost: 25000, buildingUpkeep: 5000, foodOutput: 14000, growth: 1.25, recruitmentDiscount: 10, special: true, description: "The hybrid metropolitan endpoint keeps civilian supply secure while adding Crown, Growth, and major recruitment savings." }),
 
-  eco("survey-camp", "Survey Camp", "Any", 8, 0, 25000, 900, { chainId: "materials", nodeTier: 1, materialCost: 50, buildingUpkeep: 40, materialsOutput: 180, description: "Maps usable deposits and starts a Materials district. It creates building resources rather than Crown." }),
-  eco("stone-quarry", "Stone Quarry", "Hills or Mountains", 20, 0, 75000, 2700, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], materialCost: 400, buildingUpkeep: 120, materialsOutput: 750, constructionCrownDiscount: 5, constructionMaterialsDiscount: 5, constructionCpPercent: 5, description: "The stone investment path lowers building Crown and Materials costs by 5% and raises monthly Construction CP by 5%." }),
-  eco("iron-mine", "Iron Mine", "Hills or Mountains", 20, 20, 90000, 3000, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], flatOutput: 100, materialCost: 450, buildingUpkeep: 140, materialsOutput: 600, upkeepDiscount: 5, description: "The military industry path mixes Crown and Materials while reducing raised-army upkeep by 5%." }),
-  eco("masonry-district", "Masonry District", "Any", 35, 0, 240000, 8500, { chainId: "materials", nodeTier: 3, parentIds: ["stone-quarry"], materialCost: 1700, buildingUpkeep: 400, materialsOutput: 2400, constructionCrownDiscount: 10, constructionMaterialsDiscount: 10, constructionCpPercent: 10, description: "Organized masons lower building Crown and Materials costs by 10% and raise monthly Construction CP by 10%." }),
-  eco("ironworks", "Ironworks", "Any", 35, 30, 280000, 9500, { chainId: "materials", nodeTier: 3, parentIds: ["iron-mine"], flatOutput: 500, materialCost: 2000, buildingUpkeep: 450, materialsOutput: 1900, upkeepDiscount: 10, description: "Hybrid forging produces Crown and Materials while reducing raised-army upkeep by 10%." }),
-  eco("builders-guild", "Builders Guild", "Any", 50, 0, 780000, 26000, { chainId: "materials", nodeTier: 4, parentIds: ["masonry-district"], materialCost: 6500, buildingUpkeep: 1400, materialsOutput: 7000, constructionCrownDiscount: 15, constructionMaterialsDiscount: 15, constructionCpPercent: 15, description: "A City construction industry that lowers building Crown and Materials costs by 15% and raises monthly Construction CP by 15%." }),
-  eco("grand-foundry", "Grand Foundry", "Any", 50, 45, 900000, 30000, { chainId: "materials", nodeTier: 4, parentIds: ["ironworks"], flatOutput: 1500, materialCost: 7500, buildingUpkeep: 1600, materialsOutput: 5400, upkeepDiscount: 15, description: "A City military foundry with balanced Crown and Materials plus a 15% raised-army upkeep reduction." }),
-  eco("monumental-works", "Monumental Works", "Any", 80, 0, 3000000, 85000, { chainId: "materials", nodeTier: 5, parentIds: ["builders-guild"], materialCost: 26000, buildingUpkeep: 4000, materialsOutput: 20000, constructionCrownDiscount: 20, constructionMaterialsDiscount: 20, constructionCpPercent: 20, special: true, description: "The stone endpoint provides unmatched Materials, 20% cheaper building Crown and Materials costs, and 20% more monthly Construction CP." }),
-  eco("industrial-complex", "Industrial Complex", "Any", 80, 65, 3400000, 95000, { chainId: "materials", nodeTier: 5, parentIds: ["grand-foundry"], flatOutput: 3500, materialCost: 30000, buildingUpkeep: 4800, materialsOutput: 15000, upkeepDiscount: 20, special: true, description: "The military industry endpoint combines Crown and Materials with a 20% raised-army upkeep reduction." }),
+  eco("survey-camp", "Survey Camp", "Any", 8, 0, 4000, 900, { chainId: "materials", nodeTier: 1, materialCost: 50, buildingUpkeep: 40, materialsOutput: 180, description: "Maps usable deposits and starts a Materials district. It creates building resources rather than Crown." }),
+  eco("stone-quarry", "Stone Quarry", "Hills or Mountains", 20, 0, 12000, 2700, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], materialCost: 400, buildingUpkeep: 120, materialsOutput: 750, constructionCrownDiscount: 5, constructionMaterialsDiscount: 5, constructionCpPercent: 5, description: "The stone investment path lowers building Crown and Materials costs by 5% and raises monthly Construction CP by 5%." }),
+  eco("iron-mine", "Iron Mine", "Hills or Mountains", 20, 20, 15000, 3000, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], flatOutput: 100, materialCost: 450, buildingUpkeep: 140, materialsOutput: 600, upkeepDiscount: 5, description: "The military industry path mixes Crown and Materials while reducing raised-army upkeep by 5%." }),
+  eco("masonry-district", "Masonry District", "Any", 35, 0, 60000, 8500, { chainId: "materials", nodeTier: 3, parentIds: ["stone-quarry"], materialCost: 1700, buildingUpkeep: 400, materialsOutput: 2400, constructionCrownDiscount: 10, constructionMaterialsDiscount: 10, constructionCpPercent: 10, description: "Organized masons lower building Crown and Materials costs by 10% and raise monthly Construction CP by 10%." }),
+  eco("ironworks", "Ironworks", "Any", 35, 30, 70000, 9500, { chainId: "materials", nodeTier: 3, parentIds: ["iron-mine"], flatOutput: 500, materialCost: 2000, buildingUpkeep: 450, materialsOutput: 1900, upkeepDiscount: 10, description: "Hybrid forging produces Crown and Materials while reducing raised-army upkeep by 10%." }),
+  eco("builders-guild", "Builders Guild", "Any", 50, 0, 220000, 26000, { chainId: "materials", nodeTier: 4, parentIds: ["masonry-district"], materialCost: 6500, buildingUpkeep: 1400, materialsOutput: 7000, constructionCrownDiscount: 15, constructionMaterialsDiscount: 15, constructionCpPercent: 15, description: "A City construction industry that lowers building Crown and Materials costs by 15% and raises monthly Construction CP by 15%." }),
+  eco("grand-foundry", "Grand Foundry", "Any", 50, 45, 250000, 30000, { chainId: "materials", nodeTier: 4, parentIds: ["ironworks"], flatOutput: 1500, materialCost: 7500, buildingUpkeep: 1600, materialsOutput: 5400, upkeepDiscount: 15, description: "A City military foundry with balanced Crown and Materials plus a 15% raised-army upkeep reduction." }),
+  eco("monumental-works", "Monumental Works", "Any", 80, 0, 800000, 85000, { chainId: "materials", nodeTier: 5, parentIds: ["builders-guild"], materialCost: 26000, buildingUpkeep: 4000, materialsOutput: 20000, constructionCrownDiscount: 20, constructionMaterialsDiscount: 20, constructionCpPercent: 20, special: true, description: "The stone endpoint provides unmatched Materials, 20% cheaper building Crown and Materials costs, and 20% more monthly Construction CP." }),
+  eco("industrial-complex", "Industrial Complex", "Any", 80, 65, 900000, 95000, { chainId: "materials", nodeTier: 5, parentIds: ["grand-foundry"], flatOutput: 3500, materialCost: 30000, buildingUpkeep: 4800, materialsOutput: 15000, upkeepDiscount: 20, special: true, description: "The military industry endpoint combines Crown and Materials with a 20% raised-army upkeep reduction." }),
 
-  eco("trading-post", "Trading Post", "Any", 10, 24, 30000, 1000, { chainId: "commerce", nodeTier: 1, flatOutput: 500, materialCost: 100, buildingUpkeep: 60, description: "The entry-level Crown district and the only economic root dedicated to direct income." }),
-  eco("market-town", "Market District", "Any", 20, 55, 110000, 3200, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1800, materialCost: 600, buildingUpkeep: 220, description: "Reliable inland commerce focused on strong, predictable Crown income." }),
-  eco("river-jetty", "River Jetty", "Any", 20, 50, 120000, 3600, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 2200, materialCost: 750, buildingUpkeep: 300, foodOutput: 60, materialsOutput: 80, eventRollBonus: 1, description: "Early river trade adds Crown plus small Food and Materials flows without replacing dedicated production districts." }),
-  eco("merchants-guild", "Merchants Guild", "Any", 35, 100, 320000, 10000, { chainId: "commerce", nodeTier: 3, parentIds: ["market-town"], flatOutput: 7000, materialCost: 2200, buildingUpkeep: 800, description: "A stable inland guild that concentrates entirely on dependable Crown income." }),
-  eco("trade-harbor", "Trade Harbor", "Any", 40, 95, 390000, 12000, { chainId: "commerce", nodeTier: 3, parentIds: ["river-jetty"], flatOutput: 9000, materialCost: 2800, buildingUpkeep: 1200, foodOutput: 220, materialsOutput: 250, eventRollBonus: 2, description: "A developed harbor producing Crown with useful secondary Food and Materials from overseas trade." }),
-  eco("grand-bazaar", "Grand Bazaar", "Any", 50, 170, 1000000, 32000, { chainId: "commerce", nodeTier: 4, parentIds: ["merchants-guild"], flatOutput: 18000, materialCost: 8000, buildingUpkeep: 2500, buildingUpkeepDiscount: 5, upkeepDiscount: 5, description: "A City market combining excellent Crown with 5% lower building and raised-army upkeep." }),
-  eco("grand-harbor", "Grand Harbor", "Any", 60, 165, 1200000, 38000, { chainId: "commerce", nodeTier: 4, parentIds: ["trade-harbor"], flatOutput: 24000, materialCost: 10000, buildingUpkeep: 3500, foodOutput: 650, materialsOutput: 800, eventRollBonus: 3, description: "A major maritime hub with superior Crown and modest Food and Materials support." }),
-  eco("world-market", "World Market", "Any", 75, 300, 3600000, 100000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-bazaar"], flatOutput: 45000, materialCost: 30000, buildingUpkeep: 7500, buildingUpkeepDiscount: 10, upkeepDiscount: 10, special: true, description: "The inland endpoint: very high stable Crown with 10% lower building and raised-army upkeep." }),
-  eco("imperial-port", "Imperial Port", "Any", 85, 290, 4200000, 115000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-harbor"], flatOutput: 60000, materialCost: 36000, buildingUpkeep: 9000, foodOutput: 1600, materialsOutput: 1800, eventRollBonus: 5, special: true, description: "The maritime endpoint provides the highest Crown plus meaningful secondary Food and Materials, while dedicated production districts remain stronger." }),
+  eco("trading-post", "Trading Post", "Any", 10, 24, 2000, 1000, { chainId: "commerce", nodeTier: 1, flatOutput: 500, materialCost: 100, buildingUpkeep: 60, description: "The entry-level Crown district and the only economic root dedicated to direct income." }),
+  eco("market-town", "Market District", "Any", 20, 55, 7000, 3200, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1800, materialCost: 600, buildingUpkeep: 220, description: "Reliable inland commerce focused on strong, predictable Crown income." }),
+  eco("river-jetty", "River Jetty", "Any", 20, 50, 8000, 3600, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 2200, materialCost: 750, buildingUpkeep: 300, foodOutput: 60, materialsOutput: 80, eventRollBonus: 1, description: "Early river trade adds Crown plus small Food and Materials flows without replacing dedicated production districts." }),
+  eco("merchants-guild", "Merchants Guild", "Any", 35, 100, 35000, 10000, { chainId: "commerce", nodeTier: 3, parentIds: ["market-town"], flatOutput: 7000, materialCost: 2200, buildingUpkeep: 800, description: "A stable inland guild that concentrates entirely on dependable Crown income." }),
+  eco("trade-harbor", "Trade Harbor", "Any", 40, 95, 40000, 12000, { chainId: "commerce", nodeTier: 3, parentIds: ["river-jetty"], flatOutput: 9000, materialCost: 2800, buildingUpkeep: 1200, foodOutput: 220, materialsOutput: 250, eventRollBonus: 2, description: "A developed harbor producing Crown with useful secondary Food and Materials from overseas trade." }),
+  eco("grand-bazaar", "Grand Bazaar", "Any", 50, 170, 60000, 32000, { chainId: "commerce", nodeTier: 4, parentIds: ["merchants-guild"], flatOutput: 18000, materialCost: 8000, buildingUpkeep: 2500, buildingUpkeepDiscount: 5, upkeepDiscount: 5, description: "A City market combining excellent Crown with 5% lower building and raised-army upkeep." }),
+  eco("grand-harbor", "Grand Harbor", "Any", 60, 165, 75000, 38000, { chainId: "commerce", nodeTier: 4, parentIds: ["trade-harbor"], flatOutput: 24000, materialCost: 10000, buildingUpkeep: 3500, foodOutput: 650, materialsOutput: 800, eventRollBonus: 3, description: "A major maritime hub with superior Crown and modest Food and Materials support." }),
+  eco("world-market", "World Market", "Any", 75, 300, 140000, 100000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-bazaar"], flatOutput: 45000, materialCost: 30000, buildingUpkeep: 7500, buildingUpkeepDiscount: 10, upkeepDiscount: 10, special: true, description: "The inland endpoint: very high stable Crown with 10% lower building and raised-army upkeep." }),
+  eco("imperial-port", "Imperial Port", "Any", 85, 290, 180000, 115000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-harbor"], flatOutput: 60000, materialCost: 36000, buildingUpkeep: 9000, foodOutput: 1600, materialsOutput: 1800, eventRollBonus: 5, special: true, description: "The maritime endpoint provides the highest Crown plus meaningful secondary Food and Materials, while dedicated production districts remain stronger." }),
 
-  eco("village-commons", "Village Commons", "Any", 6, 0, 18000, 700, { chainId: "civic", nodeTier: 1, materialCost: 80, buildingUpkeep: 50, publicOrder: 3, growth: 0.05, description: "The first Civic district. It produces no Crown, instead supporting Order and long-term population development." }),
-  eco("tavern-quarter", "Tavern Quarter", "Any", 15, 0, 70000, 2400, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], materialCost: 450, buildingUpkeep: 180, publicOrder: 7, eventRollBonus: 1, description: "The culture path focuses on Public Order and favorable monthly events." }),
-  eco("shrine-district", "Shrine District", "Any", 12, 0, 75000, 2600, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], materialCost: 500, buildingUpkeep: 160, publicOrder: 4, growth: 0.25, mitigationTags: ["plague"], description: "The welfare path gives less Order but adds Growth and early protection from plague." }),
-  eco("festival-hall", "Festival Hall", "Any", 25, 0, 230000, 8000, { chainId: "civic", nodeTier: 3, parentIds: ["tavern-quarter"], materialCost: 1700, buildingUpkeep: 600, publicOrder: 14, eventRollBonus: 3, description: "Festivals stabilize a Town and push its d100 results toward opportunities." }),
-  eco("temple-school", "Temple School", "Any", 25, 0, 250000, 8500, { chainId: "civic", nodeTier: 3, parentIds: ["shrine-district"], materialCost: 1900, buildingUpkeep: 650, publicOrder: 8, growth: 0.55, mitigationTags: ["plague", "unrest"], description: "Education and care counter population pressure through Growth and crisis protection." }),
-  eco("grand-theatre", "Grand Theatre", "Any", 40, 0, 720000, 24000, { chainId: "civic", nodeTier: 4, parentIds: ["festival-hall"], materialCost: 6000, buildingUpkeep: 1800, publicOrder: 24, eventRollBonus: 5, description: "The culture City branch delivers exceptional Order and event control without direct income." }),
-  eco("cathedral-academy", "Cathedral Academy", "Any", 40, 0, 760000, 26000, { chainId: "civic", nodeTier: 4, parentIds: ["temple-school"], materialCost: 6500, buildingUpkeep: 1900, publicOrder: 12, growth: 0.95, mitigationTags: ["plague", "unrest", "famine"], description: "A City welfare institution that gives up Order for major Growth and broad protection." }),
-  eco("cultural-capital", "Cultural Capital", "Any", 65, 0, 2900000, 82000, { chainId: "civic", nodeTier: 5, parentIds: ["grand-theatre"], materialCost: 23000, buildingUpkeep: 5500, publicOrder: 38, eventRollBonus: 10, incomeBonusPercent: 25, special: true, description: "The culture endpoint provides maximum Public Order, event control, and +25% settlement Crown production." }),
-  eco("sacred-university", "Sacred University", "Any", 65, 0, 3100000, 88000, { chainId: "civic", nodeTier: 5, parentIds: ["cathedral-academy"], materialCost: 25000, buildingUpkeep: 6000, publicOrder: 0, growth: 3, buildingUpkeepDiscount: 20, mitigationTags: ["plague", "unrest", "famine", "migration"], special: true, description: "The academic endpoint provides +3% Growth, broad crisis protection, and 20% lower building upkeep without adding Public Order." }),
+  eco("village-commons", "Village Commons", "Any", 6, 0, 4000, 700, { chainId: "civic", nodeTier: 1, materialCost: 80, buildingUpkeep: 50, publicOrder: 3, growth: 0.05, description: "The first Civic district. It produces no Crown, instead supporting Order and long-term population development." }),
+  eco("tavern-quarter", "Tavern Quarter", "Any", 15, 0, 12000, 2400, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], materialCost: 450, buildingUpkeep: 180, publicOrder: 7, eventRollBonus: 1, description: "The culture path focuses on Public Order and favorable monthly events." }),
+  eco("shrine-district", "Shrine District", "Any", 12, 0, 12000, 2600, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], materialCost: 500, buildingUpkeep: 160, publicOrder: 4, growth: 0.25, mitigationTags: ["plague"], description: "The welfare path gives less Order but adds Growth and early protection from plague." }),
+  eco("festival-hall", "Festival Hall", "Any", 25, 0, 75000, 8000, { chainId: "civic", nodeTier: 3, parentIds: ["tavern-quarter"], materialCost: 1700, buildingUpkeep: 600, publicOrder: 14, eventRollBonus: 3, description: "Festivals stabilize a Town and push its d100 results toward opportunities." }),
+  eco("temple-school", "Temple School", "Any", 25, 0, 80000, 8500, { chainId: "civic", nodeTier: 3, parentIds: ["shrine-district"], materialCost: 1900, buildingUpkeep: 650, publicOrder: 8, growth: 0.55, mitigationTags: ["plague", "unrest"], description: "Education and care counter population pressure through Growth and crisis protection." }),
+  eco("grand-theatre", "Grand Theatre", "Any", 40, 0, 250000, 24000, { chainId: "civic", nodeTier: 4, parentIds: ["festival-hall"], materialCost: 6000, buildingUpkeep: 1800, publicOrder: 24, eventRollBonus: 5, description: "The culture City branch delivers exceptional Order and event control without direct income." }),
+  eco("cathedral-academy", "Cathedral Academy", "Any", 40, 0, 260000, 26000, { chainId: "civic", nodeTier: 4, parentIds: ["temple-school"], materialCost: 6500, buildingUpkeep: 1900, publicOrder: 12, growth: 0.95, mitigationTags: ["plague", "unrest", "famine"], description: "A City welfare institution that gives up Order for major Growth and broad protection." }),
+  eco("cultural-capital", "Cultural Capital", "Any", 65, 0, 900000, 82000, { chainId: "civic", nodeTier: 5, parentIds: ["grand-theatre"], materialCost: 23000, buildingUpkeep: 5500, publicOrder: 38, eventRollBonus: 10, incomeBonusPercent: 25, special: true, description: "The culture endpoint provides maximum Public Order, event control, and +25% settlement Crown production." }),
+  eco("sacred-university", "Sacred University", "Any", 65, 0, 950000, 88000, { chainId: "civic", nodeTier: 5, parentIds: ["cathedral-academy"], materialCost: 25000, buildingUpkeep: 6000, publicOrder: 0, growth: 3, buildingUpkeepDiscount: 20, mitigationTags: ["plague", "unrest", "famine", "migration"], special: true, description: "The academic endpoint provides +3% Growth, broad crisis protection, and 20% lower building upkeep without adding Public Order." }),
 
-  mil("muster-field", "Muster Field", 8, 30000, 1200, { chainId: "recruitment", nodeTier: 1, materialCost: 200, buildingUpkeep: 100, canRecruit: true, recruitPerLevel: 10, recruitableUnitIds: ["militia", "watchman"], uniqueChain: true }),
-  mil("infantry-yard", "Infantry Yard", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["spearman", "men-at-arms"], uniqueChain: true }),
-  mil("archery-range", "Archery Range", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["archer"], uniqueChain: true }),
-  mil("drill-hall", "Drill Hall", 25, 280000, 9500, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], materialCost: 2400, buildingUpkeep: 600, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["veteran-infantry", "sergeant"], uniqueChain: true }),
-  mil("stable", "Stable Compound", 25, 340000, 11000, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], materialCost: 2800, buildingUpkeep: 650, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["mounted-scout"], uniqueChain: true, description: "A cavalry training branch. Building it directly unlocks mounted units without a separate resource requirement." }),
-  mil("marksmen-range", "Marksmen Range", 25, 300000, 10000, { chainId: "recruitment", nodeTier: 3, parentIds: ["archery-range"], materialCost: 2500, buildingUpkeep: 600, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["crossbowman"], uniqueChain: true }),
-  mil("royal-barracks", "Royal Barracks", 40, 850000, 28000, { chainId: "recruitment", nodeTier: 4, parentIds: ["drill-hall"], materialCost: 7500, buildingUpkeep: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["royal-guard"], upkeepDiscount: 4, uniqueChain: true }),
-  mil("cavalry-yard", "Cavalry Yard", 40, 980000, 32000, { chainId: "recruitment", nodeTier: 4, parentIds: ["stable"], materialCost: 8500, buildingUpkeep: 2000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["cavalry"], uniqueChain: true }),
-  mil("rangers-lodge", "Rangers Lodge", 40, 900000, 30000, { chainId: "recruitment", nodeTier: 4, parentIds: ["marksmen-range"], materialCost: 8000, buildingUpkeep: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["ranger"], uniqueChain: true }),
-  mil("war-college", "War College", 70, 3400000, 95000, { chainId: "recruitment", nodeTier: 5, parentIds: ["royal-barracks"], materialCost: 30000, buildingUpkeep: 5000, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["imperial-guard", "war-champion"], upkeepDiscount: 10, special: true, uniqueChain: true }),
-  mil("knightly-order", "Knightly Order", 65, 4000000, 110000, { chainId: "recruitment", nodeTier: 5, parentIds: ["cavalry-yard"], materialCost: 36000, buildingUpkeep: 6000, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["knight"], recruitmentDiscount: 8, special: true, uniqueChain: true }),
-  mil("imperial-marksmen", "Imperial Marksmen Academy", 65, 3600000, 100000, { chainId: "recruitment", nodeTier: 5, parentIds: ["rangers-lodge"], materialCost: 32000, buildingUpkeep: 5500, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["imperial-marksman"], special: true, uniqueChain: true }),
+  mil("muster-field", "Muster Field", 8, 4000, 1200, { chainId: "recruitment", nodeTier: 1, materialCost: 200, buildingUpkeep: 100, canRecruit: true, recruitPerLevel: 10, recruitableUnitIds: ["militia", "watchman"], uniqueChain: true }),
+  mil("infantry-yard", "Infantry Yard", 15, 12000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["spearman", "men-at-arms"], uniqueChain: true }),
+  mil("archery-range", "Archery Range", 15, 12000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["archer"], uniqueChain: true }),
+  mil("drill-hall", "Drill Hall", 25, 35000, 9500, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], materialCost: 2400, buildingUpkeep: 600, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["veteran-infantry", "sergeant"], uniqueChain: true }),
+  mil("stable", "Stable Compound", 25, 40000, 11000, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], materialCost: 2800, buildingUpkeep: 650, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["mounted-scout"], uniqueChain: true, description: "A cavalry training branch. Building it directly unlocks mounted units without a separate resource requirement." }),
+  mil("marksmen-range", "Marksmen Range", 25, 38000, 10000, { chainId: "recruitment", nodeTier: 3, parentIds: ["archery-range"], materialCost: 2500, buildingUpkeep: 600, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["crossbowman"], uniqueChain: true }),
+  mil("royal-barracks", "Royal Barracks", 40, 140000, 28000, { chainId: "recruitment", nodeTier: 4, parentIds: ["drill-hall"], materialCost: 7500, buildingUpkeep: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["royal-guard"], upkeepDiscount: 4, uniqueChain: true }),
+  mil("cavalry-yard", "Cavalry Yard", 40, 160000, 32000, { chainId: "recruitment", nodeTier: 4, parentIds: ["stable"], materialCost: 8500, buildingUpkeep: 2000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["cavalry"], uniqueChain: true }),
+  mil("rangers-lodge", "Rangers Lodge", 40, 150000, 30000, { chainId: "recruitment", nodeTier: 4, parentIds: ["marksmen-range"], materialCost: 8000, buildingUpkeep: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["ranger"], uniqueChain: true }),
+  mil("war-college", "War College", 70, 550000, 95000, { chainId: "recruitment", nodeTier: 5, parentIds: ["royal-barracks"], materialCost: 30000, buildingUpkeep: 5000, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["imperial-guard", "war-champion"], upkeepDiscount: 10, special: true, uniqueChain: true }),
+  mil("knightly-order", "Knightly Order", 65, 650000, 110000, { chainId: "recruitment", nodeTier: 5, parentIds: ["cavalry-yard"], materialCost: 36000, buildingUpkeep: 6000, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["knight"], recruitmentDiscount: 8, special: true, uniqueChain: true }),
+  mil("imperial-marksmen", "Imperial Marksmen Academy", 65, 600000, 100000, { chainId: "recruitment", nodeTier: 5, parentIds: ["rangers-lodge"], materialCost: 32000, buildingUpkeep: 5500, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["imperial-marksman"], special: true, uniqueChain: true }),
 
-  mil("watch-post", "Watch Post", 5, 22000, 800, { chainId: "defense", nodeTier: 1, materialCost: 100, buildingUpkeep: 80, publicOrder: 2, siegeDefensePercent: 5, garrisonUnits: [{ unitId: "militia", count: 20 }], uniqueChain: true, description: "A local watch that supplies 20 free Militia and +5% siege defense while supporting Public Order." }),
-  mil("palisade", "Palisade", 10, 70000, 2600, { chainId: "defense", nodeTier: 2, parentIds: ["watch-post"], materialCost: 700, buildingUpkeep: 200, publicOrder: 4, siegeDefensePercent: 10, garrisonUnits: [{ unitId: "militia", count: 30 }, { unitId: "watchman", count: 15 }], mitigationTags: ["raid"], uniqueChain: true, description: "A defended perimeter with a free local garrison, +10% siege defense, and stronger Public Order." }),
-  mil("stone-walls", "Stone Walls", 20, 260000, 9000, { chainId: "defense", nodeTier: 3, parentIds: ["palisade"], materialCost: 3000, buildingUpkeep: 600, publicOrder: 7, siegeDefensePercent: 20, garrisonUnits: [{ unitId: "spearman", count: 25 }, { unitId: "men-at-arms", count: 15 }, { unitId: "archer", count: 20 }], bonusSlots: 1, mitigationTags: ["raid"], uniqueChain: true, description: "Stone defenses add a mixed free garrison, one general district slot, +20% siege-event mitigation, and visible civic control." }),
-  mil("citadel", "Citadel", 35, 900000, 30000, { chainId: "defense", nodeTier: 4, parentIds: ["stone-walls"], materialCost: 10000, buildingUpkeep: 2000, publicOrder: 12, siegeDefensePercent: 35, garrisonUnits: [{ unitId: "veteran-infantry", count: 25 }, { unitId: "crossbowman", count: 20 }, { unitId: "men-at-arms", count: 25 }], mitigationTags: ["raid", "unrest"], uniqueChain: true, description: "A City citadel provides a veteran free garrison, +35% siege defense, and major Public Order." }),
-  mil("grand-fortress", "Grand Fortress", 60, 3800000, 105000, { chainId: "defense", nodeTier: 5, parentIds: ["citadel"], materialCost: 38000, buildingUpkeep: 6000, publicOrder: 20, siegeDefensePercent: 50, garrisonUnits: [{ unitId: "watchman", count: 210 }, { unitId: "men-at-arms", count: 45 }, { unitId: "archer", count: 30 }, { unitId: "royal-guard", count: 15 }], bonusSlots: 2, mitigationTags: ["raid", "unrest", "disaster"], special: true, uniqueChain: true, description: "A metropolitan fortress provides two general district slots and a 300-soldier free garrison: 70% Town Guard, 15% line infantry, 10% archers, and 5% elite Royal Guard." }),
+  mil("watch-post", "Watch Post", 5, 2000, 800, { chainId: "defense", nodeTier: 1, materialCost: 100, buildingUpkeep: 80, publicOrder: 2, siegeDefensePercent: 5, garrisonUnits: [{ unitId: "militia", count: 20 }], uniqueChain: true, description: "A local watch that supplies 20 free Militia and +5% siege defense while supporting Public Order." }),
+  mil("palisade", "Palisade", 10, 6000, 2600, { chainId: "defense", nodeTier: 2, parentIds: ["watch-post"], materialCost: 700, buildingUpkeep: 200, publicOrder: 4, siegeDefensePercent: 10, garrisonUnits: [{ unitId: "militia", count: 30 }, { unitId: "watchman", count: 15 }], mitigationTags: ["raid"], uniqueChain: true, description: "A defended perimeter with a free local garrison, +10% siege defense, and stronger Public Order." }),
+  mil("stone-walls", "Stone Walls", 20, 20000, 9000, { chainId: "defense", nodeTier: 3, parentIds: ["palisade"], materialCost: 3000, buildingUpkeep: 600, publicOrder: 7, siegeDefensePercent: 20, garrisonUnits: [{ unitId: "spearman", count: 25 }, { unitId: "men-at-arms", count: 15 }, { unitId: "archer", count: 20 }], bonusSlots: 1, mitigationTags: ["raid"], uniqueChain: true, description: "Stone defenses add a mixed free garrison, one general district slot, +20% siege-event mitigation, and visible civic control." }),
+  mil("citadel", "Citadel", 35, 75000, 30000, { chainId: "defense", nodeTier: 4, parentIds: ["stone-walls"], materialCost: 10000, buildingUpkeep: 2000, publicOrder: 12, siegeDefensePercent: 35, garrisonUnits: [{ unitId: "veteran-infantry", count: 25 }, { unitId: "crossbowman", count: 20 }, { unitId: "men-at-arms", count: 25 }], mitigationTags: ["raid", "unrest"], uniqueChain: true, description: "A City citadel provides a veteran free garrison, +35% siege defense, and major Public Order." }),
+  mil("grand-fortress", "Grand Fortress", 60, 300000, 105000, { chainId: "defense", nodeTier: 5, parentIds: ["citadel"], materialCost: 38000, buildingUpkeep: 6000, publicOrder: 20, siegeDefensePercent: 50, garrisonUnits: [{ unitId: "watchman", count: 210 }, { unitId: "men-at-arms", count: 45 }, { unitId: "archer", count: 30 }, { unitId: "royal-guard", count: 15 }], bonusSlots: 2, mitigationTags: ["raid", "unrest", "disaster"], special: true, uniqueChain: true, description: "A metropolitan fortress provides two general district slots and a 300-soldier free garrison: 70% Town Guard, 15% line infantry, 10% archers, and 5% elite Royal Guard." }),
 
-  mil("engineer-camp", "Engineer Camp", 8, 28000, 1000, { chainId: "siege", nodeTier: 1, materialCost: 150, buildingUpkeep: 100, constructionBonus: 20, uniqueChain: true }),
-  mil("siege-yard", "Siege Yard", 15, 85000, 3000, { chainId: "siege", nodeTier: 2, parentIds: ["engineer-camp"], materialCost: 850, buildingUpkeep: 250, constructionBonus: 60, uniqueChain: true }),
-  mil("siege-workshop", "Siege Workshop", 25, 300000, 10500, { chainId: "siege", nodeTier: 3, parentIds: ["siege-yard"], materialCost: 2800, buildingUpkeep: 650, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["siege-crew"], constructionBonus: 140, uniqueChain: true }),
-  mil("royal-arsenal", "Royal Arsenal", 40, 920000, 31000, { chainId: "siege", nodeTier: 4, parentIds: ["siege-workshop"], materialCost: 9000, buildingUpkeep: 2000, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["royal-engineer"], constructionBonus: 320, uniqueChain: true }),
-  mil("grand-arsenal", "Grand Arsenal", 65, 3900000, 108000, { chainId: "siege", nodeTier: 5, parentIds: ["royal-arsenal"], materialCost: 36000, buildingUpkeep: 6000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["grand-artillery"], constructionBonus: 800, special: true, uniqueChain: true }),
+  mil("engineer-camp", "Engineer Camp", 8, 4000, 1000, { chainId: "siege", nodeTier: 1, materialCost: 150, buildingUpkeep: 100, constructionBonus: 20, uniqueChain: true }),
+  mil("siege-yard", "Siege Yard", 15, 12000, 3000, { chainId: "siege", nodeTier: 2, parentIds: ["engineer-camp"], materialCost: 850, buildingUpkeep: 250, constructionBonus: 60, uniqueChain: true }),
+  mil("siege-workshop", "Siege Workshop", 25, 38000, 10500, { chainId: "siege", nodeTier: 3, parentIds: ["siege-yard"], materialCost: 2800, buildingUpkeep: 650, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["siege-crew"], constructionBonus: 140, uniqueChain: true }),
+  mil("royal-arsenal", "Royal Arsenal", 40, 150000, 31000, { chainId: "siege", nodeTier: 4, parentIds: ["siege-workshop"], materialCost: 9000, buildingUpkeep: 2000, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["royal-engineer"], constructionBonus: 320, uniqueChain: true }),
+  mil("grand-arsenal", "Grand Arsenal", 65, 600000, 108000, { chainId: "siege", nodeTier: 5, parentIds: ["royal-arsenal"], materialCost: 36000, buildingUpkeep: 6000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["grand-artillery"], constructionBonus: 800, special: true, uniqueChain: true }),
 
   mil("laurent-manor", "Laurent Manor", 5, 0, 0, { chainId: "landmark", branch: "landmark", nodeTier: 0, landmark: true, buildingUpkeep: 300, slotUse: 0, canRecruit: true, recruitPerLevel: 10, recruitableUnitIds: ["militia", "watchman", "spearman", "men-at-arms", "archer"], bonusSlots: 2, publicOrder: 6, siegeDefensePercent: 10, garrisonUnits: [{ unitId: "watchman", count: 20 }, { unitId: "men-at-arms", count: 10 }], special: true, gmOnly: true, uniqueChain: true, description: "De Laurent's unique fortified manor. It has no tier or normal district, requires 5 POP, contributes recruitment capacity, grants two general district slots, and provides a free household garrison.", notes: "De Laurent's staffed noble landmark." })
 ];
@@ -305,11 +306,13 @@ function policy(id, name, settlementTier, description, effects = {}) {
     description,
     effects: {
       incomeMultiplier: 1,
+      buildingUpkeepMultiplier: 1,
       militaryUpkeepMultiplier: 1,
       manpowerMultiplier: 1,
       armyFoodMultiplier: 1,
       foodPerPop: 0,
       growth: 0,
+      flatPopulation: 0,
       publicOrder: 0,
       eventRoll: 0,
       ...effects
@@ -938,12 +941,17 @@ function summaryContext(summary) {
     materialsBalance: formatSigned(summary.materialsBalance),
     materialsAfterTurn: formatNumber(summary.materialsAfterTurn),
     publicOrder: formatNumber(summary.effectivePublicOrder),
+    publicOrderBase: formatNumber(summary.publicOrderBase),
+    buildingPublicOrder: formatSigned(summary.buildingPublicOrder),
+    policyPublicOrder: formatSigned(summary.policyPublicOrder),
+    activePublicOrder: formatSigned(summary.activePublicOrder),
     publicOrderBand: summary.publicOrderBand.label,
     publicOrderBandClass: summary.publicOrderBand.className,
     publicOrderGrowth: `${formatSigned(summary.publicOrderGrowth)}% Growth`,
     publicOrderIncome: `${formatSigned(summary.publicOrderIncomePercent)}% Crown`,
     publicOrderPressure: formatSigned(summary.publicOrderPressure),
     publicOrderEventRoll: `${formatSigned(summary.publicOrderEventRoll)} Event Roll`,
+    policyFlatPopulation: formatSigned(summary.policyFlatPopulation),
     defense: formatNumber(summary.defense),
     defenseTarget: formatNumber(summary.defenseTarget),
     defenseCoverage: `${formatNumber(summary.defenseCoverage)}%`,
@@ -1407,7 +1415,7 @@ function treeLineageLayout(items = []) {
     const columns = descendants(item.id);
     const start = columns.length ? columns[0] : 1;
     const end = columns.length ? columns.at(-1) : start;
-    styles.set(item.id, `grid-column: ${start} / span ${Math.max(1, end - start + 1)};`);
+    styles.set(item.id, `grid-column: ${start} / span ${Math.max(1, end - start + 1)}; grid-row: 1;`);
   }
   return { columnCount, styles };
 }
@@ -3635,12 +3643,13 @@ async function processSettlementTurn(data, settlement, gmTurnNote) {
       `Food Security: ${before.foodSecurity.label} / ${formatNumber(before.foodCoverage * 100)}% coverage / ${formatSigned(before.foodSecurityGrowth)}% Growth`,
       `Materials: ${formatNumber(materialsBefore)} -> ${formatNumber(settlement.materials)} (${formatSigned(before.materialsBalance)})`,
       `Manpower Reserve: ${formatNumber(manpowerBefore)} -> ${formatNumber(settlement.manpowerReserve)} (+${formatNumber(manpowerRecovered)})`,
-      `Public Order: ${formatNumber(publicOrderBefore)} -> ${formatNumber(after.effectivePublicOrder)}`,
+      `Public Order: ${formatNumber(publicOrderBefore)} Base / ${formatNumber(after.effectivePublicOrder)} Effective`,
       `Expired Modifiers: ${expiredEffects.length ? expiredEffects.join(", ") : "None"}`,
       `Construction CP Applied: ${formatNumber(construction.cpApplied)}`,
       `Completed Projects: ${construction.completed.length ? construction.completed.map(project => project.name).join(", ") : "None"}`,
       `Recruitment: ${recruitmentResult.lines.length ? recruitmentResult.lines.join("; ") : "None"}`,
       `Growth Pressure: ${formatSigned(before.populationPressure)}%`,
+      `Policy Settlers: ${formatSigned(growth.policyFlatPopulation)} POP`,
       `POP Change: ${formatSigned(growth.popChange)} (${formatSigned(growth.rate)}%)`,
       `New POP: ${formatNumber(after.totalPop)}`,
       `Month Event: ${monthEvent ? `${monthEvent.rawRoll}${monthEvent.modifier ? ` ${formatSigned(monthEvent.modifier)}` : ""} -> ${monthEvent.finalRoll} / ${monthEvent.name} (GM approval pending)` : "Disabled"}`
@@ -4213,10 +4222,10 @@ function defaultRules() {
   return {
     tiers: [
       tierRule("hamlet", "Hamlet", 0, 2, 3, 0, 0, 0, 0, 25000, 1, "Hamlet Center", 10, 20),
-      tierRule("village", "Village", 100, 3, 4, 100000, 3000, 500, 0, 75000, 1, "Village Hall", 20, 60),
-      tierRule("town", "Town", 500, 4, 6, 400000, 12000, 2500, 0, 250000, 2, "Town Hall", 30, 160),
-      tierRule("city", "City", 2000, 6, 8, 1500000, 40000, 10000, 0, 800000, 3, "City Hall", 40, 420),
-      tierRule("metropolis", "Metropolis", 8000, 8, 10, 5000000, 120000, 35000, 0, 2000000, 4, "Grand Hall", 50, 1100)
+      tierRule("village", "Village", 100, 3, 4, 20000, 3000, 500, 0, 75000, 1, "Village Hall", 20, 60),
+      tierRule("town", "Town", 500, 4, 6, 80000, 12000, 2500, 0, 250000, 2, "Town Hall", 30, 160),
+      tierRule("city", "City", 2000, 6, 8, 300000, 40000, 10000, 0, 800000, 3, "City Hall", 40, 420),
+      tierRule("metropolis", "Metropolis", 8000, 8, 10, 1000000, 120000, 35000, 0, 2000000, 4, "Grand Hall", 50, 1100)
     ],
     economy: {
       incomeMultiplier: 1,
@@ -4386,6 +4395,8 @@ function normalizeData(raw) {
   if (refreshSchema9) refreshSchema9Catalog(catalog, unitCatalog);
   const refreshSchema10 = sourceSchema < 10;
   if (refreshSchema10) refreshSchema10Catalog(catalog, unitCatalog);
+  const refreshSchema11 = sourceSchema < 11;
+  if (refreshSchema11) refreshSchema11Catalog(catalog);
   const eventCatalog = normalizeEventCatalog(source.eventCatalog || fallback.eventCatalog, migrateLegacy);
   const settlements = Array.isArray(source.settlements) && source.settlements.length
     ? source.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, migrateLegacy))
@@ -4395,10 +4406,12 @@ function normalizeData(raw) {
   if (refreshSchema8) refreshSchema8Settlements(settlements, catalog, unitCatalog, rules);
   if (refreshSchema9) refreshSchema9Settlements(settlements, catalog, unitCatalog, rules);
   if (refreshSchema10) refreshSchema10Settlements(settlements, catalog, unitCatalog, rules);
+  if (refreshSchema11) refreshSchema11Settlements(settlements, catalog);
   let settlementTemplates = normalizeSettlementTemplates(source.settlementTemplates || fallback.settlementTemplates, migrateLegacy || refreshEconomicBalance)
     .map(template => ({ ...template, food: 0, terrainTags: [], biomeTags: [] }));
   if (refreshSchema9) settlementTemplates = refreshSchema9Templates(settlementTemplates, catalog, unitCatalog);
   if (refreshSchema10) settlementTemplates = refreshSchema10Templates(settlementTemplates, catalog, unitCatalog);
+  if (refreshSchema11) settlementTemplates = refreshSchema11Templates(settlementTemplates, catalog);
   return {
     schemaVersion: SCHEMA_VERSION,
     month: Math.max(1, Math.trunc(toNumber(source.month, fallback.month))),
@@ -4694,6 +4707,36 @@ function refreshSchema10Templates(templates, catalog, unitCatalog) {
   }));
 }
 
+const SCHEMA11_BUILDING_IDS = new Set(BUILDING_CATALOG.filter(item => !item.landmark).map(item => item.id));
+
+function refreshSchema11Catalog(catalog) {
+  const defaults = new Map(BUILDING_CATALOG.map(item => [item.id, item]));
+  for (const item of catalog) {
+    if (!SCHEMA11_BUILDING_IDS.has(item.id)) continue;
+    const builtIn = defaults.get(item.id);
+    if (builtIn) item.crownCost = builtIn.crownCost;
+  }
+}
+
+function refreshSchema11Settlements(settlements, catalog) {
+  const prices = new Map(catalog.filter(item => SCHEMA11_BUILDING_IDS.has(item.id)).map(item => [item.id, item.crownCost]));
+  for (const settlement of settlements) {
+    for (const building of settlement.buildings) {
+      if (prices.has(building.catalogId)) building.crownCost = prices.get(building.catalogId);
+    }
+  }
+}
+
+function refreshSchema11Templates(templates, catalog) {
+  const prices = new Map(catalog.filter(item => SCHEMA11_BUILDING_IDS.has(item.id)).map(item => [item.id, item.crownCost]));
+  return templates.map(template => ({
+    ...template,
+    buildings: template.buildings.map(building => prices.has(building.catalogId)
+      ? { ...building, crownCost: prices.get(building.catalogId) }
+      : building)
+  }));
+}
+
 function migrateLaurentStaffing(catalog, settlements) {
   const template = catalog.find(item => item.id === "laurent-manor");
   if (template) template.workers = Math.max(5, toNumber(template.workers, 0));
@@ -4723,8 +4766,16 @@ function normalizeRules(value, migrateLegacy = false, sourceSchema = SCHEMA_VERS
     city: { openSlots: 12, maxSlots: 14 },
     metropolis: { openSlots: 16, maxSlots: 18 }
   };
+  const schema10PromotionCosts = {
+    hamlet: 0,
+    village: 100000,
+    town: 400000,
+    city: 1500000,
+    metropolis: 5000000
+  };
   const migratedNumber = (item, base, key) => {
     const current = toNumber(item?.[key], base[key]);
+    if (sourceSchema < 11 && key === "promotionCost" && current === schema10PromotionCosts[base.id]) return base[key];
     const old = oldTiers[base.id]?.[key];
     if (migrateLegacy && old !== undefined && current === old) return base[key];
     const schema7 = schema7Tiers[base.id]?.[key];
@@ -5535,7 +5586,10 @@ function calculateSettlement(settlement, data = {}) {
     * percentMultiplier(publicOrderBand.incomePercent));
   const buildingUpkeepRaw = allBuildings.reduce((total, building) => total + buildingUpkeepCharge(building), 0);
   const buildingUpkeepDiscount = settlementBuildingUpkeepDiscount(settlement, rules);
-  const buildingUpkeep = Math.round(buildingUpkeepRaw * (1 - buildingUpkeepDiscount / 100) * percentMultiplier(activeModifiers.buildingUpkeepPercent));
+  const buildingUpkeep = Math.round(buildingUpkeepRaw
+    * (1 - buildingUpkeepDiscount / 100)
+    * policyEffects.buildingUpkeepMultiplier
+    * percentMultiplier(activeModifiers.buildingUpkeepPercent));
   const militaryCostRaw = settlement.troops.reduce((total, troop) => {
     const type = troopType(troop.type, unitCatalog);
     const upkeep = unitUpkeepFromRules(type, rules);
@@ -5609,6 +5663,7 @@ function calculateSettlement(settlement, data = {}) {
     effectivePublicOrder,
     publicOrderGrowth: publicOrderBand.growth,
     policyGrowth: policyEffects.growth,
+    policyFlatPopulation: policyEffects.flatPopulation,
     activeGrowth: activeModifiers.growth,
     foodSecurityGrowth,
     populationPressure
@@ -5669,6 +5724,8 @@ function calculateSettlement(settlement, data = {}) {
     materialsAfterTurn: Math.max(0, settlement.materials + materialsBalance),
     publicOrderBase: settlement.publicOrder,
     buildingPublicOrder,
+    policyPublicOrder: policyEffects.publicOrder,
+    activePublicOrder: activeModifiers.publicOrder,
     publicOrderPressure,
     effectivePublicOrder,
     publicOrderBand,
@@ -5707,6 +5764,7 @@ function calculateSettlement(settlement, data = {}) {
     cpThisMonth,
     growthRate: growth.rate,
     popChange: growth.popChange,
+    policyFlatPopulation: growth.policyFlatPopulation,
     projectedPop: Math.max(0, settlement.population + growth.popChange),
     buildingGrowth: growth.buildingGrowth,
     populationPressure: growth.populationPressure,
@@ -5730,8 +5788,12 @@ function calculateGrowth(settlement, summary, rules = defaultRules()) {
   const rate = settlement.overrides.ignoreGrowthLimits ? rawRate : clamp(rawRate, rules.growth.minimumRate, rules.growth.maximumRate);
   const overridePopChange = cleanString(growth.overridePopChange);
   const calculated = summary.totalPop * rate / 100;
-  const popChange = overridePopChange !== "" ? Math.trunc(toNumber(overridePopChange, 0)) : growth.roundDown ? Math.floor(calculated) : Math.round(calculated);
-  return { rate, popChange, foodPenalty, foodSecurityGrowth, populationPressure, orderModifier, buildingGrowth };
+  const policyFlatPopulation = Math.trunc(toNumber(summary.policyFlatPopulation, 0));
+  const percentageChange = growth.roundDown ? Math.floor(calculated) : Math.round(calculated);
+  const popChange = overridePopChange !== ""
+    ? Math.trunc(toNumber(overridePopChange, 0))
+    : percentageChange + policyFlatPopulation;
+  return { rate, popChange, policyFlatPopulation, foodPenalty, foodSecurityGrowth, populationPressure, orderModifier, buildingGrowth };
 }
 
 function aggregateActiveModifiers(items = []) {

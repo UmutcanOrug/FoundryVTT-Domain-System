@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.15
+
+- Divided the default Crown promotion prices by five: Village `20,000`, Town `80,000`, City `300,000`, and Metropolis `1,000,000`. Existing deliberately customized promotion costs remain unchanged during migration.
+- Repriced every built-in building around the campaign's slow month cadence without changing Materials, CP, workforce, output, or upkeep. Merchants Guild and Drill Hall now cost `35,000` Crown, Stable Compound `40,000`, and Stone Walls `20,000`.
+- Set the Defense chain to roughly half the Crown price of comparable recruitment development: `2,000/6,000/20,000/75,000/300,000` from T1 through T5.
+- Added the Hamlet policy `Heroic Land Grants`: a flat `+20 POP` per processed month in exchange for `-40%` Crown income, `+0.5` Food consumption per POP, `+25%` building upkeep, and `-8` Public Order.
+- Added a player-visible Public Order breakdown for Base, Buildings, Policy, Active Events, Population Pressure, and Effective Order. GM and settlement-template fields now explicitly say `Base Public Order`.
+- Fixed Content Library lineage nodes from the same unit tier wrapping onto separate rows and allowed long unit names to wrap cleanly.
+- Added schema v11 migration for built-in Crown prices and old default promotion costs while preserving custom content, active construction payments, custom slot rules, and customized Laurent Manor values.
+
 ## 0.1.14
 
 - Reworked economic branch identities. The Stone path now grants progressive `5/10/15/20%` construction Crown and Materials discounts plus the same percentage CP boost, while the Iron path grants `5/10/15/20%` army-upkeep discounts.
