@@ -29,7 +29,7 @@ Normal bina Tier 1-5, yerleske kademesiyle eslesir. Landmark tier kullanmaz ve n
 
 Food bir terfi veya insaat para birimi degildir. Terfi Crown ve Materials pesin odendikten sonra CP ile tamamlanir. GM `Settlement Rank` ile masrafsiz dogrudan kademe degistirebilir.
 
-GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v9 gecisi oyuncunun daha once degistirdigi custom slot degerlerini korur.
+GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v10 gecisi oyuncunun daha once degistirdigi custom slot degerlerini korur.
 
 ## Otomatik Is Gucu
 
@@ -106,22 +106,22 @@ Bir onceki aydan Food biriktirmek acigi gizlemez. Uygun tierdeki tek Food binasi
 - `Survey Camp`
 - Saf dal: `Stone Quarry -> Masonry District -> Builders Guild -> Monumental Works`
 - Hybrid dal: `Iron Mine -> Ironworks -> Grand Foundry -> Industrial Complex`
-- Saf dal en yuksek Materials ve Construction CP'yi verir.
-- Hybrid dal Materials + Crown + recruitment/army upkeep indirimi verir.
+- Saf Stone dali en yuksek Materials'i verir. Tier 2-5 boyunca insaat Crown ve Materials maliyetini `%5/%10/%15/%20` azaltir ve ayni oranda Construction CP bonusu verir.
+- Hybrid Iron dali Materials + Crown verir ve Tier 2-5 boyunca Army Upkeep'i `%5/%10/%15/%20` azaltir.
 - Iron resource veya Iron tag gereksinimi yoktur.
 
 ### Commerce, sari
 
 - `Trading Post` koktur.
-- Inland market dali duzenli Crown ve settlement Building Upkeep indirimi verir.
-- River/Harbor dali daha yuksek Crown ve daha iyi event roll verir; artik terrain gereksinimi yoktur ve secim yerleskenin temasina gore yapilir.
+- Inland market dali duzenli Crown verir. Grand Bazaar Building/Army Upkeep'i `%5`, World Market `%10` azaltir.
+- River/Harbor dali Crown ve daha iyi event roll yaninda, ana Food veya Materials binalarinin yerini tutmayacak miktarda iki kaynagi da destekler.
 - Bir dal her durumda dogrudan digerinden iyi degildir.
 
 ### Civic, turkuaz
 
 - Crown veya Food basmaz.
-- Culture dali daha fazla Public Order ve event kontrolu verir.
-- Welfare dali daha fazla Growth ve olay mitigation verir.
+- Culture dali daha fazla Public Order ve event kontrolu verir; Cultural Capital ayrica toplam settlement Crown uretimini `%25` arttirir.
+- University dali Public Order vermez. Sacred University `+%3 Growth` ve `-%20 Building Upkeep` verir.
 - Buyuyen yerleskede Population Order Pressure'i dengelemek icin Civic yatirimi gerekir.
 
 ## Construction ve Branch Secimi
@@ -206,14 +206,15 @@ Eski belirsiz Defense target/coverage sistemi yoktur. Defense binalari somut gar
 | Palisade | 30 Militia, 15 Town Guard | +4 | +10% |
 | Stone Walls | 25 Spearmen, 15 Men-at-Arms, 20 Archers | +7 | +20% |
 | Citadel | 25 Veteran Infantry, 20 Crossbowmen, 25 Men-at-Arms | +12 | +35% |
-| Grand Fortress | 30 Royal Guard, 40 Veteran Infantry, 25 Imperial Marksmen | +20 | +50% |
+| Grand Fortress | 210 Town Guard, 45 Men-at-Arms, 30 Archers, 15 Royal Guard | +20 | +50% |
 
 - Auto garrison Manpower Reserve veya Recruitment Capacity kullanmaz.
 - Auto garrison Army Upkeep odemez.
-- Overview, auto garrison Power'ini ve kompozisyonunu ayri gosterir.
-- Defending Power = Raised Army Power + Auto Garrison Power.
+- Stone Walls +1, Grand Fortress +2 genel district slotu verir.
+- Overview, auto garrison Power'ini ve kompozisyonunu ayri referans olarak gosterir.
+- Auto Garrison Power henuz otomatik savas cozmez, kayip vermez ve regiment olusturmaz.
 - Toplam Siege Defense %75'te sinirlanir.
-- `usesDefense` isaretli zararli event modifierlari Siege Defense yuzdesi kadar azalir.
+- `Uses Defense` isaretli zararli ay sonu event modifierlari Siege Defense yuzdesi kadar azalir. Mevcut surumde kusatma savasi veya casualty cozumlemez.
 
 ## Public Order
 
@@ -260,7 +261,7 @@ Her yerleskede ayni anda bir policy aktiftir.
 
 ## GM Landmark ve Content Library Akisi
 
-Content Library bina sekmesinde uc ayri ekleme dugmesi vardir:
+Content Library bina sekmesinde uc ayri, onay isteyen ekleme dugmesi vardir:
 
 - `Economic`
 - `Military`
@@ -275,8 +276,10 @@ GM Controls icinde:
 - `GM Construction Queue`: normal bina veya landmarki CP projesi olarak kuyruga koyar.
 - Building editoru gerekli POP, Crown/Materials/CP cost, output, upkeep, discount, recruitment, Siege Defense ve `unit-id:count` garrison listesini duzenler.
 - Unit editoru recruit cost, tek upkeep yuzdesi, Power, Food, limit, Actor ve resmi duzenler.
-- Unitler Infantry, Ranged, Cavalry ve Siege ailelerinde T1-T5 agaci olarak okunur. `Unique Unit` isaretli unitler ayri bolumde gorunur.
-- Unit editorundeki `Recruitment Buildings` listesi, birimin hangi askeri bina veya Landmark tarafindan acildigini dogrudan belirler.
+- Royal Guard, Imperial Guard, Imperial Marksmen, Knights, War College Champions ve Grand Artillery Train normal askeri agaclarin ust tier birlikleridir; Unique degildir.
+- Unitler Infantry, Ranged, Cavalry ve Siege ailelerinde T1-T5 agaci olarak okunur. Yalnizca Landmark'a baglanan gercek `Unique Unit` birlikleri ayri bolumde gorunur.
+- Built-in gercek Unique ornekleri Tier 4 Gladiators ve hybrid melee/ranged Elven Guard'dir.
+- Unit editorundeki `Recruitment Buildings` listesi normal birimleri askeri binalara, Unique birimleri Landmark'lara baglar. Unique atanan Landmark recruitment acik degilse sistem bunu acar ve asgari capacity saglar.
 
 ## De Laurent Korunmasi
 
@@ -291,18 +294,20 @@ Laurent Manor:
 - Varsayilan +2 genel district slotu verir.
 - Varsayilan 20 Town Guard + 10 Men-at-Arms auto garrison verir.
 - Varsayilan +10% Siege Defense ve +6 Public Order verir.
-- Custom workers, upkeep, recruitment, resim ve not degerleri schema v9 gecisinde korunur.
+- Custom workers, upkeep, recruitment, resim ve not degerleri schema v10 gecisinde korunur.
 
-## Schema v9 Gecisi
+## Schema v10 Gecisi
 
-v0.1.12 ve daha eski dunya verileri otomatik tasinir.
+v0.1.13 ve daha eski dunya verileri otomatik tasinir.
 
 - Terrain ve Biome alanlari profil, sablon, bina editoru ve kurulum kosullarindan kaldirilir.
 - Iron/Horse resource ve unit gereksinimleri kaldirilir.
 - Stored Food ve construction Food cost kayitlari sifirlanir.
-- Built-in Food zinciri v0.1.13 sivil nufus hedeflerine yenilenir; mevcut Food binalari da yeni outputu alir.
+- Built-in Food zinciri v0.1.14 sivil nufus hedeflerini korur; mevcut Food binalari da guncel outputu alir.
 - Eski Economic/Military bina bonus slotlari tek genel `Bonus District Slots` alaninda birlestirilir.
-- Built-in unitler Infantry, Ranged, Cavalry, Siege ve Unique agaclarina tasinir.
+- Stone, Iron, Commerce, Civic ve Defense bonuslari v0.1.14 kimliklerine yenilenir; indirimler gercek kuyruk maliyetine ve aylik hesaplara uygulanir.
+- Built-in ust tier birlikler normal Infantry, Ranged, Cavalry ve Siege agaclarina tasinir. Gladiators ve Elven Guard Landmark-only Unique olarak eklenir.
+- Arena/Gladiator veya Elf adli custom Landmark'lar uygun Unique birimle otomatik eslestirilir.
 - Manuel assignment yerine otomatik is gucu uygulanir.
 - Eski Garrison/Campaign upkeep tek %20 upkeep'e tasinir.
 - Settlement kimligi, owner, custom catalog, resim, regiment, Actor, log ve notlar korunur.
@@ -329,9 +334,9 @@ Sonuc:
 
 ```text
 Gross Crown: 249.150
-Building Upkeep: 15.066
-Surdurulebilir Men-at-Arms: yaklasik 1.957
-Bu ordudaki Food Coverage: %142
+Building Upkeep: 15.390
+Surdurulebilir Men-at-Arms: yaklasik 2.365
+Bu ordudaki Food Coverage: %145
 ```
 
 Bu zorunlu build degil, denge regression referansidir. Oyuncu daha fazla Order, Growth, Materials, recruitment veya savunma icin income ve army kapasitesinden fedakarlik yapabilir.
@@ -353,5 +358,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.13.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.14.zip
 ```

@@ -19,29 +19,31 @@ DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, econ
 - Tier-based Free POP Crown income of `10/20/30/40/50`.
 - Pure Grain and Stone branches, hybrid Pastoral and Foundry branches, dedicated Commerce income, and Civic Order/Growth development.
 - Terrain and Biome gates are removed; settlement identity is carried by its region, description, background, buildings, and landmarks.
-- Inland Commerce lowers settlement building upkeep; maritime Commerce favors higher Crown and event rolls.
+- Grand Bazaar and World Market reduce both building and army upkeep; maritime Commerce favors Crown and event rolls while adding modest Food and Materials support.
+- Stone development progressively reduces construction Crown and Materials costs while boosting CP; Iron development progressively reduces army upkeep.
+- Cultural Capital combines Public Order with a settlement-wide Crown bonus, while Sacred University trades Order for Growth and building-upkeep reduction.
 - Exact Food Security bands from `-3%` Growth below 50% coverage to `+1.5%` Growth at 200% coverage.
 - Exact Public Order income modifiers of `-50/-25/0/+10/+20%`, plus Growth and event-roll effects.
 - Population pressure on both Growth and Public Order, configurable by the GM.
 - One manpower cap based on Total POP, a recovering manpower reserve, and a separate pooled monthly Recruitment Capacity.
 - One unit upkeep value, defaulting to 20% of recruit price per month.
-- Defense buildings with explicit free auto-garrisons, Public Order, and Siege Defense percentages.
+- Defense buildings with explicit free auto-garrisons, Public Order, and Siege Event Mitigation percentages. Auto Garrison Power is a reference value; the current version does not auto-resolve sieges.
 - Current / Maximum regiment strength, per-regiment images and Actor UUID links, and building-free replenishment.
 - A paged 4x2 Overview district board, compact branch selector, aligned lineage trees, branch colors, and hidden locked player units.
 - A scroll-safe Overview branch workspace that keeps Tier IV-V reachable at wide and narrow Foundry window sizes.
 - Tierless landmarks that consume no district, plus immediate or queued GM landmark placement.
-- Building-granted slots are generic district slots; Laurent Manor grants two and World Market grants one.
-- Content Library unit trees for Infantry, Ranged, Cavalry, and Siege, plus a separate Unique Units roster with direct recruitment-building assignment.
+- Building-granted slots are generic district slots; Laurent Manor and Grand Fortress grant two, while Stone Walls grants one.
+- Content Library unit trees for normal Infantry, Ranged, Cavalry, and Siege development, plus a landmark-only Unique roster with Gladiators and Elven Guard.
 - Controlled player Treasury deposits and withdrawals with Chronicle audit entries.
 - GM-editable building, unit, event, permission, economy, military, Growth, Order, and settlement-tier rules.
 - Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town templates.
 - Individual settlement processing, pending-only global month close, duplicate-process protection, and pre-turn snapshots.
 - De Laurent remains a player settlement and never becomes a reusable template.
-- Schema v9 migration preserves custom settlements, ownership, catalog entries, images, regiments, logs, customized Laurent Manor values, and custom tier rules while removing Terrain/Biome data and merging old Economic/Military bonus slots.
+- Schema v10 migration preserves custom settlements, ownership, catalog entries, images, Actors, regiments, logs, customized Laurent Manor values, and custom tier rules while refreshing the revised economic and military identities.
 
 ## Balance Reference
 
-The automated v0.1.13 City scenario uses `5,000 POP`, one Food district, seven other City districts, and Laurent Manor. It produces `249,150` gross Crown, pays `15,066` building upkeep, sustains approximately `1,957 Men-at-Arms`, and retains `142%` Food coverage. Separate upper-bound tests confirm that one suitable Food district sustains an army-free settlement through its tier; armies create the intended additional pressure.
+The automated v0.1.14 City scenario uses `5,000 POP`, one Food district, seven other City districts, and Laurent Manor. It produces `249,150` gross Crown, pays `15,390` building upkeep, sustains approximately `2,365 Men-at-Arms`, and retains `145%` Food coverage. Separate upper-bound tests confirm that one suitable Food district sustains an army-free settlement through its tier; armies create the intended additional pressure.
 
 See `KULLANIM-KILAVUZU.md` for the complete Turkish workflow and rule reference.
 
@@ -62,5 +64,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.13.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.14.zip
 ```

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.14
+
+- Reworked economic branch identities. The Stone path now grants progressive `5/10/15/20%` construction Crown and Materials discounts plus the same percentage CP boost, while the Iron path grants `5/10/15/20%` army-upkeep discounts.
+- Gave Grand Bazaar `-5%` building and army upkeep and World Market `-10%` to both, removed World Market's bonus district, and added modest Food/Materials side output to the harbor path.
+- Split the Civic endpoints cleanly: Cultural Capital retains Public Order and adds `+25%` settlement Crown production; Sacred University has no Public Order, but grants `+3%` Growth and `-20%` building upkeep.
+- Moved generic bonus districts to fortifications: Stone Walls grants one and Grand Fortress grants two. Grand Fortress now supplies a 300-soldier free garrison weighted toward Town Guard instead of a small all-elite force.
+- Reclassified Royal Guard, Imperial Guard, Imperial Marksmen, Knights, War College Champions, and Grand Artillery Train into their normal military families. Added true landmark-only Gladiators and Elven Guard Unique units with direct Landmark assignment.
+- Added schema v10 migration for the revised built-in buildings and units, including automatic Arena/Gladiator and Elf landmark matching while preserving custom images, Actor UUIDs, notes, enabled states, and Laurent Manor economy settings.
+- Applied construction discounts to the actual queued Crown/Materials price, applied percentage CP bonuses to monthly construction, and applied settlement Crown bonuses to gross income.
+- Clarified that Auto Garrison Power is a reference value and Siege Defense currently mitigates only harmful month-event modifiers marked `Uses Defense`; it does not yet resolve siege battles or casualties.
+- Replaced the Overview instructional sentence with the settlement description, added confirmation to Content Library category creation buttons, and moved regiment image/Actor/notes controls behind a compact settings button.
+- Rebuilt Raised Forces into stable two-column summary cards and expanded regression coverage for discounts, slot grants, garrison ratios, Unique assignment, migration, and responsive UI contracts.
+
 ## 0.1.13
 
 - Removed Terrain and Biome from settlement profiles, starter/custom templates, building editors, catalog search, construction requirements, warnings, and strategic summaries. Existing worlds migrate these fields to empty values without changing settlement descriptions or visuals.
