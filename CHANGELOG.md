@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.12
+
+- Replaced manual POP assignment with automatic full-workforce reservation. Players can Halt or Continue a building; halted or labor-starved buildings produce no effects and pay half upkeep.
+- Removed Biome, Horses, Iron, and strategic-resource recruitment gates. Terrain remains available for geographic building requirements, while a Stable directly unlocks cavalry development.
+- Converted Food into a non-stored monthly flow. Food Security now compares current production with consumption and applies exact Growth bands from -3% Starvation to +1.5% Abundant.
+- Rebalanced the complete Food chain so one suitable district sustains its tier while deeper pure or hybrid investment is needed for the strongest surplus bonuses.
+- Added exact Public Order Crown modifiers of -50%, -25%, 0%, +10%, and +20%, exact Growth modifiers, and configurable logarithmic population pressure on Order.
+- Gave inland Commerce a settlement building-upkeep discount while maritime Commerce retains higher Crown and event-roll potential, making its branch choice mechanically distinct.
+- Replaced source-specific recruitment and Military Capacity with one pooled monthly Recruitment Capacity. Completed higher-tier buildings retain all unit unlocks from their ancestors.
+- Made replenishment independent of buildings and Recruitment Capacity. It reserves manpower and partial Crown when ordered, then resolves at month end.
+- Replaced Garrison/Campaign upkeep with one monthly unit upkeep, defaulting to 20% of recruit cost.
+- Rebuilt Defense buildings around explicit free auto-garrisons, Public Order, and Siege Defense percentages. Free garrisons consume no manpower and pay no unit upkeep.
+- Added controlled player Treasury deposits and withdrawals with Chronicle audit entries and a per-settlement GM permission.
+- Added direct Economic, Military, and Landmark creation buttons in Content Library, immediate landmark placement, and a GM construction-queue workflow for normal buildings or landmarks.
+- Added workforce requirements and expanded effect badges to building cards, compacted the Overview branch picker, and added readable military building trees to Recruitment.
+- Updated default district limits to Hamlet 2/3, Village 3/4, Town 4/6, City 6/8, and Metropolis 8/10 while preserving custom world values during migration.
+- Added schema v8 migration that refreshes built-in balance and removes obsolete resource data while preserving custom Laurent Manor workers, upkeep, recruitment, images, and notes.
+- Added a representative City simulation. The tested eight-district City produces 141,488 gross Crown, pays 14,973 building upkeep, sustains about 1,013 Men-at-Arms, and retains 192% Food coverage.
+
 ## 0.1.11
 
 - Rebalanced every built-in economic family around a distinct role instead of making every district another Crown generator.

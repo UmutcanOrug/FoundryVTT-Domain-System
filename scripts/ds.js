@@ -5,7 +5,7 @@ const SOCKET_NAME = `module.${MODULE_ID}`;
 const TEMPLATE_PATH = `modules/${MODULE_ID}/templates/ds-panel.hbs`;
 const ACTION_CONFIRM_TIMEOUT_MS = 15000;
 const DIRECT_RECRUITMENT_SOURCE = "__direct__";
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 const DISTRICT_PAGE_SIZE = 8;
 
 const TABS = [
@@ -57,20 +57,21 @@ const BRANCHES = [
 ];
 
 const PUBLIC_ORDER_BANDS = [
-  { id: "unrest", label: "Unrest", min: 0, max: 24, growth: -0.75, eventRoll: -5, className: "ds-bad" },
-  { id: "unstable", label: "Unstable", min: 25, max: 49, growth: -0.25, eventRoll: -2, className: "ds-warn" },
-  { id: "stable", label: "Stable", min: 50, max: 74, growth: 0, eventRoll: 0, className: "" },
-  { id: "content", label: "Content", min: 75, max: 89, growth: 0.25, eventRoll: 2, className: "ds-good" },
-  { id: "prosperous", label: "Prosperous", min: 90, max: 100, growth: 0.5, eventRoll: 4, className: "ds-good" }
+  { id: "unrest", label: "Unrest", min: 0, max: 24, growth: -1, incomePercent: -50, eventRoll: -5, className: "ds-bad" },
+  { id: "unstable", label: "Unstable", min: 25, max: 49, growth: -0.5, incomePercent: -25, eventRoll: -2, className: "ds-warn" },
+  { id: "stable", label: "Stable", min: 50, max: 74, growth: 0, incomePercent: 0, eventRoll: 0, className: "" },
+  { id: "content", label: "Content", min: 75, max: 89, growth: 0.25, incomePercent: 10, eventRoll: 2, className: "ds-good" },
+  { id: "prosperous", label: "Prosperous", min: 90, max: 100, growth: 0.5, incomePercent: 20, eventRoll: 4, className: "ds-good" }
 ];
 
 const FOOD_SECURITY_BANDS = [
-  { id: "critical", label: "Critical", min: 0, max: 0.5, growth: -1.5, eventRoll: -4, className: "ds-bad" },
-  { id: "strained", label: "Strained", min: 0.5, max: 1, growth: -0.75, eventRoll: -2, className: "ds-warn" },
+  { id: "starvation", label: "Starvation", min: 0, max: 0.5, growth: -3, eventRoll: -5, className: "ds-bad" },
+  { id: "severe-shortage", label: "Severe Shortage", min: 0.5, max: 0.75, growth: -2, eventRoll: -3, className: "ds-bad" },
+  { id: "shortage", label: "Shortage", min: 0.75, max: 1, growth: -1, eventRoll: -1, className: "ds-warn" },
   { id: "sustained", label: "Sustained", min: 1, max: 1.25, growth: 0, eventRoll: 0, className: "" },
-  { id: "secure", label: "Secure", min: 1.25, max: 1.5, growth: 0.35, eventRoll: 1, className: "ds-good" },
-  { id: "abundant", label: "Abundant", min: 1.5, max: 2, growth: 0.7, eventRoll: 2, className: "ds-good" },
-  { id: "overflowing", label: "Overflowing", min: 2, max: Number.POSITIVE_INFINITY, growth: 1, eventRoll: 3, className: "ds-good" }
+  { id: "well-fed", label: "Well Fed", min: 1.25, max: 1.5, growth: 0.5, eventRoll: 1, className: "ds-good" },
+  { id: "plentiful", label: "Plentiful", min: 1.5, max: 2, growth: 1, eventRoll: 2, className: "ds-good" },
+  { id: "abundant", label: "Abundant", min: 2, max: Number.POSITIVE_INFINITY, growth: 1.5, eventRoll: 3, className: "ds-good" }
 ];
 
 const EVENT_EFFECT_KEYS = [
@@ -86,8 +87,6 @@ const EVENT_EFFECT_KEYS = [
 ];
 
 const TERRAIN_OPTIONS = ["Plains", "Farmlands", "Grassland", "Hills", "Mountains", "Forest", "Coast", "River", "Lake", "Swamp", "Desert", "Tundra", "Underground"];
-const BIOME_OPTIONS = ["Temperate", "Farmlands", "Forest", "Grasslands", "Highlands", "Wetlands", "Riverlands", "Coastal", "Arid", "Tundra", "Urban", "Underground"];
-const STRATEGIC_RESOURCE_OPTIONS = ["Iron", "Horses"];
 
 const POLICY_OPTIONS = [
   policy("balanced", "Balanced Administration", "hamlet", "No modifier. The settlement follows the normal economy and growth rules."),
@@ -115,47 +114,47 @@ const TROOP_TYPES = [
   unit("veteran-infantry", "Veteran Infantry", 1200, 3.8, 3, 1, "Experienced infantry drilled for coordinated battlefield maneuvers."),
   unit("sergeant", "Sergeants", 1500, 4.2, 3, 1, "Veteran retainers who steady nearby formations."),
   unit("crossbowman", "Crossbowmen", 1300, 3.8, 3, 1, "Armored ranged troops capable of defeating heavy armor."),
-  unit("mounted-scout", "Mounted Scouts", 1500, 4, 3, 1.25, "Fast cavalry used for screening, pursuit, and reconnaissance.", { requiredTags: ["horses"] }),
-  unit("siege-crew", "Siege Engineers", 1800, 4.5, 3, 1, "Engineers and crews trained to operate field siege equipment.", { requiredTags: ["iron"] }),
+  unit("mounted-scout", "Mounted Scouts", 1500, 4, 3, 1.25, "Fast cavalry used for screening, pursuit, and reconnaissance."),
+  unit("siege-crew", "Siege Engineers", 1800, 4.5, 3, 1, "Engineers and crews trained to operate field siege equipment."),
   unit("royal-guard", "Royal Guard", 3200, 6, 4, 1.5, "Elite household infantry equipped by a Royal Barracks.", { special: true }),
   unit("ranger", "Rangers", 3000, 5.8, 4, 1.25, "Expert marksmen trained for difficult terrain and independent operations."),
-  unit("cavalry", "Heavy Cavalry", 4000, 6.5, 4, 1.75, "Armored cavalry trained for decisive charges.", { requiredTags: ["horses"] }),
-  unit("royal-engineer", "Royal Artillery Crew", 4200, 6.2, 4, 1.5, "Royal engineers operating advanced artillery and siege trains.", { requiredTags: ["iron"] }),
+  unit("cavalry", "Heavy Cavalry", 4000, 6.5, 4, 1.75, "Armored cavalry trained for decisive charges."),
+  unit("royal-engineer", "Royal Artillery Crew", 4200, 6.2, 4, 1.5, "Royal engineers operating advanced artillery and siege trains."),
   unit("imperial-guard", "Imperial Guard", 7500, 8.5, 5, 2, "The finest disciplined infantry a metropolis can maintain.", { special: true, maxPerSettlement: 300 }),
   unit("war-champion", "War College Champions", 9000, 9.5, 5, 2, "Renowned officers and champions produced by the War College.", { special: true, maxPerSettlement: 100 }),
   unit("imperial-marksman", "Imperial Marksmen", 7000, 8.2, 5, 1.75, "Master ranged troops equipped and trained at metropolitan scale.", { special: true, maxPerSettlement: 300 }),
-  unit("knight", "Knights", 10000, 10, 5, 2.5, "Noble heavy cavalry maintained by a Knightly Order.", { requiredTags: ["horses"], special: true, maxPerSettlement: 200 }),
-  unit("grand-artillery", "Grand Artillery Train", 9500, 9, 5, 2.25, "A metropolitan siege train with master engineers and heavy engines.", { requiredTags: ["iron"], special: true, maxPerSettlement: 100 })
+  unit("knight", "Knights", 10000, 10, 5, 2.5, "Noble heavy cavalry maintained by a Knightly Order.", { special: true, maxPerSettlement: 200 }),
+  unit("grand-artillery", "Grand Artillery Train", 9500, 9, 5, 2.25, "A metropolitan siege train with master engineers and heavy engines.", { special: true, maxPerSettlement: 100 })
 ];
 
 const BUILDING_CATALOG = [
-  eco("land-clearance", "Land Clearance", "Any", 10, 0, 20000, 800, { chainId: "food", nodeTier: 1, materialCost: 100, buildingUpkeep: 40, foodOutput: 180, description: "Opens the first agricultural district. It produces Food rather than Crown and can later specialize in grain or pastoral development." }),
-  eco("farmstead", "Farmstead", "Farmlands or Plains", 20, 0, 65000, 2500, { chainId: "food", nodeTier: 2, parentIds: ["land-clearance"], materialCost: 500, buildingUpkeep: 120, foodOutput: 650, growth: 0.1, description: "A mixed food district that supports a Village and prepares the choice between maximum Food security and population-focused pastoral land." }),
-  eco("grain-estate", "Grain Estate", "Farmlands or Plains", 35, 0, 220000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], materialCost: 1800, buildingUpkeep: 350, foodOutput: 2400, description: "The grain branch sacrifices side benefits for the highest sustainable Food output at Town tier." }),
-  eco("horse-ranch", "Pastoral Ranch", "Plains or Grassland", 30, 25, 240000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 500, materialCost: 1700, buildingUpkeep: 400, foodOutput: 1600, growth: 0.4, grantsTags: ["horses"], description: "The hybrid pastoral branch produces moderate Crown and Food while adding Growth, Horses, and future cavalry support." }),
-  eco("grand-granary", "Grand Granary", "Any", 45, 0, 700000, 24000, { chainId: "food", nodeTier: 4, parentIds: ["grain-estate"], materialCost: 6000, buildingUpkeep: 1200, foodOutput: 7500, mitigationTags: ["famine"], description: "A City-scale grain reserve with exceptional Food output and protection against famine events." }),
-  eco("royal-stud", "Royal Stockyards", "Plains or Grassland", 45, 45, 820000, 26000, { chainId: "food", nodeTier: 4, parentIds: ["horse-ranch"], flatOutput: 1000, materialCost: 6500, buildingUpkeep: 1500, foodOutput: 4800, growth: 0.8, grantsTags: ["horses"], recruitmentDiscount: 6, description: "Hybrid City stockyards split their value between Crown and Food, then add Growth, Horses, and cheaper recruitment." }),
-  eco("agrarian-heartland", "Agrarian Heartland", "Any", 70, 0, 2600000, 75000, { chainId: "food", nodeTier: 5, parentIds: ["grand-granary"], materialCost: 22000, buildingUpkeep: 4000, foodOutput: 26000, mitigationTags: ["famine", "migration"], special: true, description: "The pure Food endpoint, able to feed a metropolis and build deep Food Security without producing Crown." }),
-  eco("imperial-stud", "Royal Pastures", "Plains or Grassland", 65, 70, 3000000, 85000, { chainId: "food", nodeTier: 5, parentIds: ["royal-stud"], flatOutput: 2500, materialCost: 25000, buildingUpkeep: 5000, foodOutput: 16000, growth: 1.25, grantsTags: ["horses"], recruitmentDiscount: 10, special: true, description: "The hybrid pastoral endpoint combines Crown and Food with major Growth, Horses, and recruitment savings." }),
+  eco("land-clearance", "Land Clearance", "Any", 10, 0, 20000, 800, { chainId: "food", nodeTier: 1, materialCost: 100, buildingUpkeep: 40, foodOutput: 90, description: "Opens the first agricultural district. It produces Food rather than Crown and can later specialize in grain or pastoral development." }),
+  eco("farmstead", "Farmstead", "Farmlands or Plains", 20, 0, 65000, 2500, { chainId: "food", nodeTier: 2, parentIds: ["land-clearance"], materialCost: 500, buildingUpkeep: 120, foodOutput: 220, growth: 0.1, description: "A mixed food district that supports a Village and prepares the choice between maximum Food security and population-focused pastoral land." }),
+  eco("grain-estate", "Grain Estate", "Farmlands or Plains", 35, 0, 220000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], materialCost: 1800, buildingUpkeep: 350, foodOutput: 900, description: "The grain branch sacrifices side benefits for the highest sustainable Food output at Town tier." }),
+  eco("horse-ranch", "Pastoral Ranch", "Plains or Grassland", 30, 25, 240000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 500, materialCost: 1700, buildingUpkeep: 400, foodOutput: 600, growth: 0.4, recruitmentDiscount: 2, description: "The hybrid pastoral branch produces moderate Crown and Food while adding Growth and a small recruitment discount." }),
+  eco("grand-granary", "Grand Granary", "Any", 45, 0, 700000, 24000, { chainId: "food", nodeTier: 4, parentIds: ["grain-estate"], materialCost: 6000, buildingUpkeep: 1200, foodOutput: 3000, mitigationTags: ["famine"], description: "A City-scale grain reserve with exceptional Food output and protection against famine events." }),
+  eco("royal-stud", "Royal Stockyards", "Plains or Grassland", 45, 45, 820000, 26000, { chainId: "food", nodeTier: 4, parentIds: ["horse-ranch"], flatOutput: 1000, materialCost: 6500, buildingUpkeep: 1500, foodOutput: 1900, growth: 0.8, recruitmentDiscount: 6, description: "Hybrid City stockyards split their value between Crown and Food, then add Growth and cheaper recruitment." }),
+  eco("agrarian-heartland", "Agrarian Heartland", "Any", 70, 0, 2600000, 75000, { chainId: "food", nodeTier: 5, parentIds: ["grand-granary"], materialCost: 22000, buildingUpkeep: 4000, foodOutput: 12000, mitigationTags: ["famine", "migration"], special: true, description: "The pure Food endpoint, able to feed a metropolis and build deep Food Security without producing Crown." }),
+  eco("imperial-stud", "Royal Pastures", "Plains or Grassland", 65, 70, 3000000, 85000, { chainId: "food", nodeTier: 5, parentIds: ["royal-stud"], flatOutput: 2500, materialCost: 25000, buildingUpkeep: 5000, foodOutput: 7500, growth: 1.25, recruitmentDiscount: 10, special: true, description: "The hybrid pastoral endpoint combines Crown and Food with major Growth and recruitment savings." }),
 
   eco("survey-camp", "Survey Camp", "Any", 8, 0, 25000, 900, { chainId: "materials", nodeTier: 1, materialCost: 50, buildingUpkeep: 40, materialsOutput: 180, description: "Maps usable deposits and starts a Materials district. It creates building resources rather than Crown." }),
   eco("stone-quarry", "Stone Quarry", "Hills or Mountains", 20, 0, 75000, 2700, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], materialCost: 400, buildingUpkeep: 120, materialsOutput: 750, constructionBonus: 20, description: "The stone path favors maximum Materials and faster construction." }),
-  eco("iron-mine", "Iron Mine", "Hills or Mountains", 20, 20, 90000, 3000, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], flatOutput: 100, materialCost: 450, buildingUpkeep: 140, materialsOutput: 600, grantsTags: ["iron"], recruitmentDiscount: 2, description: "The hybrid iron path splits output between Crown and Materials while granting Iron and military procurement benefits." }),
+  eco("iron-mine", "Iron Mine", "Hills or Mountains", 20, 20, 90000, 3000, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], flatOutput: 100, materialCost: 450, buildingUpkeep: 140, materialsOutput: 600, recruitmentDiscount: 2, description: "The hybrid mine path splits output between Crown and Materials while improving military procurement." }),
   eco("masonry-district", "Masonry District", "Any", 35, 0, 240000, 8500, { chainId: "materials", nodeTier: 3, parentIds: ["stone-quarry"], materialCost: 1700, buildingUpkeep: 400, materialsOutput: 2400, constructionBonus: 120, description: "Organized masons greatly increase Materials and add direct Construction CP." }),
-  eco("ironworks", "Ironworks", "Any", 35, 30, 280000, 9500, { chainId: "materials", nodeTier: 3, parentIds: ["iron-mine"], flatOutput: 500, materialCost: 2000, buildingUpkeep: 450, materialsOutput: 1900, grantsTags: ["iron"], recruitmentDiscount: 4, upkeepDiscount: 2, description: "Hybrid forging produces Crown and Materials together while reducing recruitment and army upkeep." }),
+  eco("ironworks", "Ironworks", "Any", 35, 30, 280000, 9500, { chainId: "materials", nodeTier: 3, parentIds: ["iron-mine"], flatOutput: 500, materialCost: 2000, buildingUpkeep: 450, materialsOutput: 1900, recruitmentDiscount: 4, upkeepDiscount: 2, description: "Hybrid forging produces Crown and Materials together while reducing recruitment and army upkeep." }),
   eco("builders-guild", "Builders Guild", "Any", 50, 0, 780000, 26000, { chainId: "materials", nodeTier: 4, parentIds: ["masonry-district"], materialCost: 6500, buildingUpkeep: 1400, materialsOutput: 7000, constructionBonus: 450, description: "A City construction industry focused on raw Materials and rapid project completion." }),
-  eco("grand-foundry", "Grand Foundry", "Any", 50, 45, 900000, 30000, { chainId: "materials", nodeTier: 4, parentIds: ["ironworks"], flatOutput: 1500, materialCost: 7500, buildingUpkeep: 1600, materialsOutput: 5400, grantsTags: ["iron"], recruitmentDiscount: 7, upkeepDiscount: 4, description: "A hybrid military foundry with balanced Crown and Materials plus meaningful army cost reductions." }),
+  eco("grand-foundry", "Grand Foundry", "Any", 50, 45, 900000, 30000, { chainId: "materials", nodeTier: 4, parentIds: ["ironworks"], flatOutput: 1500, materialCost: 7500, buildingUpkeep: 1600, materialsOutput: 5400, recruitmentDiscount: 7, upkeepDiscount: 4, description: "A hybrid military foundry with balanced Crown and Materials plus meaningful army cost reductions." }),
   eco("monumental-works", "Monumental Works", "Any", 80, 0, 3000000, 85000, { chainId: "materials", nodeTier: 5, parentIds: ["builders-guild"], materialCost: 26000, buildingUpkeep: 4000, materialsOutput: 20000, constructionBonus: 1500, special: true, description: "The stone endpoint: unmatched Materials and Construction CP for metropolitan projects." }),
-  eco("industrial-complex", "Industrial Complex", "Any", 80, 65, 3400000, 95000, { chainId: "materials", nodeTier: 5, parentIds: ["grand-foundry"], flatOutput: 3500, materialCost: 30000, buildingUpkeep: 4800, materialsOutput: 15000, grantsTags: ["iron"], recruitmentDiscount: 12, upkeepDiscount: 8, special: true, description: "The hybrid iron endpoint combines Crown and Materials with the strongest industrial military discounts." }),
+  eco("industrial-complex", "Industrial Complex", "Any", 80, 65, 3400000, 95000, { chainId: "materials", nodeTier: 5, parentIds: ["grand-foundry"], flatOutput: 3500, materialCost: 30000, buildingUpkeep: 4800, materialsOutput: 15000, recruitmentDiscount: 12, upkeepDiscount: 8, special: true, description: "The hybrid industry endpoint combines Crown and Materials with the strongest military discounts." }),
 
   eco("trading-post", "Trading Post", "Any", 10, 24, 30000, 1000, { chainId: "commerce", nodeTier: 1, flatOutput: 500, materialCost: 100, buildingUpkeep: 60, description: "The entry-level Crown district and the only economic root dedicated to direct income." }),
-  eco("market-town", "Market District", "Any", 20, 55, 110000, 3200, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1800, materialCost: 600, buildingUpkeep: 220, description: "Reliable inland commerce with strong Crown, moderate staffing, and no terrain requirement." }),
+  eco("market-town", "Market District", "Any", 20, 55, 110000, 3200, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1800, materialCost: 600, buildingUpkeep: 220, buildingUpkeepDiscount: 2, description: "Reliable inland commerce with strong Crown and a small settlement building-upkeep discount." }),
   eco("river-jetty", "River Jetty", "Coast, River, or Lake", 20, 50, 120000, 3600, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 2200, materialCost: 750, buildingUpkeep: 300, eventRollBonus: 1, description: "Terrain-limited foreign trade with slightly higher risk, Crown potential, and event quality." }),
-  eco("merchants-guild", "Merchants Guild", "Any", 35, 100, 320000, 10000, { chainId: "commerce", nodeTier: 3, parentIds: ["market-town"], flatOutput: 7000, materialCost: 2200, buildingUpkeep: 800, description: "A stable inland guild that turns workers into dependable Crown without strategic terrain." }),
+  eco("merchants-guild", "Merchants Guild", "Any", 35, 100, 320000, 10000, { chainId: "commerce", nodeTier: 3, parentIds: ["market-town"], flatOutput: 7000, materialCost: 2200, buildingUpkeep: 800, buildingUpkeepDiscount: 4, description: "A stable inland guild that produces dependable Crown and lowers settlement building upkeep." }),
   eco("trade-harbor", "Trade Harbor", "Coast, River, or Lake", 40, 95, 390000, 12000, { chainId: "commerce", nodeTier: 3, parentIds: ["river-jetty"], flatOutput: 9000, materialCost: 2800, buildingUpkeep: 1200, eventRollBonus: 2, description: "A higher-output harbor with greater upkeep and stronger trade-event results." }),
-  eco("grand-bazaar", "Grand Bazaar", "Any", 50, 170, 1000000, 32000, { chainId: "commerce", nodeTier: 4, parentIds: ["merchants-guild"], flatOutput: 18000, materialCost: 8000, buildingUpkeep: 2500, description: "A low-risk City market combining excellent Crown with predictable costs." }),
+  eco("grand-bazaar", "Grand Bazaar", "Any", 50, 170, 1000000, 32000, { chainId: "commerce", nodeTier: 4, parentIds: ["merchants-guild"], flatOutput: 18000, materialCost: 8000, buildingUpkeep: 2500, buildingUpkeepDiscount: 7, description: "A low-risk City market combining excellent Crown with lower upkeep across the settlement." }),
   eco("grand-harbor", "Grand Harbor", "Coast, River, or Lake", 60, 165, 1200000, 38000, { chainId: "commerce", nodeTier: 4, parentIds: ["trade-harbor"], flatOutput: 24000, materialCost: 10000, buildingUpkeep: 3500, eventRollBonus: 3, description: "A costly maritime hub that surpasses inland income and improves event rolls." }),
-  eco("world-market", "World Market", "Any", 75, 300, 3600000, 100000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-bazaar"], flatOutput: 45000, materialCost: 30000, buildingUpkeep: 7500, bonusEconomicSlots: 1, special: true, description: "The inland endpoint: very high stable Crown and one additional Economic district slot." }),
+  eco("world-market", "World Market", "Any", 75, 300, 3600000, 100000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-bazaar"], flatOutput: 45000, materialCost: 30000, buildingUpkeep: 7500, buildingUpkeepDiscount: 12, bonusEconomicSlots: 1, special: true, description: "The inland endpoint: very high stable Crown, lower building upkeep, and one additional Economic district slot." }),
   eco("imperial-port", "Imperial Port", "Coast, River, or Lake", 85, 290, 4200000, 115000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-harbor"], flatOutput: 60000, materialCost: 36000, buildingUpkeep: 9000, eventRollBonus: 5, special: true, description: "The maritime endpoint: the highest Crown output and event bonus, paid for with terrain limits, workers, upkeep, and cost." }),
 
   eco("village-commons", "Village Commons", "Any", 6, 0, 18000, 700, { chainId: "civic", nodeTier: 1, materialCost: 80, buildingUpkeep: 50, publicOrder: 3, growth: 0.05, description: "The first Civic district. It produces no Crown, instead supporting Order and long-term population development." }),
@@ -168,32 +167,32 @@ const BUILDING_CATALOG = [
   eco("cultural-capital", "Cultural Capital", "Any", 65, 0, 2900000, 82000, { chainId: "civic", nodeTier: 5, parentIds: ["grand-theatre"], materialCost: 23000, buildingUpkeep: 5500, publicOrder: 38, eventRollBonus: 10, special: true, description: "The culture endpoint: maximum Public Order and event control, with no Crown production." }),
   eco("sacred-university", "Sacred University", "Any", 65, 0, 3100000, 88000, { chainId: "civic", nodeTier: 5, parentIds: ["cathedral-academy"], materialCost: 25000, buildingUpkeep: 6000, publicOrder: 18, growth: 1.4, mitigationTags: ["plague", "unrest", "famine", "migration"], special: true, description: "The welfare endpoint: the strongest building Growth and disaster protection, balanced by lower Order and high upkeep." }),
 
-  mil("muster-field", "Muster Field", 8, 30000, 1200, { chainId: "recruitment", nodeTier: 1, materialCost: 200, buildingUpkeep: 100, militaryCapacity: 120, canRecruit: true, recruitPerLevel: 20, recruitableUnitIds: ["militia", "watchman"], defense: 10, uniqueChain: true }),
-  mil("infantry-yard", "Infantry Yard", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, militaryCapacity: 260, canRecruit: true, recruitPerLevel: 18, recruitableUnitIds: ["spearman", "men-at-arms"], defense: 18, uniqueChain: true }),
-  mil("archery-range", "Archery Range", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, militaryCapacity: 220, canRecruit: true, recruitPerLevel: 18, recruitableUnitIds: ["archer"], defense: 14, uniqueChain: true }),
-  mil("drill-hall", "Drill Hall", 25, 280000, 9500, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], materialCost: 2400, buildingUpkeep: 600, militaryCapacity: 550, canRecruit: true, recruitPerLevel: 30, recruitableUnitIds: ["veteran-infantry", "sergeant"], defense: 28, uniqueChain: true }),
-  mil("stable", "Stable Compound", 25, 340000, 11000, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], terrain: "Plains or Grassland", materialCost: 2800, buildingUpkeep: 650, militaryCapacity: 420, canRecruit: true, recruitPerLevel: 14, recruitableUnitIds: ["mounted-scout"], requiredTagsAny: ["horses", "plains", "grassland"], defense: 20, uniqueChain: true }),
-  mil("marksmen-range", "Marksmen Range", 25, 300000, 10000, { chainId: "recruitment", nodeTier: 3, parentIds: ["archery-range"], materialCost: 2500, buildingUpkeep: 600, militaryCapacity: 480, canRecruit: true, recruitPerLevel: 28, recruitableUnitIds: ["crossbowman"], defense: 22, uniqueChain: true }),
-  mil("royal-barracks", "Royal Barracks", 40, 850000, 28000, { chainId: "recruitment", nodeTier: 4, parentIds: ["drill-hall"], materialCost: 7500, buildingUpkeep: 1800, militaryCapacity: 1100, canRecruit: true, recruitPerLevel: 55, recruitableUnitIds: ["royal-guard"], defense: 45, upkeepDiscount: 4, uniqueChain: true }),
-  mil("cavalry-yard", "Cavalry Yard", 40, 980000, 32000, { chainId: "recruitment", nodeTier: 4, parentIds: ["stable"], materialCost: 8500, buildingUpkeep: 2000, militaryCapacity: 850, canRecruit: true, recruitPerLevel: 24, recruitableUnitIds: ["cavalry"], requiredTagsAny: ["horses"], defense: 38, uniqueChain: true }),
-  mil("rangers-lodge", "Rangers Lodge", 40, 900000, 30000, { chainId: "recruitment", nodeTier: 4, parentIds: ["marksmen-range"], materialCost: 8000, buildingUpkeep: 1800, militaryCapacity: 900, canRecruit: true, recruitPerLevel: 48, recruitableUnitIds: ["ranger"], defense: 35, uniqueChain: true }),
-  mil("war-college", "War College", 70, 3400000, 95000, { chainId: "recruitment", nodeTier: 5, parentIds: ["royal-barracks"], materialCost: 30000, buildingUpkeep: 5000, militaryCapacity: 2500, canRecruit: true, recruitPerLevel: 100, recruitableUnitIds: ["imperial-guard", "war-champion"], defense: 80, upkeepDiscount: 10, special: true, uniqueChain: true }),
-  mil("knightly-order", "Knightly Order", 65, 4000000, 110000, { chainId: "recruitment", nodeTier: 5, parentIds: ["cavalry-yard"], materialCost: 36000, buildingUpkeep: 6000, militaryCapacity: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["knight"], requiredTagsAny: ["horses"], defense: 75, recruitmentDiscount: 8, special: true, uniqueChain: true }),
-  mil("imperial-marksmen", "Imperial Marksmen Academy", 65, 3600000, 100000, { chainId: "recruitment", nodeTier: 5, parentIds: ["rangers-lodge"], materialCost: 32000, buildingUpkeep: 5500, militaryCapacity: 2200, canRecruit: true, recruitPerLevel: 85, recruitableUnitIds: ["imperial-marksman"], defense: 65, special: true, uniqueChain: true }),
+  mil("muster-field", "Muster Field", 8, 30000, 1200, { chainId: "recruitment", nodeTier: 1, materialCost: 200, buildingUpkeep: 100, canRecruit: true, recruitPerLevel: 10, recruitableUnitIds: ["militia", "watchman"], uniqueChain: true }),
+  mil("infantry-yard", "Infantry Yard", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["spearman", "men-at-arms"], uniqueChain: true }),
+  mil("archery-range", "Archery Range", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["archer"], uniqueChain: true }),
+  mil("drill-hall", "Drill Hall", 25, 280000, 9500, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], materialCost: 2400, buildingUpkeep: 600, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["veteran-infantry", "sergeant"], uniqueChain: true }),
+  mil("stable", "Stable Compound", 25, 340000, 11000, { chainId: "recruitment", nodeTier: 3, parentIds: ["infantry-yard"], terrain: "Any", materialCost: 2800, buildingUpkeep: 650, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["mounted-scout"], uniqueChain: true, description: "A cavalry training branch. Building it directly unlocks mounted units without a separate Horses resource." }),
+  mil("marksmen-range", "Marksmen Range", 25, 300000, 10000, { chainId: "recruitment", nodeTier: 3, parentIds: ["archery-range"], materialCost: 2500, buildingUpkeep: 600, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["crossbowman"], uniqueChain: true }),
+  mil("royal-barracks", "Royal Barracks", 40, 850000, 28000, { chainId: "recruitment", nodeTier: 4, parentIds: ["drill-hall"], materialCost: 7500, buildingUpkeep: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["royal-guard"], upkeepDiscount: 4, uniqueChain: true }),
+  mil("cavalry-yard", "Cavalry Yard", 40, 980000, 32000, { chainId: "recruitment", nodeTier: 4, parentIds: ["stable"], materialCost: 8500, buildingUpkeep: 2000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["cavalry"], uniqueChain: true }),
+  mil("rangers-lodge", "Rangers Lodge", 40, 900000, 30000, { chainId: "recruitment", nodeTier: 4, parentIds: ["marksmen-range"], materialCost: 8000, buildingUpkeep: 1800, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["ranger"], uniqueChain: true }),
+  mil("war-college", "War College", 70, 3400000, 95000, { chainId: "recruitment", nodeTier: 5, parentIds: ["royal-barracks"], materialCost: 30000, buildingUpkeep: 5000, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["imperial-guard", "war-champion"], upkeepDiscount: 10, special: true, uniqueChain: true }),
+  mil("knightly-order", "Knightly Order", 65, 4000000, 110000, { chainId: "recruitment", nodeTier: 5, parentIds: ["cavalry-yard"], materialCost: 36000, buildingUpkeep: 6000, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["knight"], recruitmentDiscount: 8, special: true, uniqueChain: true }),
+  mil("imperial-marksmen", "Imperial Marksmen Academy", 65, 3600000, 100000, { chainId: "recruitment", nodeTier: 5, parentIds: ["rangers-lodge"], materialCost: 32000, buildingUpkeep: 5500, canRecruit: true, recruitPerLevel: 70, recruitableUnitIds: ["imperial-marksman"], special: true, uniqueChain: true }),
 
-  mil("watch-post", "Watch Post", 5, 22000, 800, { chainId: "defense", nodeTier: 1, materialCost: 100, buildingUpkeep: 80, defense: 20, publicOrder: 2, uniqueChain: true }),
-  mil("palisade", "Palisade", 10, 70000, 2600, { chainId: "defense", nodeTier: 2, parentIds: ["watch-post"], materialCost: 700, buildingUpkeep: 200, defense: 60, publicOrder: 3, mitigationTags: ["raid"], uniqueChain: true }),
-  mil("stone-walls", "Stone Walls", 20, 260000, 9000, { chainId: "defense", nodeTier: 3, parentIds: ["palisade"], materialCost: 3000, buildingUpkeep: 600, defense: 160, publicOrder: 5, mitigationTags: ["raid"], uniqueChain: true }),
-  mil("citadel", "Citadel", 35, 900000, 30000, { chainId: "defense", nodeTier: 4, parentIds: ["stone-walls"], materialCost: 10000, buildingUpkeep: 2000, defense: 420, militaryCapacity: 300, publicOrder: 8, mitigationTags: ["raid", "unrest"], uniqueChain: true }),
-  mil("grand-fortress", "Grand Fortress", 60, 3800000, 105000, { chainId: "defense", nodeTier: 5, parentIds: ["citadel"], materialCost: 38000, buildingUpkeep: 6000, defense: 1100, militaryCapacity: 800, publicOrder: 15, mitigationTags: ["raid", "unrest", "disaster"], special: true, uniqueChain: true }),
+  mil("watch-post", "Watch Post", 5, 22000, 800, { chainId: "defense", nodeTier: 1, materialCost: 100, buildingUpkeep: 80, publicOrder: 2, siegeDefensePercent: 5, garrisonUnits: [{ unitId: "militia", count: 20 }], uniqueChain: true, description: "A local watch that supplies 20 free Militia and +5% siege defense while supporting Public Order." }),
+  mil("palisade", "Palisade", 10, 70000, 2600, { chainId: "defense", nodeTier: 2, parentIds: ["watch-post"], materialCost: 700, buildingUpkeep: 200, publicOrder: 4, siegeDefensePercent: 10, garrisonUnits: [{ unitId: "militia", count: 30 }, { unitId: "watchman", count: 15 }], mitigationTags: ["raid"], uniqueChain: true, description: "A defended perimeter with a free local garrison, +10% siege defense, and stronger Public Order." }),
+  mil("stone-walls", "Stone Walls", 20, 260000, 9000, { chainId: "defense", nodeTier: 3, parentIds: ["palisade"], materialCost: 3000, buildingUpkeep: 600, publicOrder: 7, siegeDefensePercent: 20, garrisonUnits: [{ unitId: "spearman", count: 25 }, { unitId: "men-at-arms", count: 15 }, { unitId: "archer", count: 20 }], mitigationTags: ["raid"], uniqueChain: true, description: "Stone defenses add a mixed free garrison, +20% siege defense, and visible civic control." }),
+  mil("citadel", "Citadel", 35, 900000, 30000, { chainId: "defense", nodeTier: 4, parentIds: ["stone-walls"], materialCost: 10000, buildingUpkeep: 2000, publicOrder: 12, siegeDefensePercent: 35, garrisonUnits: [{ unitId: "veteran-infantry", count: 25 }, { unitId: "crossbowman", count: 20 }, { unitId: "men-at-arms", count: 25 }], mitigationTags: ["raid", "unrest"], uniqueChain: true, description: "A City citadel provides a veteran free garrison, +35% siege defense, and major Public Order." }),
+  mil("grand-fortress", "Grand Fortress", 60, 3800000, 105000, { chainId: "defense", nodeTier: 5, parentIds: ["citadel"], materialCost: 38000, buildingUpkeep: 6000, publicOrder: 20, siegeDefensePercent: 50, garrisonUnits: [{ unitId: "royal-guard", count: 30 }, { unitId: "veteran-infantry", count: 40 }, { unitId: "imperial-marksman", count: 25 }], mitigationTags: ["raid", "unrest", "disaster"], special: true, uniqueChain: true, description: "A metropolitan fortress provides an elite free garrison, +50% siege defense, and the strongest defensive Order bonus." }),
 
   mil("engineer-camp", "Engineer Camp", 8, 28000, 1000, { chainId: "siege", nodeTier: 1, materialCost: 150, buildingUpkeep: 100, constructionBonus: 20, uniqueChain: true }),
   mil("siege-yard", "Siege Yard", 15, 85000, 3000, { chainId: "siege", nodeTier: 2, parentIds: ["engineer-camp"], materialCost: 850, buildingUpkeep: 250, constructionBonus: 60, uniqueChain: true }),
-  mil("siege-workshop", "Siege Workshop", 25, 300000, 10500, { chainId: "siege", nodeTier: 3, parentIds: ["siege-yard"], materialCost: 2800, buildingUpkeep: 650, militaryCapacity: 200, canRecruit: true, recruitPerLevel: 8, recruitableUnitIds: ["siege-crew"], constructionBonus: 140, requiredTagsAny: ["iron"], uniqueChain: true }),
-  mil("royal-arsenal", "Royal Arsenal", 40, 920000, 31000, { chainId: "siege", nodeTier: 4, parentIds: ["siege-workshop"], materialCost: 9000, buildingUpkeep: 2000, militaryCapacity: 450, canRecruit: true, recruitPerLevel: 18, recruitableUnitIds: ["royal-engineer"], constructionBonus: 320, requiredTagsAny: ["iron"], uniqueChain: true }),
-  mil("grand-arsenal", "Grand Arsenal", 65, 3900000, 108000, { chainId: "siege", nodeTier: 5, parentIds: ["royal-arsenal"], materialCost: 36000, buildingUpkeep: 6000, militaryCapacity: 1000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["grand-artillery"], constructionBonus: 800, requiredTagsAny: ["iron"], defense: 100, special: true, uniqueChain: true }),
+  mil("siege-workshop", "Siege Workshop", 25, 300000, 10500, { chainId: "siege", nodeTier: 3, parentIds: ["siege-yard"], materialCost: 2800, buildingUpkeep: 650, canRecruit: true, recruitPerLevel: 15, recruitableUnitIds: ["siege-crew"], constructionBonus: 140, uniqueChain: true }),
+  mil("royal-arsenal", "Royal Arsenal", 40, 920000, 31000, { chainId: "siege", nodeTier: 4, parentIds: ["siege-workshop"], materialCost: 9000, buildingUpkeep: 2000, canRecruit: true, recruitPerLevel: 25, recruitableUnitIds: ["royal-engineer"], constructionBonus: 320, uniqueChain: true }),
+  mil("grand-arsenal", "Grand Arsenal", 65, 3900000, 108000, { chainId: "siege", nodeTier: 5, parentIds: ["royal-arsenal"], materialCost: 36000, buildingUpkeep: 6000, canRecruit: true, recruitPerLevel: 40, recruitableUnitIds: ["grand-artillery"], constructionBonus: 800, special: true, uniqueChain: true }),
 
-  mil("laurent-manor", "Laurent Manor", 5, 0, 0, { chainId: "landmark", branch: "landmark", nodeTier: 0, landmark: true, buildingUpkeep: 300, slotUse: 0, militaryCapacity: 350, canRecruit: true, recruitPerLevel: 20, recruitableUnitIds: ["militia", "watchman", "spearman", "men-at-arms", "archer"], bonusEconomicSlots: 2, defense: 100, publicOrder: 6, special: true, gmOnly: true, uniqueChain: true, description: "De Laurent's unique fortified manor. It has no tier or normal district, requires 5 POP, and cannot be upgraded.", notes: "De Laurent's staffed noble landmark." })
+  mil("laurent-manor", "Laurent Manor", 5, 0, 0, { chainId: "landmark", branch: "landmark", nodeTier: 0, landmark: true, buildingUpkeep: 300, slotUse: 0, canRecruit: true, recruitPerLevel: 10, recruitableUnitIds: ["militia", "watchman", "spearman", "men-at-arms", "archer"], bonusEconomicSlots: 2, publicOrder: 6, siegeDefensePercent: 10, garrisonUnits: [{ unitId: "watchman", count: 20 }, { unitId: "men-at-arms", count: 10 }], special: true, gmOnly: true, uniqueChain: true, description: "De Laurent's unique fortified manor. It has no tier or normal district, requires 5 POP, contributes recruitment capacity, and provides a free household garrison.", notes: "De Laurent's staffed noble landmark." })
 ];
 
 const LEGACY_BUILDING_IDS = [
@@ -404,6 +403,8 @@ function eco(id, name, terrain, workers, rate, crownCost, cpCost, extra = {}) {
     materialsUpkeep: 0,
     publicOrder: 0,
     defense: 0,
+    siegeDefensePercent: 0,
+    garrisonUnits: [],
     eventRollBonus: 0,
     grantsTags: [],
     requiredTagsAny: [],
@@ -424,6 +425,7 @@ function eco(id, name, terrain, workers, rate, crownCost, cpCost, extra = {}) {
     constructionBonus: 0,
     recruitmentDiscount: 0,
     upkeepDiscount: 0,
+    buildingUpkeepDiscount: 0,
     growth: 0,
     uniqueChain: false,
     maxPerSettlement: 2,
@@ -458,6 +460,8 @@ function mil(id, name, workers, crownCost, cpCost, extra = {}) {
     materialsUpkeep: 0,
     publicOrder: 0,
     defense: 0,
+    siegeDefensePercent: 0,
+    garrisonUnits: [],
     eventRollBonus: 0,
     grantsTags: [],
     requiredTagsAny: [],
@@ -478,6 +482,7 @@ function mil(id, name, workers, crownCost, cpCost, extra = {}) {
     constructionBonus: 0,
     recruitmentDiscount: 0,
     upkeepDiscount: 0,
+    buildingUpkeepDiscount: 0,
     growth: 0,
     uniqueChain: true,
     maxPerSettlement: 1,
@@ -706,6 +711,14 @@ function buildContext(rawData) {
         name: item.name,
         label: item.landmark ? `Landmark / ${item.name}` : `${categoryLabel(item.category)} / ${tierName(item.settlementTier, data.rules)} / T${item.nodeTier} / ${item.name}`
       })),
+    gmNormalBuildingOptions: data.catalog
+      .filter(item => item.enabled && !item.landmark)
+      .sort((a, b) => a.category.localeCompare(b.category) || a.nodeTier - b.nodeTier || a.name.localeCompare(b.name))
+      .map(item => ({ id: item.id, name: item.name, label: `${categoryLabel(item.category)} / T${item.nodeTier} / ${item.name}` })),
+    gmLandmarkOptions: data.catalog
+      .filter(item => item.enabled && item.landmark)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(item => ({ id: item.id, name: item.name, label: item.name })),
     unitCatalog: data.unitCatalog,
     rules: rulesContext(data.rules),
     tierRules: data.rules.tiers.map(tier => tierRuleContext(tier)),
@@ -733,8 +746,7 @@ function searchableSettlementText(settlement) {
     settlement.name,
     settlement.region,
     settlement.type,
-    ...(settlement.terrainTags || []),
-    ...(settlement.biomeTags || [])
+    ...(settlement.terrainTags || [])
   ].join(" ").toLowerCase();
 }
 
@@ -770,14 +782,14 @@ function selectedContext(settlement, data, isGM) {
   return {
     ...settlement,
     terrainTagsText: settlement.terrainTags.join(", "),
-    biomeTagsText: settlement.biomeTags.join(", "),
+    biomeTagsText: "",
     terrainTagsList: settlement.terrainTags,
-    biomeTagsList: settlement.biomeTags,
+    biomeTagsList: [],
     terrainOptions: TERRAIN_OPTIONS.map(name => ({ name, checked: settlement.terrainTags.some(tag => tag.toLowerCase() === name.toLowerCase()) })),
-    biomeOptions: BIOME_OPTIONS.map(name => ({ name, checked: settlement.biomeTags.some(tag => tag.toLowerCase() === name.toLowerCase()) })),
-    resourceOptions: STRATEGIC_RESOURCE_OPTIONS.map(name => ({ name, checked: settlement.terrainTags.some(tag => tag.toLowerCase() === name.toLowerCase()) })),
-    customTerrainTagsText: settlement.terrainTags.filter(tag => ![...TERRAIN_OPTIONS, ...STRATEGIC_RESOURCE_OPTIONS].some(option => option.toLowerCase() === tag.toLowerCase())).join(", "),
-    customBiomeTagsText: settlement.biomeTags.filter(tag => !BIOME_OPTIONS.some(option => option.toLowerCase() === tag.toLowerCase())).join(", "),
+    biomeOptions: [],
+    resourceOptions: [],
+    customTerrainTagsText: settlement.terrainTags.filter(tag => !TERRAIN_OPTIONS.some(option => option.toLowerCase() === tag.toLowerCase())).join(", "),
+    customBiomeTagsText: "",
     ownerNames: ownerNames(settlement),
     access: permissions,
     canEditBasics: permissions.canEditBasics,
@@ -824,6 +836,9 @@ function selectedContext(settlement, data, isGM) {
     activeReplenishment: recruitment.filter(order => order.status !== "completed" && order.kind === "replenishment"),
     completedRecruitment: recruitment.filter(order => order.status === "completed"),
     constructionCatalog: constructionCatalogContext(settlement, data, permissions, summary),
+    recruitmentBuildingTrees: buildingTreeGroups(data.catalog
+      .filter(item => item.enabled && item.category === "military" && ["recruitment", "siege"].includes(item.branch))
+      .map(item => catalogBuildingContext(item, data.unitCatalog))),
     recruitableUnits: recruitableUnitsContext(settlement, data, permissions, summary, isGM),
     canManageConstruction: permissions.canEditConstruction,
     canManageRecruitment: permissions.canManageRecruitment,
@@ -881,6 +896,7 @@ function summaryContext(summary) {
     grossIncome: formatNumber(summary.grossIncome),
     militaryCost: formatNumber(summary.militaryCost),
     buildingUpkeep: formatNumber(summary.buildingUpkeep),
+    buildingUpkeepDiscount: `${formatNumber(summary.buildingUpkeepDiscount)}%`,
     upkeepDiscount: `${formatNumber(summary.upkeepDiscount)}%`,
     netIncome: formatSigned(summary.netIncome),
     foodStored: formatNumber(summary.foodStored),
@@ -906,6 +922,8 @@ function summaryContext(summary) {
     publicOrderBand: summary.publicOrderBand.label,
     publicOrderBandClass: summary.publicOrderBand.className,
     publicOrderGrowth: `${formatSigned(summary.publicOrderGrowth)}% Growth`,
+    publicOrderIncome: `${formatSigned(summary.publicOrderIncomePercent)}% Crown`,
+    publicOrderPressure: formatSigned(summary.publicOrderPressure),
     publicOrderEventRoll: `${formatSigned(summary.publicOrderEventRoll)} Event Roll`,
     defense: formatNumber(summary.defense),
     defenseTarget: formatNumber(summary.defenseTarget),
@@ -914,6 +932,10 @@ function summaryContext(summary) {
     defenseState: summary.defenseState,
     armyPower: formatNumber(summary.armyPower),
     garrisonPower: formatNumber(summary.garrisonPower),
+    autoGarrisonPower: formatNumber(summary.autoGarrisonPower),
+    autoGarrisonSummary: summary.autoGarrison.map(entry => `${formatNumber(entry.count)} ${entry.name}`).join(", ") || "None",
+    defendingPower: formatNumber(summary.defendingPower),
+    siegeDefense: `${formatNumber(summary.siegeDefensePercent)}%`,
     strategicTags: summary.strategicTags.join(", ") || "None",
     totalSlots: formatNumber(summary.totalSlots),
     unlockedSlots: formatNumber(summary.unlockedSlots),
@@ -937,6 +959,8 @@ function buildingContext(building, settlement, data, permissions) {
   const output = buildingOutput(building, settlement);
   const recruitCapacity = buildingRecruitmentCapacity(building);
   const branch = branchMeta(building.branch || building.chainId, building.category);
+  const operating = buildingOperating(building);
+  const waitingForLabor = building.active && !operating;
   return {
     ...building,
     categoryLabel: categoryLabel(building.category),
@@ -951,6 +975,12 @@ function buildingContext(building, settlement, data, permissions) {
     tierRoman: building.landmark ? "" : romanTier(building.nodeTier),
     tierDisplay: building.landmark ? "Landmark" : `Tier ${building.nodeTier}`,
     activeChecked: building.active ? "checked" : "",
+    operating,
+    halted: !building.active,
+    waitingForLabor,
+    operationLabel: operating ? "Operating" : waitingForLabor ? `Waiting for ${formatNumber(building.workers)} POP` : "Halted",
+    operationAction: building.active ? "halt" : "continue",
+    operationButtonLabel: building.active ? "Halt" : "Continue",
     specialChecked: building.special ? "checked" : "",
     gmOnlyChecked: building.gmOnly ? "checked" : "",
     canRecruitChecked: building.canRecruit ? "checked" : "",
@@ -966,6 +996,11 @@ function buildingContext(building, settlement, data, permissions) {
     buildingUpkeepDisplay: formatNumber(building.buildingUpkeep),
     bonusOutput: formatNumber(output.bonus),
     workerCapacity: formatNumber(workerCapacity(building)),
+    requiredWorkersDisplay: formatNumber(building.workers),
+    garrisonUnitsText: garrisonUnitsText(building.garrisonUnits, data.unitCatalog),
+    garrisonSummary: normalizeGarrisonUnits(building.garrisonUnits, data.unitCatalog).map(entry => `${formatNumber(entry.count)} ${troopType(entry.unitId, data.unitCatalog).name}`).join(", ") || "None",
+    siegeDefenseDisplay: `${formatNumber(building.siegeDefensePercent)}%`,
+    buildingUpkeepDiscountDisplay: `${formatNumber(building.buildingUpkeepDiscount)}%`,
     slotUseDisplay: formatNumber(slotUse(building)),
     recruitCapacity: formatNumber(recruitCapacity),
     militaryCapacityDisplay: formatNumber(building.militaryCapacity),
@@ -981,19 +1016,18 @@ function buildingContext(building, settlement, data, permissions) {
 
 function troopContext(troop, settlement, permissions, unitCatalog, rules = defaultRules(), isGM = false) {
   const type = troopType(troop.type, unitCatalog);
-  const mode = troop.mode === "campaign" ? "campaign" : "garrison";
   const upkeep = unitUpkeepFromRules(type, rules);
-  const costPerTroop = mode === "campaign" ? upkeep.campaign : upkeep.garrison;
+  const costPerTroop = upkeep.upkeep;
   const missing = Math.max(0, troop.maxCount - troop.count);
-  const sources = recruitmentSources(settlement, troop.type, isGM);
   const replenishmentCost = Math.max(0, Math.round(replenishmentUnitCost(type, rules) * recruitmentCostMultiplier(settlement)));
   return {
     ...troop,
     displayName: troop.name || type.name,
     typeName: type.name,
     hasImage: Boolean(troop.imageUrl),
-    garrisonCostDisplay: formatNumber(upkeep.garrison),
-    campaignCostDisplay: formatNumber(upkeep.campaign),
+    upkeepDisplay: formatNumber(upkeep.upkeep),
+    garrisonCostDisplay: formatNumber(upkeep.upkeep),
+    campaignCostDisplay: formatNumber(upkeep.upkeep),
     cost: formatNumber(costPerTroop * troop.count),
     tierLabel: `Tier ${type.tier}`,
     power: formatNumber(regimentPower(troop, unitCatalog)),
@@ -1008,33 +1042,25 @@ function troopContext(troop, settlement, permissions, unitCatalog, rules = defau
     foodUpkeepDisplay: formatNumber(type.foodUpkeep * troop.count),
     replenishmentCostDisplay: formatNumber(replenishmentCost),
     replenishmentTotalDisplay: formatNumber(replenishmentCost * missing),
-    replenishmentSources: sources,
-    canReplenish: missing > 0 && permissions.canManageRecruitment && sources.length > 0,
+    replenishmentSources: [],
+    canReplenish: missing > 0 && permissions.canManageRecruitment,
     hasActor: Boolean(troop.actorUuid || type.actorUuid),
     actorUuid: troop.actorUuid || type.actorUuid,
     canEditFull: permissions.canEditMilitary,
     canEditAssignments: permissions.canEditAssignments,
     typeOptions: unitCatalog.map(option => ({ ...option, selected: option.id === troop.type })),
-    garrisonSelected: mode === "garrison",
-    campaignSelected: mode === "campaign"
+    garrisonSelected: true,
+    campaignSelected: false
   };
 }
 
 function recruitmentContext(order, settlement, permissions, unitCatalog, isGM) {
-  const source = settlement.buildings.find(building => building.id === order.sourceBuildingId);
   const type = troopType(order.troopType, unitCatalog);
   const remaining = Math.max(0, order.targetCount - order.trained);
-  const sourceOptions = recruitmentSources(settlement, order.troopType, isGM);
-  if (source && !sourceOptions.some(option => option.id === source.id)) {
-    sourceOptions.push({
-      id: source.id,
-      name: `${source.name} (inactive)`
-    });
-  }
   return {
     ...order,
     imageUrl: order.imageUrl || type.imageUrl,
-    sourceName: source?.name || "Direct GM",
+    sourceName: order.kind === "replenishment" ? "Independent Replenishment" : "Shared Recruitment Pool",
     kindLabel: order.kind === "replenishment" ? "Replenishment" : "Recruitment",
     troopTypeName: type.name,
     remaining: formatNumber(remaining),
@@ -1042,7 +1068,7 @@ function recruitmentContext(order, settlement, permissions, unitCatalog, isGM) {
     progressPercent: order.targetCount > 0 ? clamp(Math.round(order.trained / order.targetCount * 100), 0, 100) : 100,
     totalCost: formatNumber(order.crownPaid),
     statusLabel: RECRUITMENT_STATUSES.find(status => status.value === order.status)?.label || order.status,
-    sourceOptions: sourceOptions.map(option => ({ ...option, selected: option.id === (order.sourceBuildingId || DIRECT_RECRUITMENT_SOURCE) })),
+    sourceOptions: [],
     troopTypeOptions: unitCatalog.map(option => ({ ...option, selected: option.id === order.troopType })),
     statusOptions: RECRUITMENT_STATUSES.map(option => ({ ...option, selected: option.value === order.status })),
     canEditFull: permissions.canEditMilitary,
@@ -1050,12 +1076,13 @@ function recruitmentContext(order, settlement, permissions, unitCatalog, isGM) {
   };
 }
 
-function recruitmentSources(settlement, unitId = "", includeDirect = false) {
+function recruitmentSources(settlement, unitId = "", includeDirect = false, data = {}) {
+  const catalog = data.catalog || BUILDING_CATALOG;
   const sources = settlement.buildings
-    .filter(building => building.active && recruitmentSourceCandidate(building) && (!unitId || sourceUnlocksUnit(building, unitId)))
+    .filter(building => buildingOperating(building) && buildingUnlocksUnit(building, unitId, catalog))
     .map(building => ({
       id: building.id,
-      name: recruitmentSourceLabel(building)
+      name: building.name
     }));
   if (includeDirect) sources.unshift({ id: DIRECT_RECRUITMENT_SOURCE, name: "Direct GM (no building requirement)" });
   return sources;
@@ -1125,6 +1152,7 @@ function catalogBuildingContext(item, unitCatalog) {
     grantsTagsText: item.grantsTags.join(", "),
     requiredTagsAnyText: item.requiredTagsAny.join(", "),
     mitigationTagsText: item.mitigationTags.join(", "),
+    garrisonUnitsText: garrisonUnitsText(item.garrisonUnits, unitCatalog),
     parentNames: item.parentIds.map(id => BUILDING_CATALOG.find(candidate => candidate.id === id)?.name || id).join(", ") || "Chain Root",
     nodeTierLabel: item.landmark ? "Landmark" : `Tier ${item.nodeTier}`,
     settlementTierLabel: item.landmark ? "Unique" : tierName(item.settlementTier),
@@ -1146,8 +1174,9 @@ function catalogUnitContext(item, rules = defaultRules()) {
     requiredTagsText: item.requiredTags.join(", "),
     isBuiltIn: TROOP_TYPES.some(candidate => candidate.id === item.id),
     recruitCostDisplay: formatNumber(item.recruitCost),
-    garrisonDisplay: formatNumber(upkeep.garrison),
-    campaignDisplay: formatNumber(upkeep.campaign)
+    upkeepDisplay: formatNumber(upkeep.upkeep),
+    garrisonDisplay: formatNumber(upkeep.upkeep),
+    campaignDisplay: formatNumber(upkeep.upkeep)
   };
 }
 
@@ -1166,15 +1195,19 @@ function branchOptionsFor(category, selectedId) {
 function buildingEffectBadges(item, unitCatalog = TROOP_TYPES) {
   const badges = [];
   const add = (icon, label, kind = "") => badges.push({ icon, label, kind });
+  if (item.workers > 0) add("fa-people-group", `Requires ${formatNumber(item.workers)} POP`, "workers");
   if (item.rate > 0) add("fa-coins", `${formatNumber(item.rate)} Crown / worker`, "crown");
   if (item.flatOutput > 0) add("fa-sack-dollar", `+${formatNumber(item.flatOutput)} Crown`, "crown");
   if (item.foodOutput > 0) add("fa-wheat-awn", `+${formatNumber(item.foodOutput)} Food`, "food");
   if (item.materialsOutput > 0) add("fa-gem", `+${formatNumber(item.materialsOutput)} Materials`, "materials");
-  if (item.militaryCapacity > 0) add("fa-khanda", `+${formatNumber(item.militaryCapacity)} Capacity`, "military");
-  if (item.defense > 0) add("fa-shield-halved", `+${formatNumber(item.defense)} Defense`, "military");
+  if (item.recruitPerLevel > 0) add("fa-user-plus", `+${formatNumber(item.recruitPerLevel)} Recruitment / month`, "military");
+  if (item.siegeDefensePercent > 0) add("fa-shield-halved", `+${formatNumber(item.siegeDefensePercent)}% Siege Defense`, "military");
+  const garrison = normalizeGarrisonUnits(item.garrisonUnits, unitCatalog);
+  if (garrison.length) add("fa-chess-rook", `Free Garrison: ${garrison.map(entry => `${formatNumber(entry.count)} ${troopType(entry.unitId, unitCatalog).name}`).join(", ")}`, "military");
   if (item.publicOrder) add("fa-scale-balanced", `${formatSigned(item.publicOrder)} Order`, "civic");
   if (item.growth) add("fa-seedling", `${formatSigned(item.growth)}% Growth`, "food");
   if (item.constructionBonus) add("fa-hammer", `+${formatNumber(item.constructionBonus)} CP`, "materials");
+  if (item.buildingUpkeepDiscount) add("fa-building-shield", `-${formatNumber(item.buildingUpkeepDiscount)}% Building Upkeep`, "crown");
   if (item.landmark) add("fa-crown", "Tierless Landmark", "crown");
   const unitNames = (item.recruitableUnitIds || []).map(id => troopType(id, unitCatalog).name);
   if (unitNames.length) add("fa-user-plus", `Recruits: ${unitNames.join(", ")}`, "military");
@@ -1536,7 +1569,6 @@ function settlementProgressionContext(settlement, data, permissions) {
   if (next && !settlement.overrides.ignorePopulationLimits && settlement.population < next.minPopulation) reasons.push(`Needs ${formatNumber(next.minPopulation - settlement.population)} more POP.`);
   if (next && settlement.treasure < next.promotionCost) reasons.push(`Needs ${formatNumber(next.promotionCost - settlement.treasure)} more Crown.`);
   if (next && settlement.materials < next.promotionMaterials) reasons.push(`Needs ${formatNumber(next.promotionMaterials - settlement.materials)} more Materials.`);
-  if (next && settlement.food < next.promotionFood) reasons.push(`Needs ${formatNumber(next.promotionFood - settlement.food)} more Food.`);
   if (queued) reasons.push("Progression is already queued.");
   return {
     current: tierRuleContext(current),
@@ -1569,15 +1601,19 @@ function rulesContext(rules) {
     construction: { ...rules.construction },
     military: { ...rules.military },
     growth: { ...rules.growth },
+    order: { ...rules.order },
     events: { ...rules.events }
   };
 }
 
 function recruitableUnitsContext(settlement, data, permissions, summary, isGM) {
-  const capacityRemaining = Math.max(0, summary.militaryCapacity - summary.troopManpowerUsed - summary.manpowerQueued);
+  const queuedRecruitment = settlement.recruitment
+    .filter(order => order.status !== "completed" && order.kind !== "replenishment")
+    .reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
+  const capacityRemaining = Math.max(0, summary.recruitmentCapacity - queuedRecruitment);
   return data.unitCatalog.filter(unit => unit.enabled).map(unit => {
     const upkeep = unitUpkeepFromRules(unit, data.rules);
-    const sources = recruitmentSources(settlement, unit.id, isGM);
+    const sources = recruitmentSources(settlement, unit.id, false, data);
     const discount = settlementRecruitmentDiscount(settlement, null, data.rules);
     const effectiveRecruitCost = Math.max(0, Math.round(unit.recruitCost * (1 - discount / 100) * recruitmentCostMultiplier(settlement)));
     const manpowerRemaining = summary.manpowerAvailable;
@@ -1585,15 +1621,13 @@ function recruitableUnitsContext(settlement, data, permissions, summary, isGM) {
     const existingCount = settlement.troops.filter(troop => troop.type === unit.id).reduce((total, troop) => total + troop.maxCount, 0);
     const sameQueued = settlement.recruitment.filter(order => order.status !== "completed" && order.troopType === unit.id).reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
     const unitLimit = unit.maxPerSettlement > 0 ? Math.max(0, unit.maxPerSettlement - existingCount - sameQueued) : 9999;
-    const tagMissing = unit.requiredTags.find(tag => !settlementGrantedTags(settlement).has(tag.toLowerCase()));
-    const maxRecruit = isGM ? 9999 : Math.max(0, Math.min(capacityRemaining, manpowerRemaining, treasuryLimit, unitLimit));
+    const maxRecruit = Math.max(0, Math.min(capacityRemaining, manpowerRemaining, treasuryLimit, unitLimit));
     const reasons = [];
     if (!sources.length) reasons.push("No completed building unlocks this unit.");
-    if (!isGM && capacityRemaining <= 0) reasons.push("Military capacity is full.");
-    if (!isGM && manpowerRemaining <= 0) reasons.push("No manpower remains.");
-    if (!isGM && treasuryLimit <= 0) reasons.push("Not enough Crown.");
-    if (!isGM && unitLimit <= 0) reasons.push(`${unit.name} settlement limit reached.`);
-    if (!isGM && tagMissing) reasons.push(`Requires strategic resource: ${tagMissing}.`);
+    if (capacityRemaining <= 0) reasons.push("Monthly recruitment capacity is committed.");
+    if (manpowerRemaining <= 0) reasons.push("No manpower remains.");
+    if (treasuryLimit <= 0) reasons.push("Not enough Crown.");
+    if (unitLimit <= 0) reasons.push(`${unit.name} settlement limit reached.`);
 
     return {
       ...unit,
@@ -1605,16 +1639,17 @@ function recruitableUnitsContext(settlement, data, permissions, summary, isGM) {
       recruitCostDisplay: formatNumber(effectiveRecruitCost),
       baseRecruitCostDisplay: formatNumber(unit.recruitCost),
       discountDisplay: `${formatNumber(discount)}%`,
-      garrisonDisplay: formatNumber(upkeep.garrison),
-      campaignDisplay: formatNumber(upkeep.campaign),
+      upkeepDisplay: formatNumber(upkeep.upkeep),
+      garrisonDisplay: formatNumber(upkeep.upkeep),
+      campaignDisplay: formatNumber(upkeep.upkeep),
       sourceOptions: sources,
       sourceSummary: sources.map(source => source.name).join(", ") || "Locked",
       maxRecruit,
       defaultCount: Math.max(1, Math.min(10, maxRecruit || 1)),
-      canQueue: permissions.canManageRecruitment && (isGM || reasons.length === 0),
-      blocked: reasons.length > 0 && !isGM,
+      canQueue: permissions.canManageRecruitment && reasons.length === 0,
+      blocked: reasons.length > 0,
       blockReason: reasons.join(" "),
-      hiddenForPlayer: !isGM && (!sources.length || Boolean(tagMissing))
+      hiddenForPlayer: !isGM && !sources.length
     };
   }).filter(unit => !unit.hiddenForPlayer);
 }
@@ -1643,6 +1678,7 @@ function permissionsFor(settlement, isGM = Boolean(game.user?.isGM), userId = ga
       canEditMilitary: true,
       canEditConstruction: true,
       canManageRecruitment: true,
+      canTransferTreasure: true,
       canEditGrowth: true,
       canEditAssignments: true,
       canWriteTurnNote: true,
@@ -1659,6 +1695,7 @@ function permissionsFor(settlement, isGM = Boolean(game.user?.isGM), userId = ga
     canEditMilitary: false,
     canEditConstruction: assigned && Boolean(settlement.permissions.playersCanManageConstruction),
     canManageRecruitment: assigned && Boolean(settlement.permissions.playersCanManageRecruitment),
+    canTransferTreasure: assigned && Boolean(settlement.permissions.playersCanTransferTreasure),
     canEditGrowth: false,
     canEditAssignments: assigned && Boolean(settlement.permissions.playersCanEditAssignments),
     canWriteTurnNote: assigned && Boolean(settlement.permissions.playersCanWriteTurnNotes),
@@ -1807,7 +1844,9 @@ function activateListeners(element) {
       event.preventDefault();
       const confirmMessage = event.submitter?.dataset.confirm || event.currentTarget.dataset.confirm;
       if (confirmMessage && !globalThis.confirm(confirmMessage)) return;
-      await sendAction(event.currentTarget.dataset.actionForm, formPayload(event.currentTarget));
+      const payload = formPayload(event.currentTarget);
+      if (event.submitter?.name) payload[event.submitter.name] = event.submitter.value;
+      await sendAction(event.currentTarget.dataset.actionForm, payload);
     });
   });
 
@@ -2052,6 +2091,9 @@ async function processAction(action, payload, userId) {
     case "updateBuilding":
       updateBuilding(data, payload, user);
       break;
+    case "toggleBuildingOperation":
+      toggleBuildingOperation(data, payload, user);
+      break;
     case "deleteBuilding":
       deleteBuilding(data, payload, user);
       break;
@@ -2121,6 +2163,9 @@ async function processAction(action, payload, userId) {
     case "queueConstruction":
       queueConstruction(data, payload, user);
       break;
+    case "queueGmConstruction":
+      queueGmConstruction(data, payload, user);
+      break;
     case "cancelProject":
       cancelProject(data, payload, user);
       break;
@@ -2135,6 +2180,9 @@ async function processAction(action, payload, userId) {
       break;
     case "updateGrowth":
       updateGrowth(data, payload, user);
+      break;
+    case "transferTreasure":
+      transferTreasure(data, payload, user);
       break;
     case "updateTurnNote":
       updateTurnNote(data, payload, user);
@@ -2247,14 +2295,14 @@ function updateBasics(data, payload, user) {
   settlement.region = cleanString(payload.region);
   settlement.type = tierName(settlement.tier, data.rules);
   settlement.terrainTags = Array.from(new Set([...normalizeTags(payload.terrainTags), ...splitTags(payload.customTerrainTags)]));
-  settlement.biomeTags = Array.from(new Set([...normalizeTags(payload.biomeTags), ...splitTags(payload.customBiomeTags)]));
+  settlement.biomeTags = [];
   settlement.notes = cleanString(payload.notes);
 
   if (user.isGM) {
     if (Object.hasOwn(payload, "imageUrl")) settlement.imageUrl = cleanString(payload.imageUrl);
     if (Object.hasOwn(payload, "portraitUrl")) settlement.portraitUrl = cleanString(payload.portraitUrl);
     if (Object.hasOwn(payload, "governorName")) settlement.governorName = cleanString(payload.governorName);
-    if (Object.hasOwn(payload, "biomeDescription")) settlement.biomeDescription = cleanString(payload.biomeDescription);
+    settlement.biomeDescription = "";
     if (Object.hasOwn(payload, "systemNotes")) settlement.systemNotes = cleanString(payload.systemNotes);
     if (Object.hasOwn(payload, "ownerUserIds")) settlement.ownerUserIds = arrayPayload(payload.ownerUserIds).map(cleanString).filter(Boolean);
     settlement.gmNotes = cleanString(payload.gmNotes);
@@ -2278,7 +2326,7 @@ function updateVisuals(data, payload, user) {
   settlement.imageUrl = cleanString(payload.imageUrl);
   settlement.portraitUrl = cleanString(payload.portraitUrl);
   settlement.governorName = cleanString(payload.governorName);
-  settlement.biomeDescription = cleanString(payload.biomeDescription);
+  settlement.biomeDescription = "";
   settlement.systemNotes = cleanString(payload.systemNotes);
   settlement.districtBackgroundUrl = cleanString(payload.districtBackgroundUrl);
   settlement.backgroundOverlay = clamp(toNumber(payload.backgroundOverlay, settlement.backgroundOverlay), 0, 90);
@@ -2290,7 +2338,7 @@ function updatePopulation(data, payload, user) {
   requireGM(user);
   settlement.population = Math.max(0, Math.trunc(toNumber(payload.population, settlement.population)));
   settlement.treasure = toNumber(payload.treasure, settlement.treasure);
-  settlement.food = Math.max(0, toNumber(payload.food, settlement.food));
+  settlement.food = 0;
   settlement.materials = Math.max(0, toNumber(payload.materials, settlement.materials));
   settlement.publicOrder = clamp(toNumber(payload.publicOrder, settlement.publicOrder), 0, 100);
   settlement.manpowerBonus = toNumber(payload.manpowerBonus, settlement.manpowerBonus);
@@ -2346,9 +2394,10 @@ function updateRulesConstruction(data, payload, user) {
 
 function updateRulesMilitary(data, payload, user) {
   requireGM(user);
-  for (const key of ["garrisonUpkeepPercent", "campaignUpkeepPercent"]) {
-    data.rules.military[key] = Math.max(0, toNumber(payload[key], data.rules.military[key]));
-  }
+  const upkeepPercent = clamp(toNumber(payload.upkeepPercent, data.rules.military.upkeepPercent), 0, 100);
+  data.rules.military.upkeepPercent = upkeepPercent;
+  data.rules.military.garrisonUpkeepPercent = upkeepPercent;
+  data.rules.military.campaignUpkeepPercent = upkeepPercent;
   data.rules.military.manpowerRate = clamp(toNumber(payload.manpowerRate, data.rules.military.manpowerRate), 0, 500);
   data.rules.military.manpowerRecoveryRate = clamp(toNumber(payload.manpowerRecoveryRate, data.rules.military.manpowerRecoveryRate), 0, 100);
 }
@@ -2360,12 +2409,15 @@ function updateRulesGrowth(data, payload, user) {
   data.rules.growth.populationPressureStart = Math.max(1, toNumber(payload.populationPressureStart, data.rules.growth.populationPressureStart));
   data.rules.growth.populationPressurePerDoubling = Math.max(0, toNumber(payload.populationPressurePerDoubling, data.rules.growth.populationPressurePerDoubling));
   data.rules.growth.populationPressureCap = Math.max(0, toNumber(payload.populationPressureCap, data.rules.growth.populationPressureCap));
+  data.rules.order.populationPressureStart = Math.max(1, toNumber(payload.orderPressureStart, data.rules.order.populationPressureStart));
+  data.rules.order.populationPressurePerDoubling = Math.max(0, toNumber(payload.orderPressurePerDoubling, data.rules.order.populationPressurePerDoubling));
+  data.rules.order.populationPressureCap = Math.max(0, toNumber(payload.orderPressureCap, data.rules.order.populationPressureCap));
 }
 
 function updateRulesEvents(data, payload, user) {
   requireGM(user);
   data.rules.events.enabled = Boolean(payload.enabled);
-  data.rules.events.foodShortagePenalty = Math.max(0, toNumber(payload.foodShortagePenalty, data.rules.events.foodShortagePenalty));
+  data.rules.events.foodShortagePenalty = 0;
 }
 
 function updateRuleTier(data, payload, user) {
@@ -2378,7 +2430,7 @@ function updateRuleTier(data, payload, user) {
   tier.promotionCost = Math.max(0, toNumber(payload.promotionCost, tier.promotionCost));
   tier.promotionCp = Math.max(0, toNumber(payload.promotionCp, tier.promotionCp));
   tier.promotionMaterials = Math.max(0, toNumber(payload.promotionMaterials, tier.promotionMaterials));
-  tier.promotionFood = Math.max(0, toNumber(payload.promotionFood, tier.promotionFood));
+  tier.promotionFood = 0;
   tier.slotUnlockCost = Math.max(0, toNumber(payload.slotUnlockCost, tier.slotUnlockCost));
   tier.activeProjects = clamp(Math.trunc(toNumber(payload.activeProjects, tier.activeProjects)), 1, 5);
   tier.coreName = cleanString(payload.coreName) || tier.coreName;
@@ -2421,6 +2473,7 @@ function updatePermissions(data, payload, user) {
   settlement.permissions.playersCanEditAssignments = Boolean(payload.playersCanEditAssignments);
   settlement.permissions.playersCanManageConstruction = Boolean(payload.playersCanManageConstruction);
   settlement.permissions.playersCanManageRecruitment = Boolean(payload.playersCanManageRecruitment);
+  settlement.permissions.playersCanTransferTreasure = Boolean(payload.playersCanTransferTreasure);
   settlement.permissions.playersCanWriteTurnNotes = Boolean(payload.playersCanWriteTurnNotes);
 }
 
@@ -2504,13 +2557,15 @@ function updateBuilding(data, payload, user) {
     building.flatOutput = toNumber(payload.flatOutput, building.flatOutput);
     building.buildingUpkeep = Math.max(0, toNumber(payload.buildingUpkeep, building.buildingUpkeep));
     building.materialCost = Math.max(0, toNumber(payload.materialCost, building.materialCost));
-    building.foodCost = Math.max(0, toNumber(payload.foodCost, building.foodCost));
+    building.foodCost = 0;
     building.foodOutput = toNumber(payload.foodOutput, building.foodOutput);
     building.materialsOutput = toNumber(payload.materialsOutput, building.materialsOutput);
     building.foodUpkeep = Math.max(0, toNumber(payload.foodUpkeep, building.foodUpkeep));
     building.materialsUpkeep = Math.max(0, toNumber(payload.materialsUpkeep, building.materialsUpkeep));
     building.publicOrder = toNumber(payload.publicOrder, building.publicOrder);
-    building.defense = Math.max(0, toNumber(payload.defense, building.defense));
+    building.defense = 0;
+    building.siegeDefensePercent = clamp(toNumber(payload.siegeDefensePercent, building.siegeDefensePercent), 0, 100);
+    if (Object.hasOwn(payload, "garrisonUnits")) building.garrisonUnits = normalizeGarrisonUnits(payload.garrisonUnits, data.unitCatalog);
     building.eventRollBonus = toNumber(payload.eventRollBonus, building.eventRollBonus);
     building.grantsTags = splitTags(payload.grantsTags);
     building.requiredTagsAny = splitTags(payload.requiredTagsAny);
@@ -2544,6 +2599,7 @@ function updateBuilding(data, payload, user) {
     building.constructionBonus = Math.max(0, toNumber(payload.constructionBonus, building.constructionBonus));
     building.recruitmentDiscount = clamp(toNumber(payload.recruitmentDiscount, building.recruitmentDiscount), 0, 90);
     building.upkeepDiscount = clamp(toNumber(payload.upkeepDiscount, building.upkeepDiscount), 0, 90);
+    building.buildingUpkeepDiscount = clamp(toNumber(payload.buildingUpkeepDiscount, building.buildingUpkeepDiscount), 0, 90);
     building.growth = toNumber(payload.growth, building.growth);
     building.uniqueChain = Boolean(payload.uniqueChain);
     building.maxPerSettlement = Math.max(0, Math.trunc(toNumber(payload.maxPerSettlement, building.maxPerSettlement)));
@@ -2555,7 +2611,16 @@ function updateBuilding(data, payload, user) {
   }
 
   if (!permissions.canEditAssignments) throw new Error("You cannot edit building assignments.");
-  building.assignedPop = clamp(toNumber(payload.assignedPop, building.assignedPop), 0, building.workers);
+  throw new Error("Building labor is automatic. Use Halt or Continue.");
+}
+
+function toggleBuildingOperation(data, payload, user) {
+  const settlement = findSettlement(data, payload.settlementId);
+  const permissions = permissionsFor(settlement, user.isGM, user.id);
+  if (!permissions.canEditAssignments) throw new Error("You cannot halt or continue buildings in this settlement.");
+  const building = findById(settlement.buildings, payload.buildingId, "Building");
+  building.active = cleanString(payload.operation) === "continue" || payload.active === true || payload.active === "true";
+  synchronizeAutomaticLabor(settlement);
 }
 
 function deleteBuilding(data, payload, user) {
@@ -2568,25 +2633,29 @@ function deleteBuilding(data, payload, user) {
 function addCatalogBuilding(data, payload, user) {
   requireGM(user);
   const id = `building-${randomId().toLowerCase()}`;
+  const kind = ["economic", "military", "landmark"].includes(payload.buildingKind) ? payload.buildingKind : "economic";
+  const landmark = kind === "landmark";
+  const category = kind === "economic" ? "economic" : "military";
   data.catalog.push(normalizeCatalogItem({
     id,
-    name: "New Building Template",
-    category: "economic",
+    name: landmark ? "New Landmark" : category === "military" ? "New Military Building" : "New Economic Building",
+    category,
     terrain: "Any",
-    workers: 5,
+    workers: landmark ? 0 : 5,
     crownCost: 20000,
     cpCost: 800,
     materialCost: 100,
-    slot: "economic",
-    slotUse: 1,
+    slot: category,
+    slotUse: landmark ? 0 : 1,
     enabled: true,
     maxLevel: 5,
     chainId: id,
-    branch: "commerce",
-    nodeTier: 1,
+    branch: landmark ? "landmark" : category === "military" ? "recruitment" : "commerce",
+    nodeTier: landmark ? 0 : 1,
     parentIds: [],
     settlementTier: "hamlet",
-    notes: "Configure this template, then it will appear in Construction."
+    landmark,
+    notes: landmark ? "Configure this unique landmark, then queue or place it from GM Controls." : "Configure this template, then it will appear in Construction."
   }));
 }
 
@@ -2634,13 +2703,15 @@ function updateCatalogBuilding(data, payload, user) {
   item.crownCost = Math.max(0, toNumber(payload.crownCost, item.crownCost));
   item.cpCost = Math.max(0, toNumber(payload.cpCost, item.cpCost));
   item.materialCost = Math.max(0, toNumber(payload.materialCost, item.materialCost));
-  item.foodCost = Math.max(0, toNumber(payload.foodCost, item.foodCost));
+  item.foodCost = 0;
   item.foodOutput = toNumber(payload.foodOutput, item.foodOutput);
   item.materialsOutput = toNumber(payload.materialsOutput, item.materialsOutput);
   item.foodUpkeep = Math.max(0, toNumber(payload.foodUpkeep, item.foodUpkeep));
   item.materialsUpkeep = Math.max(0, toNumber(payload.materialsUpkeep, item.materialsUpkeep));
   item.publicOrder = toNumber(payload.publicOrder, item.publicOrder);
-  item.defense = Math.max(0, toNumber(payload.defense, item.defense));
+  item.defense = 0;
+  item.siegeDefensePercent = clamp(toNumber(payload.siegeDefensePercent, item.siegeDefensePercent), 0, 100);
+  if (Object.hasOwn(payload, "garrisonUnits")) item.garrisonUnits = normalizeGarrisonUnits(payload.garrisonUnits, data.unitCatalog);
   item.eventRollBonus = toNumber(payload.eventRollBonus, item.eventRollBonus);
   item.grantsTags = splitTags(payload.grantsTags);
   item.requiredTagsAny = splitTags(payload.requiredTagsAny);
@@ -2655,6 +2726,7 @@ function updateCatalogBuilding(data, payload, user) {
   item.constructionBonus = Math.max(0, toNumber(payload.constructionBonus, item.constructionBonus));
   item.recruitmentDiscount = clamp(toNumber(payload.recruitmentDiscount, item.recruitmentDiscount), 0, 90);
   item.upkeepDiscount = clamp(toNumber(payload.upkeepDiscount, item.upkeepDiscount), 0, 90);
+  item.buildingUpkeepDiscount = clamp(toNumber(payload.buildingUpkeepDiscount, item.buildingUpkeepDiscount), 0, 90);
   item.growth = toNumber(payload.growth, item.growth);
   item.uniqueChain = Boolean(payload.uniqueChain);
   item.maxPerSettlement = Math.max(0, Math.trunc(toNumber(payload.maxPerSettlement, item.maxPerSettlement)));
@@ -2745,7 +2817,7 @@ function updateTroop(data, payload, user) {
   troop.count = user.isGM
     ? clamp(requestedCount, 0, troop.maxCount)
     : clamp(requestedCount, 0, troop.count);
-  troop.mode = payload.mode === "campaign" ? "campaign" : "garrison";
+  troop.mode = "garrison";
   troop.notes = cleanString(payload.notes);
 }
 
@@ -2868,31 +2940,22 @@ function queueRecruitment(data, payload, user) {
   const unit = data.unitCatalog.find(candidate => candidate.id === cleanString(payload.unitId));
   if (!unit || !unit.enabled) throw new Error("This unit is not available for recruitment.");
   const count = Math.max(1, Math.trunc(toNumber(payload.targetCount, 1)));
-  const requestedSourceId = cleanString(payload.sourceBuildingId);
-  const direct = !requestedSourceId || requestedSourceId === DIRECT_RECRUITMENT_SOURCE;
-  let source = null;
-
+  const direct = Boolean(payload.directGM) || cleanString(payload.sourceBuildingId) === DIRECT_RECRUITMENT_SOURCE;
   if (direct && !user.isGM) throw new Error("Direct recruitment is GM only.");
-  if (!direct) {
-    source = findById(settlement.buildings, requestedSourceId, "Recruitment source");
-    if (!source.active || !sourceUnlocksUnit(source, unit.id) || buildingRecruitmentCapacity(source) <= 0) {
-      throw new Error(`${source.name} cannot recruit ${unit.name}.`);
-    }
-  }
 
   const summary = calculateSettlement(settlement, data);
-  const availableTags = settlementGrantedTags(settlement);
-  const missingTag = unit.requiredTags.find(tag => !availableTags.has(tag.toLowerCase()));
-  if (!direct && missingTag) throw new Error(`${unit.name} requires strategic resource: ${missingTag}.`);
+  if (!direct && !recruitmentSources(settlement, unit.id, false, data).length) throw new Error(`No completed building unlocks ${unit.name}.`);
   if (!direct && unit.maxPerSettlement > 0) {
     const existing = settlement.troops.filter(troop => troop.type === unit.id).reduce((total, troop) => total + troop.maxCount, 0);
     const queued = settlement.recruitment.filter(order => order.status !== "completed" && order.troopType === unit.id).reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
     if (existing + queued + count > unit.maxPerSettlement) throw new Error(`${unit.name} settlement limit is ${formatNumber(unit.maxPerSettlement)}.`);
   }
-  if (!direct && !settlement.overrides.ignoreMilitaryCapacity) {
-    if (summary.troopManpowerUsed + summary.manpowerQueued + count > summary.militaryCapacity) {
-      throw new Error(`Military capacity needs ${formatNumber(count)} free places; ${formatNumber(Math.max(0, summary.militaryCapacity - summary.troopManpowerUsed - summary.manpowerQueued))} remain.`);
-    }
+  if (!direct) {
+    const queuedRecruitment = settlement.recruitment
+      .filter(order => order.status !== "completed" && order.kind !== "replenishment")
+      .reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
+    const remainingCapacity = Math.max(0, summary.recruitmentCapacity - queuedRecruitment);
+    if (count > remainingCapacity) throw new Error(`Monthly recruitment capacity has ${formatNumber(remainingCapacity)} place(s) remaining.`);
   }
 
   if (!direct && !settlement.overrides.ignoreManpowerLimits) {
@@ -2900,7 +2963,7 @@ function queueRecruitment(data, payload, user) {
     if (summary.manpowerAvailable < requiredManpower) throw new Error(`Recruitment needs ${formatNumber(requiredManpower)} manpower; ${formatNumber(summary.manpowerAvailable)} remains.`);
   }
 
-  const discount = direct ? 0 : settlementRecruitmentDiscount(settlement, source, data.rules);
+  const discount = direct ? 0 : settlementRecruitmentDiscount(settlement, null, data.rules);
   const costPerUnit = direct ? 0 : Math.max(0, Math.round(unit.recruitCost * (1 - discount / 100) * recruitmentCostMultiplier(settlement)));
   const totalCost = costPerUnit * count;
   if (settlement.treasure < totalCost) throw new Error(`Recruitment needs ${formatNumber(totalCost)} Crown.`);
@@ -2908,7 +2971,7 @@ function queueRecruitment(data, payload, user) {
   if (!direct && !settlement.overrides.ignoreManpowerLimits) settlement.manpowerReserve = Math.max(0, settlement.manpowerReserve - count * unit.manpowerCost);
   const order = normalizeRecruitment({
     id: randomId(),
-    sourceBuildingId: direct ? "" : requestedSourceId,
+    sourceBuildingId: "",
     regimentName: cleanString(payload.regimentName) || unit.name,
     imageUrl: cleanString(payload.imageUrl) || unit.imageUrl,
     actorUuid: cleanString(payload.actorUuid) || unit.actorUuid,
@@ -2920,7 +2983,7 @@ function queueRecruitment(data, payload, user) {
     crownPaid: totalCost,
     status: "inProgress",
     createdAt: Date.now(),
-    notes: direct ? "Direct GM recruitment." : "Queued from recruitment roster."
+    notes: direct ? "Direct GM recruitment." : "Queued against the settlement recruitment pool."
   }, data.unitCatalog);
   settlement.recruitment.push(order);
   if (direct) {
@@ -2943,35 +3006,22 @@ function queueReplenishment(data, payload, user) {
     throw new Error(`${regiment.name} already has an active replenishment order.`);
   }
 
-  const requestedSourceId = cleanString(payload.sourceBuildingId);
-  const direct = !requestedSourceId || requestedSourceId === DIRECT_RECRUITMENT_SOURCE;
-  let source = null;
-  if (direct && !user.isGM) throw new Error("Direct replenishment is GM only.");
-  if (!direct) {
-    source = findById(settlement.buildings, requestedSourceId, "Replenishment source");
-    if (!source.active || !sourceUnlocksUnit(source, unit.id) || buildingRecruitmentCapacity(source) <= 0) {
-      throw new Error(`${source.name} cannot replenish ${unit.name}.`);
-    }
-  }
-
   const summary = calculateSettlement(settlement, data);
-  if (!direct && !settlement.overrides.ignoreMilitaryCapacity && summary.troopManpowerUsed + summary.manpowerQueued + count > summary.militaryCapacity) {
-    throw new Error("Military capacity is too low for this replenishment.");
-  }
-  if (!direct && !settlement.overrides.ignoreManpowerLimits && summary.manpowerAvailable < count) {
-    throw new Error(`Replenishment needs ${formatNumber(count)} manpower; ${formatNumber(summary.manpowerAvailable)} remains.`);
+  const requiredManpower = count * unit.manpowerCost;
+  if (!settlement.overrides.ignoreManpowerLimits && summary.manpowerAvailable < requiredManpower) {
+    throw new Error(`Replenishment needs ${formatNumber(requiredManpower)} manpower; ${formatNumber(summary.manpowerAvailable)} remains.`);
   }
 
-  const discount = direct ? 0 : settlementRecruitmentDiscount(settlement, source, data.rules);
-  const costPerUnit = direct ? 0 : Math.max(0, Math.round(replenishmentUnitCost(unit, data.rules, discount) * recruitmentCostMultiplier(settlement)));
+  const discount = settlementRecruitmentDiscount(settlement, null, data.rules);
+  const costPerUnit = Math.max(0, Math.round(replenishmentUnitCost(unit, data.rules, discount) * recruitmentCostMultiplier(settlement)));
   const totalCost = costPerUnit * count;
   if (settlement.treasure < totalCost) throw new Error(`Replenishment needs ${formatNumber(totalCost)} Crown.`);
   settlement.treasure -= totalCost;
-  if (!direct && !settlement.overrides.ignoreManpowerLimits) settlement.manpowerReserve = Math.max(0, settlement.manpowerReserve - count * unit.manpowerCost);
+  if (!settlement.overrides.ignoreManpowerLimits) settlement.manpowerReserve = Math.max(0, settlement.manpowerReserve - requiredManpower);
   settlement.recruitment.push(normalizeRecruitment({
     id: randomId(),
     kind: "replenishment",
-    sourceBuildingId: direct ? "" : source.id,
+    sourceBuildingId: "",
     regimentId: regiment.id,
     regimentName: regiment.name,
     imageUrl: regiment.imageUrl,
@@ -2983,15 +3033,8 @@ function queueReplenishment(data, payload, user) {
     crownPaid: totalCost,
     status: "inProgress",
     createdAt: Date.now(),
-    notes: direct ? "Direct GM replenishment." : "Casualty replenishment order."
+    notes: "Casualty replenishment resolves at month end without using Recruitment Capacity."
   }, data.unitCatalog));
-
-  if (direct) {
-    const order = settlement.recruitment.at(-1);
-    order.trained = count;
-    order.status = "completed";
-    addRecruitsToTroops(settlement, order, count, data);
-  }
 }
 
 function cancelRecruitment(data, payload, user) {
@@ -3003,12 +3046,14 @@ function cancelRecruitment(data, payload, user) {
   const remaining = Math.max(0, order.targetCount - order.trained);
   const refund = Math.min(order.crownPaid, remaining * order.costPerUnit);
   settlement.treasure += refund;
+  deleteById(settlement.recruitment, order.id);
   if (!settlement.overrides.ignoreManpowerLimits) {
     const type = troopType(order.troopType, data.unitCatalog);
     const cap = manpowerCapForSettlement(settlement, data.rules);
-    settlement.manpowerReserve = Math.min(cap, settlement.manpowerReserve + remaining * type.manpowerCost);
+    const committed = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, data.unitCatalog), 0)
+      + settlement.recruitment.filter(item => item.status !== "completed").reduce((total, item) => total + Math.max(0, item.targetCount - item.trained) * troopType(item.troopType, data.unitCatalog).manpowerCost, 0);
+    settlement.manpowerReserve = Math.min(Math.max(0, cap - committed), settlement.manpowerReserve + remaining * type.manpowerCost);
   }
-  deleteById(settlement.recruitment, order.id);
 }
 
 function addRecruitment(data, payload, user) {
@@ -3074,7 +3119,7 @@ function addProject(data, payload, user) {
     crownPaid: 0,
     requiredMaterials: item.materialCost,
     materialsPaid: 0,
-    requiredFood: item.foodCost,
+    requiredFood: 0,
     foodPaid: 0,
     requiredCp: item.cpCost,
     cpPaid: 0,
@@ -3100,7 +3145,6 @@ function queueConstruction(data, payload, user) {
   const cost = constructionCost(item);
   settlement.treasure -= cost.crown;
   settlement.materials -= cost.materials;
-  settlement.food -= cost.food;
   settlement.projects.push(normalizeProject({
     id: randomId(),
     kind: "building",
@@ -3114,8 +3158,8 @@ function queueConstruction(data, payload, user) {
     crownPaid: cost.crown,
     requiredMaterials: cost.materials,
     materialsPaid: cost.materials,
-    requiredFood: cost.food,
-    foodPaid: cost.food,
+    requiredFood: 0,
+    foodPaid: 0,
     requiredCp: cost.cp,
     cpPaid: 0,
     externalWorkers: 0,
@@ -3125,6 +3169,56 @@ function queueConstruction(data, payload, user) {
     queuedBy: user.id,
     createdAt: Date.now(),
     notes: "Queued from Construction."
+  }));
+  settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
+  ensureActiveConstructionQueue(settlement, data);
+}
+
+function queueGmConstruction(data, payload, user) {
+  requireGM(user);
+  const settlement = findSettlement(data, payload.settlementId);
+  const item = findById(data.catalog, payload.catalogId, "Building template");
+  if (item.landmark && settlement.buildings.some(building => building.landmark && building.catalogId === item.id)) {
+    throw new Error(`${item.name} already exists in this settlement.`);
+  }
+  let slot = null;
+  let current = null;
+  if (!item.landmark) {
+    slot = settlement.slots.find(candidate => candidate.id === cleanString(payload.slotId)) || firstEmptySlot(settlement, item.category, true);
+    if (!slot) throw new Error("No district slot is available for this construction order.");
+    slot.unlocked = true;
+    current = settlement.buildings.find(building => building.slotId === slot.id) || null;
+  }
+  const chargeResources = Boolean(payload.chargeResources);
+  const cost = constructionCost(item);
+  if (chargeResources && settlement.treasure < cost.crown) throw new Error(`Construction needs ${formatNumber(cost.crown)} Crown.`);
+  if (chargeResources && settlement.materials < cost.materials) throw new Error(`Construction needs ${formatNumber(cost.materials)} Materials.`);
+  if (chargeResources) {
+    settlement.treasure -= cost.crown;
+    settlement.materials -= cost.materials;
+  }
+  settlement.projects.push(normalizeProject({
+    id: randomId(),
+    kind: "building",
+    name: current ? `${current.name} -> ${item.name}` : item.name,
+    catalogId: item.id,
+    slotId: slot?.id || "",
+    replacesBuildingId: current?.id || "",
+    targetLevel: item.nodeTier || 1,
+    targetSlotUse: item.slotUse,
+    requiredCrown: chargeResources ? cost.crown : 0,
+    crownPaid: chargeResources ? cost.crown : 0,
+    requiredMaterials: chargeResources ? cost.materials : 0,
+    materialsPaid: chargeResources ? cost.materials : 0,
+    requiredFood: 0,
+    foodPaid: 0,
+    requiredCp: cost.cp,
+    cpPaid: 0,
+    status: "planned",
+    imageUrl: item.imageUrl,
+    queuedBy: user.id,
+    createdAt: Date.now(),
+    notes: item.landmark ? "Landmark queued by GM." : "Construction queued by GM."
   }));
   settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
   ensureActiveConstructionQueue(settlement, data);
@@ -3144,10 +3238,8 @@ function queueSettlementUpgrade(data, payload, user) {
   }
   if (settlement.treasure < next.promotionCost) throw new Error(`${next.name} requires ${formatNumber(next.promotionCost)} Crown.`);
   if (settlement.materials < next.promotionMaterials) throw new Error(`${next.name} requires ${formatNumber(next.promotionMaterials)} Materials.`);
-  if (settlement.food < next.promotionFood) throw new Error(`${next.name} requires ${formatNumber(next.promotionFood)} Food.`);
   settlement.treasure -= next.promotionCost;
   settlement.materials -= next.promotionMaterials;
-  settlement.food -= next.promotionFood;
   settlement.projects.push(normalizeProject({
     id: randomId(),
     kind: "settlementUpgrade",
@@ -3157,8 +3249,8 @@ function queueSettlementUpgrade(data, payload, user) {
     crownPaid: next.promotionCost,
     requiredMaterials: next.promotionMaterials,
     materialsPaid: next.promotionMaterials,
-    requiredFood: next.promotionFood,
-    foodPaid: next.promotionFood,
+    requiredFood: 0,
+    foodPaid: 0,
     requiredCp: next.promotionCp,
     cpPaid: 0,
     status: "planned",
@@ -3192,7 +3284,7 @@ function cancelProject(data, payload, user) {
   const refundableFraction = data.rules.construction.cancellationRefundPercent / 100 * (1 - progress);
   settlement.treasure += Math.round(Math.max(0, project.crownPaid) * refundableFraction);
   settlement.materials += Math.round(Math.max(0, project.materialsPaid) * refundableFraction);
-  settlement.food += Math.round(Math.max(0, project.foodPaid) * refundableFraction);
+  settlement.food = 0;
   deleteById(settlement.projects, project.id);
   settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
   ensureActiveConstructionQueue(settlement, data);
@@ -3237,8 +3329,8 @@ function updateProject(data, payload, user) {
   project.crownPaid = Math.max(0, toNumber(payload.crownPaid, project.crownPaid));
   project.requiredMaterials = Math.max(0, toNumber(payload.requiredMaterials, project.requiredMaterials));
   project.materialsPaid = Math.max(0, toNumber(payload.materialsPaid, project.materialsPaid));
-  project.requiredFood = Math.max(0, toNumber(payload.requiredFood, project.requiredFood));
-  project.foodPaid = Math.max(0, toNumber(payload.foodPaid, project.foodPaid));
+  project.requiredFood = 0;
+  project.foodPaid = 0;
   project.requiredCp = Math.max(0, toNumber(payload.requiredCp, project.requiredCp));
   project.cpPaid = Math.max(0, toNumber(payload.cpPaid, project.cpPaid));
   project.externalWorkers = Math.max(0, toNumber(payload.externalWorkers, project.externalWorkers));
@@ -3274,6 +3366,26 @@ function updateGrowth(data, payload, user) {
   settlement.growth.overrideRate = cleanString(payload.overrideRate);
   settlement.growth.overridePopChange = cleanString(payload.overridePopChange);
   settlement.growth.roundDown = Boolean(payload.roundDown);
+}
+
+function transferTreasure(data, payload, user) {
+  const settlement = findSettlement(data, payload.settlementId);
+  const permissions = permissionsFor(settlement, user.isGM, user.id);
+  if (!permissions.canTransferTreasure) throw new Error("You cannot transfer Crown for this settlement.");
+  const amount = Math.max(1, Math.trunc(toNumber(payload.amount, 0)));
+  const direction = cleanString(payload.direction) === "withdraw" ? "withdraw" : "deposit";
+  if (direction === "withdraw" && settlement.treasure < amount) throw new Error(`The Treasury only contains ${formatNumber(settlement.treasure)} Crown.`);
+  settlement.treasure += direction === "deposit" ? amount : -amount;
+  settlement.eventLog.unshift({
+    id: randomId(),
+    month: data.month,
+    created: Date.now(),
+    title: direction === "deposit" ? "Treasury Deposit" : "Treasury Withdrawal",
+    text: `${user.name || "User"} ${direction === "deposit" ? "deposited" : "withdrew"} ${formatNumber(amount)} Crown. Treasury: ${formatNumber(settlement.treasure)} Crown.`,
+    gmNote: "",
+    playerNotes: []
+  });
+  settlement.eventLog = settlement.eventLog.slice(0, 100);
 }
 
 function updateTurnNote(data, payload, user) {
@@ -3325,19 +3437,14 @@ async function processSettlementTurn(data, settlement, gmTurnNote) {
   const before = calculateSettlement(settlement, data);
   const construction = processConstruction(settlement, data, before);
   const treasureBefore = toNumber(settlement.treasure, 0);
-  const foodBefore = toNumber(settlement.food, 0);
   const materialsBefore = toNumber(settlement.materials, 0);
   const publicOrderBefore = toNumber(settlement.publicOrder, 50);
   const manpowerBefore = toNumber(settlement.manpowerReserve, 0);
   const manpowerRecovered = recoverManpower(settlement, before, data.rules);
 
   settlement.treasure = treasureBefore + before.netIncome;
-  settlement.food = Math.max(0, foodBefore + before.foodBalance);
+  settlement.food = 0;
   settlement.materials = Math.max(0, materialsBefore + before.materialsBalance);
-  if (before.foodShortage > 0) {
-    const penalty = clamp(Math.ceil(before.foodShortage / Math.max(1, settlement.population) * 10), 1, 15);
-    settlement.publicOrder = clamp(settlement.publicOrder - penalty, 0, 100);
-  }
   const recruitmentResult = processRecruitment(settlement, data);
   const growth = calculateGrowth(settlement, before, data.rules);
   settlement.population = Math.max(0, settlement.population + growth.popChange);
@@ -3362,8 +3469,8 @@ async function processSettlementTurn(data, settlement, gmTurnNote) {
       `Military Upkeep: ${formatNumber(before.militaryCost)} Crown`,
       `Net Income: ${formatSigned(before.netIncome)} Crown`,
       `Treasure: ${formatNumber(treasureBefore)} -> ${formatNumber(settlement.treasure)} Crown`,
-      `Food: ${formatNumber(foodBefore)} -> ${formatNumber(settlement.food)} (${formatSigned(before.foodBalance)})`,
-      `Food Security: ${before.foodSecurity.label} / ${formatNumber(before.foodCoverage * 100)}% coverage / ${formatNumber(before.foodReserveMonths)} reserve month(s) / ${formatSigned(before.foodSecurityGrowth)}% Growth`,
+      `Food Flow: ${formatNumber(before.foodProduction)} produced / ${formatNumber(before.foodConsumption)} consumed / ${formatSigned(before.foodBalance)} balance`,
+      `Food Security: ${before.foodSecurity.label} / ${formatNumber(before.foodCoverage * 100)}% coverage / ${formatSigned(before.foodSecurityGrowth)}% Growth`,
       `Materials: ${formatNumber(materialsBefore)} -> ${formatNumber(settlement.materials)} (${formatSigned(before.materialsBalance)})`,
       `Manpower Reserve: ${formatNumber(manpowerBefore)} -> ${formatNumber(settlement.manpowerReserve)} (+${formatNumber(manpowerRecovered)})`,
       `Public Order: ${formatNumber(publicOrderBefore)} -> ${formatNumber(after.effectivePublicOrder)}`,
@@ -3449,12 +3556,13 @@ function completeProject(settlement, data, project) {
     settlement.tier = settlementTierValue(project.targetTier);
     settlement.type = tierName(settlement.tier, data.rules);
     settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
+    synchronizeAutomaticLabor(settlement);
     return;
   }
   const item = data.catalog.find(candidate => candidate.id === project.catalogId);
   if (!item) return;
   const existing = settlement.buildings.find(building => building.id === project.replacesBuildingId)
-    || settlement.buildings.find(building => building.slotId === project.slotId);
+    || (project.slotId ? settlement.buildings.find(building => building.slotId === project.slotId) : null);
   if (existing) {
     const upgraded = buildingFromCatalog(item, {
       id: existing.id,
@@ -3467,6 +3575,7 @@ function completeProject(settlement, data, project) {
     }, data.unitCatalog);
     Object.assign(existing, upgraded);
     settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
+    synchronizeAutomaticLabor(settlement);
     return;
   }
   settlement.buildings.push(buildingFromCatalog(item, {
@@ -3477,49 +3586,28 @@ function completeProject(settlement, data, project) {
     notes: `Completed from project: ${project.name}`
   }, data.unitCatalog));
   settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
+  synchronizeAutomaticLabor(settlement);
 }
 
 function processRecruitment(settlement, data) {
-  const capacityBySource = new Map(
-    settlement.buildings
-      .filter(building => building.active && buildingRecruitmentCapacity(building) > 0)
-      .map(building => [building.id, buildingRecruitmentCapacity(building)])
-  );
   const lines = [];
   const summary = calculateSettlement(settlement, data);
-  let militaryRemaining = settlement.overrides.ignoreMilitaryCapacity ? Number.POSITIVE_INFINITY : Math.max(0, summary.militaryCapacity - summary.troopManpowerUsed);
-  let manpowerRemaining = settlement.overrides.ignoreManpowerLimits ? Number.POSITIVE_INFINITY : Math.max(0, summary.manpowerCap - summary.troopManpowerUsed);
+  let capacityRemaining = Math.max(0, summary.recruitmentCapacity);
   const orders = settlement.recruitment
     .filter(order => order.status === "inProgress")
     .sort((a, b) => Number(b.kind === "replenishment") - Number(a.kind === "replenishment"));
 
   for (const order of orders) {
-    const source = settlement.buildings.find(building => building.id === order.sourceBuildingId);
     const remaining = Math.max(0, order.targetCount - order.trained);
-    if (!source && !order.sourceBuildingId) {
-      if (remaining <= 0) continue;
-      order.trained += remaining;
-      addRecruitsToTroops(settlement, order, remaining, data);
-      lines.push(`${formatNumber(remaining)} ${troopType(order.troopType, data.unitCatalog).name} by Direct GM`);
-      order.status = "completed";
-      continue;
-    }
-
-    if (!source) continue;
-
     const type = troopType(order.troopType, data.unitCatalog);
     const isReplenishment = order.kind === "replenishment";
-    if (isReplenishment && (!source.active || !sourceUnlocksUnit(source, type.id) || buildingRecruitmentCapacity(source) <= 0)) continue;
-    const available = isReplenishment ? remaining : capacityBySource.get(source.id) || 0;
-    const trainedNow = Math.min(available, remaining, militaryRemaining, manpowerRemaining);
+    const trainedNow = isReplenishment ? remaining : Math.min(remaining, capacityRemaining);
     if (trainedNow <= 0) continue;
 
     order.trained += trainedNow;
-    if (!isReplenishment) capacityBySource.set(source.id, Math.max(0, available - trainedNow));
+    if (!isReplenishment) capacityRemaining -= trainedNow;
     addRecruitsToTroops(settlement, order, trainedNow, data);
-    militaryRemaining -= trainedNow;
-    manpowerRemaining -= trainedNow;
-    lines.push(`${formatNumber(trainedNow)} ${type.name} ${isReplenishment ? "replenished at month end" : "recruited"} from ${source.name}`);
+    lines.push(`${formatNumber(trainedNow)} ${type.name} ${isReplenishment ? "replenished at month end" : "recruited from the shared training pool"}`);
 
     if (order.trained >= order.targetCount) order.status = "completed";
   }
@@ -3555,7 +3643,7 @@ function addRecruitsToTroops(settlement, order, amount, data) {
     imageUrl: order.imageUrl || type.imageUrl,
     actorUuid: order.actorUuid || type.actorUuid,
     sourceRecruitmentId: order.id,
-    notes: `Recruited from ${order.sourceBuildingId || "Direct GM"}`
+    notes: order.notes || "Recruited from the settlement training pool."
   }, unitCatalog);
   order.regimentId = regiment.id;
   settlement.troops.push(regiment);
@@ -3613,8 +3701,7 @@ async function createPendingMonthEvent(data, settlement, month, replaceEventId =
   const rawRoll = await rollD100();
   const summary = calculateSettlement(settlement, data);
   const orderModifier = summary.publicOrderEventRoll;
-  const shortageModifier = summary.foodShortage > 0 ? -Math.max(1, Math.trunc(data.rules.events.foodShortagePenalty)) : 0;
-  const modifier = orderModifier + summary.foodSecurityEventRoll + summary.eventRollBonus + shortageModifier;
+  const modifier = orderModifier + summary.foodSecurityEventRoll + summary.eventRollBonus;
   const finalRoll = clamp(rawRoll + modifier, 1, 100);
   const candidates = data.eventCatalog.filter(event => event.enabled && finalRoll >= event.minRoll && finalRoll <= event.maxRoll);
   const template = candidates[Math.floor(Math.random() * Math.max(1, candidates.length))] || data.eventCatalog.find(event => event.enabled) || normalizeMonthEvent({});
@@ -3629,7 +3716,7 @@ async function createPendingMonthEvent(data, settlement, month, replaceEventId =
   if (template.usesDefense && summary.defenseMitigationPercent > 0) {
     const reduction = summary.defenseMitigationPercent / 100;
     mitigateEventEffects(effects, reduction);
-    mitigationText = [mitigationText, `Settlement Defense reduced harmful modifiers by ${formatNumber(summary.defenseMitigationPercent)}%.`].filter(Boolean).join(" ");
+    mitigationText = [mitigationText, `Siege Defense reduced harmful modifiers by ${formatNumber(summary.defenseMitigationPercent)}%.`].filter(Boolean).join(" ");
   }
   const pending = normalizePendingEvent({
     id: replaceEventId || randomId(),
@@ -3784,7 +3871,7 @@ function starterSettlementTemplates() {
       tier: "hamlet",
       population: 50,
       treasure: 25000,
-      food: 350,
+      food: 0,
       materials: 120,
       publicOrder: 50,
       terrainTags: [],
@@ -3794,11 +3881,11 @@ function starterSettlementTemplates() {
     {
       id: "starter-hamlet",
       name: "Starter Hamlet",
-      description: "A modest Hamlet with land development and basic security.",
+      description: "A modest Hamlet with food development and basic security.",
       tier: "hamlet",
       population: 80,
       treasure: 60000,
-      food: 800,
+      food: 0,
       materials: 400,
       publicOrder: 55,
       terrainTags: ["Plains"],
@@ -3815,7 +3902,7 @@ function starterSettlementTemplates() {
       tier: "village",
       population: 180,
       treasure: 180000,
-      food: 2500,
+      food: 0,
       materials: 1200,
       publicOrder: 58,
       terrainTags: ["Plains", "Farmlands"],
@@ -3833,10 +3920,10 @@ function starterSettlementTemplates() {
       tier: "town",
       population: 650,
       treasure: 600000,
-      food: 8000,
+      food: 0,
       materials: 4000,
       publicOrder: 62,
-      terrainTags: ["Plains", "Farmlands", "Hills", "Iron"],
+      terrainTags: ["Plains", "Farmlands", "Hills"],
       biomeTags: [],
       buildings: [
         makeBuilding("grain-estate", { assignedPop: 35 }),
@@ -3899,16 +3986,16 @@ function sampleSettlement(rules = defaultRules()) {
     type: "Village",
     tier: "village",
     terrainTags: ["Hills", "Farmlands", "Forest"],
-    biomeTags: ["Farmlands"],
+    biomeTags: [],
     ownerUserIds: [],
     imageUrl: "",
     portraitUrl: "",
     governorName: "Minister of State",
-    biomeDescription: "Hilly farmlands with nearby forest access. Strong food base, useful hunting routes, and room for estate-focused special buildings.",
-    systemNotes: "Districts use building slots. Assign POP to buildings for output, keep Free POP for income and CP, then process the month from GM Controls.",
+    biomeDescription: "",
+    systemNotes: "Hilly farmlands with nearby forest access, strong food potential, and room for estate-focused development.",
     population: 309,
     treasure: 0,
-    food: 3000,
+    food: 0,
     materials: 1500,
     publicOrder: 58,
     manpowerBonus: 0,
@@ -3975,11 +4062,11 @@ function upsertSample(data) {
 function defaultRules() {
   return {
     tiers: [
-      tierRule("hamlet", "Hamlet", 0, 3, 4, 0, 0, 0, 0, 25000, 1, "Hamlet Center", 10, 20),
-      tierRule("village", "Village", 100, 5, 7, 100000, 3000, 500, 500, 75000, 1, "Village Hall", 20, 60),
-      tierRule("town", "Town", 500, 8, 10, 400000, 12000, 2500, 2000, 250000, 2, "Town Hall", 30, 160),
-      tierRule("city", "City", 2000, 12, 14, 1500000, 40000, 10000, 8000, 800000, 3, "City Hall", 40, 420),
-      tierRule("metropolis", "Metropolis", 8000, 16, 18, 5000000, 120000, 35000, 25000, 2000000, 4, "Grand Hall", 50, 1100)
+      tierRule("hamlet", "Hamlet", 0, 2, 3, 0, 0, 0, 0, 25000, 1, "Hamlet Center", 10, 20),
+      tierRule("village", "Village", 100, 3, 4, 100000, 3000, 500, 0, 75000, 1, "Village Hall", 20, 60),
+      tierRule("town", "Town", 500, 4, 6, 400000, 12000, 2500, 0, 250000, 2, "Town Hall", 30, 160),
+      tierRule("city", "City", 2000, 6, 8, 1500000, 40000, 10000, 0, 800000, 3, "City Hall", 40, 420),
+      tierRule("metropolis", "Metropolis", 8000, 8, 10, 5000000, 120000, 35000, 0, 2000000, 4, "Grand Hall", 50, 1100)
     ],
     economy: {
       incomeMultiplier: 1,
@@ -3997,8 +4084,9 @@ function defaultRules() {
       snapshotLimit: 5
     },
     military: {
-      garrisonUpkeepPercent: 0.5,
-      campaignUpkeepPercent: 1.5,
+      upkeepPercent: 20,
+      garrisonUpkeepPercent: 20,
+      campaignUpkeepPercent: 20,
       manpowerRate: 100,
       manpowerRecoveryRate: 10
     },
@@ -4009,9 +4097,14 @@ function defaultRules() {
       populationPressurePerDoubling: 0.25,
       populationPressureCap: 3
     },
+    order: {
+      populationPressureStart: 100,
+      populationPressurePerDoubling: 3,
+      populationPressureCap: 25
+    },
     events: {
       enabled: true,
-      foodShortagePenalty: 5
+      foodShortagePenalty: 0
     }
   };
 }
@@ -4026,6 +4119,7 @@ function defaultPermissions() {
     playersCanEditAssignments: true,
     playersCanManageConstruction: true,
     playersCanManageRecruitment: true,
+    playersCanTransferTreasure: true,
     playersCanWriteTurnNotes: true
   };
 }
@@ -4080,7 +4174,9 @@ function buildingFromCatalog(item, overrides = {}, unitCatalog = TROOP_TYPES) {
     foodUpkeep: source.foodUpkeep || 0,
     materialsUpkeep: source.materialsUpkeep || 0,
     publicOrder: source.publicOrder || 0,
-    defense: source.defense || 0,
+    defense: 0,
+    siegeDefensePercent: source.siegeDefensePercent || 0,
+    garrisonUnits: source.garrisonUnits || [],
     eventRollBonus: source.eventRollBonus || 0,
     grantsTags: source.grantsTags || [],
     requiredTagsAny: source.requiredTagsAny || [],
@@ -4106,6 +4202,7 @@ function buildingFromCatalog(item, overrides = {}, unitCatalog = TROOP_TYPES) {
     constructionBonus: source.constructionBonus || 0,
     recruitmentDiscount: source.recruitmentDiscount || 0,
     upkeepDiscount: source.upkeepDiscount || 0,
+    buildingUpkeepDiscount: source.buildingUpkeepDiscount || 0,
     requires: source.requires || "",
     bonus: source.bonus || 0,
     growth: source.growth || 0,
@@ -4126,22 +4223,27 @@ function normalizeData(raw) {
   const source = clone(raw || {});
   const sourceSchema = Math.max(1, Math.trunc(toNumber(source.schemaVersion, 1)));
   const migrateLegacy = sourceSchema < 5;
-  const rules = normalizeRules(source.rules || fallback.rules, migrateLegacy);
+  const rules = normalizeRules(source.rules || fallback.rules, migrateLegacy, sourceSchema);
   const unitCatalog = normalizeUnitCatalog(source.unitCatalog || fallback.unitCatalog, migrateLegacy);
   const catalog = normalizeCatalog(source.catalog || fallback.catalog, unitCatalog, migrateLegacy);
   const refreshEconomicBalance = sourceSchema < 7;
   if (refreshEconomicBalance) refreshEconomicCatalog(catalog, unitCatalog);
+  const refreshSchema8 = sourceSchema < 8;
+  if (refreshSchema8) refreshSchema8Catalog(catalog, unitCatalog);
   const eventCatalog = normalizeEventCatalog(source.eventCatalog || fallback.eventCatalog, migrateLegacy);
   const settlements = Array.isArray(source.settlements) && source.settlements.length
     ? source.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, migrateLegacy))
     : fallback.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules));
   if (sourceSchema < 6) migrateLaurentStaffing(catalog, settlements);
   if (refreshEconomicBalance) refreshEconomicBuildings(settlements, catalog, unitCatalog, rules);
+  if (refreshSchema8) refreshSchema8Settlements(settlements, catalog, unitCatalog, rules);
+  const settlementTemplates = normalizeSettlementTemplates(source.settlementTemplates || fallback.settlementTemplates, migrateLegacy || refreshEconomicBalance)
+    .map(template => ({ ...template, food: 0, biomeTags: [] }));
   return {
     schemaVersion: SCHEMA_VERSION,
     month: Math.max(1, Math.trunc(toNumber(source.month, fallback.month))),
     rules,
-    settlementTemplates: normalizeSettlementTemplates(source.settlementTemplates || fallback.settlementTemplates, migrateLegacy || refreshEconomicBalance),
+    settlementTemplates,
     catalog,
     unitCatalog,
     eventCatalog,
@@ -4186,6 +4288,70 @@ function refreshEconomicBuildings(settlements, catalog, unitCatalog, rules) {
   }
 }
 
+function refreshSchema8Catalog(catalog, unitCatalog) {
+  for (const builtIn of BUILDING_CATALOG.filter(item => item.id !== "laurent-manor")) {
+    const index = catalog.findIndex(item => item.id === builtIn.id);
+    const current = index >= 0 ? catalog[index] : {};
+    const refreshed = normalizeCatalogItem({
+      ...builtIn,
+      imageUrl: current.imageUrl || builtIn.imageUrl || "",
+      enabled: current.enabled === undefined ? builtIn.enabled !== false : Boolean(current.enabled),
+      gmOnly: current.gmOnly === undefined ? Boolean(builtIn.gmOnly) : Boolean(current.gmOnly)
+    }, unitCatalog);
+    if (index >= 0) catalog[index] = refreshed;
+    else catalog.push(refreshed);
+  }
+  const laurent = catalog.find(item => item.id === "laurent-manor");
+  const laurentDefault = BUILDING_CATALOG.find(item => item.id === "laurent-manor");
+  if (laurent && laurentDefault) {
+    laurent.siegeDefensePercent = laurent.siegeDefensePercent || laurentDefault.siegeDefensePercent;
+    if (!laurent.garrisonUnits?.length) laurent.garrisonUnits = clone(laurentDefault.garrisonUnits);
+    laurent.requiredTagsAny = [];
+    laurent.grantsTags = [];
+  }
+  for (const unitItem of unitCatalog) {
+    if (TROOP_TYPES.some(builtIn => builtIn.id === unitItem.id)) unitItem.requiredTags = [];
+  }
+}
+
+function refreshSchema8Settlements(settlements, catalog, unitCatalog, rules) {
+  const builtInIds = new Set(BUILDING_CATALOG.filter(item => item.id !== "laurent-manor").map(item => item.id));
+  const laurentDefault = BUILDING_CATALOG.find(item => item.id === "laurent-manor");
+  for (const settlement of settlements) {
+    settlement.food = 0;
+    settlement.biomeTags = [];
+    settlement.biomeDescription = "";
+    settlement.terrainTags = settlement.terrainTags.filter(tag => !["iron", "horse", "horses"].includes(tag.toLowerCase()));
+    settlement.projects.forEach(project => {
+      project.requiredFood = 0;
+      project.foodPaid = 0;
+    });
+    settlement.buildings = settlement.buildings.map(building => {
+      if (building.catalogId === "laurent-manor") {
+        building.requiredTagsAny = [];
+        building.grantsTags = [];
+        building.siegeDefensePercent ||= laurentDefault?.siegeDefensePercent || 0;
+        if (!building.garrisonUnits?.length) building.garrisonUnits = clone(laurentDefault?.garrisonUnits || []);
+        return building;
+      }
+      if (!builtInIds.has(building.catalogId)) return building;
+      const template = catalog.find(item => item.id === building.catalogId);
+      if (!template) return building;
+      return buildingFromCatalog(template, {
+        id: building.id,
+        name: building.name || template.name,
+        slotId: building.slotId,
+        extraSlotIds: building.extraSlotIds,
+        active: building.active,
+        imageUrl: building.imageUrl || template.imageUrl,
+        notes: building.notes
+      }, unitCatalog);
+    });
+    synchronizeAutomaticLabor(settlement);
+    settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, rules);
+  }
+}
+
 function migrateLaurentStaffing(catalog, settlements) {
   const template = catalog.find(item => item.id === "laurent-manor");
   if (template) template.workers = Math.max(5, toNumber(template.workers, 0));
@@ -4197,7 +4363,7 @@ function migrateLaurentStaffing(catalog, settlements) {
   }
 }
 
-function normalizeRules(value, migrateLegacy = false) {
+function normalizeRules(value, migrateLegacy = false, sourceSchema = SCHEMA_VERSION) {
   const fallback = defaultRules();
   const source = value && typeof value === "object" ? value : {};
   const sourceTiers = Array.isArray(source.tiers) ? source.tiers : [];
@@ -4208,10 +4374,20 @@ function normalizeRules(value, migrateLegacy = false) {
     city: { minPopulation: 2000, openSlots: 10, maxSlots: 12, promotionCost: 50000, promotionCp: 7000, slotUnlockCost: 30000, activeProjects: 2 },
     metropolis: { minPopulation: 8000, openSlots: 14, maxSlots: 16, promotionCost: 150000, promotionCp: 20000, slotUnlockCost: 75000, activeProjects: 3 }
   };
+  const schema7Tiers = {
+    hamlet: { openSlots: 3, maxSlots: 4 },
+    village: { openSlots: 5, maxSlots: 7 },
+    town: { openSlots: 8, maxSlots: 10 },
+    city: { openSlots: 12, maxSlots: 14 },
+    metropolis: { openSlots: 16, maxSlots: 18 }
+  };
   const migratedNumber = (item, base, key) => {
     const current = toNumber(item?.[key], base[key]);
     const old = oldTiers[base.id]?.[key];
-    return migrateLegacy && old !== undefined && current === old ? base[key] : current;
+    if (migrateLegacy && old !== undefined && current === old) return base[key];
+    const schema7 = schema7Tiers[base.id]?.[key];
+    if (sourceSchema < 8 && schema7 !== undefined && current === schema7) return base[key];
+    return current;
   };
   return {
     tiers: fallback.tiers.map(base => {
@@ -4225,7 +4401,7 @@ function normalizeRules(value, migrateLegacy = false) {
         promotionCost: Math.max(0, migratedNumber(item, base, "promotionCost")),
         promotionCp: Math.max(0, migratedNumber(item, base, "promotionCp")),
         promotionMaterials: Math.max(0, toNumber(item.promotionMaterials, base.promotionMaterials)),
-        promotionFood: Math.max(0, toNumber(item.promotionFood, base.promotionFood)),
+        promotionFood: 0,
         slotUnlockCost: Math.max(0, migratedNumber(item, base, "slotUnlockCost")),
         activeProjects: clamp(Math.trunc(migratedNumber(item, base, "activeProjects")), 1, 5),
         coreName: cleanString(item.coreName) || base.coreName,
@@ -4251,8 +4427,9 @@ function normalizeRules(value, migrateLegacy = false) {
       snapshotLimit: clamp(Math.trunc(toNumber(source.construction?.snapshotLimit, fallback.construction.snapshotLimit)), 1, 20)
     },
     military: {
-      garrisonUpkeepPercent: Math.max(0, migrateLegacy ? fallback.military.garrisonUpkeepPercent : toNumber(source.military?.garrisonUpkeepPercent, fallback.military.garrisonUpkeepPercent)),
-      campaignUpkeepPercent: Math.max(0, migrateLegacy ? fallback.military.campaignUpkeepPercent : toNumber(source.military?.campaignUpkeepPercent, fallback.military.campaignUpkeepPercent)),
+      upkeepPercent: clamp(toNumber(source.military?.upkeepPercent, fallback.military.upkeepPercent), 0, 100),
+      garrisonUpkeepPercent: clamp(toNumber(source.military?.upkeepPercent, fallback.military.upkeepPercent), 0, 100),
+      campaignUpkeepPercent: clamp(toNumber(source.military?.upkeepPercent, fallback.military.upkeepPercent), 0, 100),
       manpowerRate: clamp(migrateLegacy && toNumber(source.military?.manpowerRate, 25) === 25
         ? fallback.military.manpowerRate
         : toNumber(source.military?.manpowerRate, fallback.military.manpowerRate), 0, 500),
@@ -4265,9 +4442,14 @@ function normalizeRules(value, migrateLegacy = false) {
       populationPressurePerDoubling: Math.max(0, toNumber(source.growth?.populationPressurePerDoubling, fallback.growth.populationPressurePerDoubling)),
       populationPressureCap: Math.max(0, toNumber(source.growth?.populationPressureCap, fallback.growth.populationPressureCap))
     },
+    order: {
+      populationPressureStart: Math.max(1, toNumber(source.order?.populationPressureStart, fallback.order.populationPressureStart)),
+      populationPressurePerDoubling: Math.max(0, toNumber(source.order?.populationPressurePerDoubling, fallback.order.populationPressurePerDoubling)),
+      populationPressureCap: Math.max(0, toNumber(source.order?.populationPressureCap, fallback.order.populationPressureCap))
+    },
     events: {
       enabled: source.events?.enabled === undefined ? fallback.events.enabled : Boolean(source.events.enabled),
-      foodShortagePenalty: Math.max(0, toNumber(source.events?.foodShortagePenalty, fallback.events.foodShortagePenalty))
+      foodShortagePenalty: 0
     }
   };
 }
@@ -4282,12 +4464,12 @@ function normalizeSettlementTemplates(items, migrateLegacy = false) {
     tier: settlementTierValue(item?.tier),
     population: Math.max(0, Math.trunc(toNumber(item?.population, 100))),
     treasure: Math.max(0, toNumber(item?.treasure, 0)),
-    food: Math.max(0, toNumber(item?.food, 0)),
+    food: 0,
     materials: Math.max(0, toNumber(item?.materials, 0)),
     publicOrder: clamp(toNumber(item?.publicOrder, 50), 0, 100),
     manpowerBonus: toNumber(item?.manpowerBonus, 0),
     terrainTags: normalizeTags(item?.terrainTags),
-    biomeTags: normalizeTags(item?.biomeTags),
+    biomeTags: [],
     buildings: Array.isArray(item?.buildings) ? clone(item.buildings) : []
   });
   const merged = new Map(defaults.map(item => [item.id, normalizeTemplate(item)]));
@@ -4352,13 +4534,15 @@ function normalizeCatalogItem(item, unitCatalog = TROOP_TYPES) {
     crownCost: Math.max(0, toNumber(item?.crownCost, 0)),
     cpCost: Math.max(0, toNumber(item?.cpCost, 0)),
     materialCost: Math.max(0, toNumber(item?.materialCost, 0)),
-    foodCost: Math.max(0, toNumber(item?.foodCost, 0)),
+    foodCost: 0,
     foodOutput: toNumber(item?.foodOutput, 0),
     materialsOutput: toNumber(item?.materialsOutput, 0),
     foodUpkeep: Math.max(0, toNumber(item?.foodUpkeep, 0)),
     materialsUpkeep: Math.max(0, toNumber(item?.materialsUpkeep, 0)),
     publicOrder: toNumber(item?.publicOrder, 0),
-    defense: Math.max(0, toNumber(item?.defense, 0)),
+    defense: 0,
+    siegeDefensePercent: clamp(toNumber(item?.siegeDefensePercent, 0), 0, 100),
+    garrisonUnits: normalizeGarrisonUnits(item?.garrisonUnits, unitCatalog),
     eventRollBonus: toNumber(item?.eventRollBonus, 0),
     grantsTags: normalizeTags(item?.grantsTags),
     requiredTagsAny: normalizeTags(item?.requiredTagsAny),
@@ -4380,6 +4564,7 @@ function normalizeCatalogItem(item, unitCatalog = TROOP_TYPES) {
     constructionBonus: Math.max(0, toNumber(item?.constructionBonus, 0)),
     recruitmentDiscount: clamp(toNumber(item?.recruitmentDiscount, 0), 0, 90),
     upkeepDiscount: clamp(toNumber(item?.upkeepDiscount, 0), 0, 90),
+    buildingUpkeepDiscount: clamp(toNumber(item?.buildingUpkeepDiscount, 0), 0, 90),
     imageUrl: cleanString(item?.imageUrl),
     description: cleanString(item?.description),
     enabled: item?.enabled === undefined ? true : Boolean(item.enabled),
@@ -4513,11 +4698,11 @@ function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING
     imageUrl: cleanString(item?.imageUrl),
     portraitUrl: cleanString(item?.portraitUrl),
     governorName: cleanString(item?.governorName),
-    biomeDescription: cleanString(item?.biomeDescription),
+    biomeDescription: "",
     systemNotes: cleanString(item?.systemNotes),
     population: Math.max(0, Math.trunc(toNumber(item?.population, 0))),
     treasure: toNumber(item?.treasure, 0) + laurentRefund.crown,
-    food: Math.max(0, toNumber(item?.food, Math.max(0, toNumber(item?.population, 0) * 4)) + laurentRefund.food),
+    food: 0,
     materials: Math.max(0, toNumber(item?.materials, Math.max(100, toNumber(item?.population, 0) * 2)) + laurentRefund.materials),
     publicOrder: clamp(toNumber(item?.publicOrder, 50), 0, 100),
     manpowerBonus: toNumber(item?.manpowerBonus, 0),
@@ -4547,11 +4732,12 @@ function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING
     gmNotes: cleanString(item?.gmNotes)
   };
   settlement.slots = normalizeSettlementSlots(item?.slots, settlement, rules);
+  synchronizeAutomaticLabor(settlement);
   const manpowerCap = manpowerCapForSettlement(settlement, rules);
   const committed = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, unitCatalog), 0)
     + settlement.recruitment.filter(order => order.status !== "completed").reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
   const fallbackReserve = Math.max(0, manpowerCap - committed);
-  settlement.manpowerReserve = clamp(toNumber(item?.manpowerReserve, fallbackReserve), 0, manpowerCap);
+  settlement.manpowerReserve = clamp(toNumber(item?.manpowerReserve, fallbackReserve), 0, fallbackReserve);
   return settlement;
 }
 
@@ -4600,13 +4786,15 @@ function normalizeBuilding(item, unitCatalog = TROOP_TYPES, catalogItem = null, 
     crownCost: Math.max(0, toNumber(source?.crownCost, 0)),
     cpCost: Math.max(0, toNumber(source?.cpCost, 0)),
     materialCost: Math.max(0, toNumber(source?.materialCost, 0)),
-    foodCost: Math.max(0, toNumber(source?.foodCost, 0)),
+    foodCost: 0,
     foodOutput: toNumber(source?.foodOutput, 0),
     materialsOutput: toNumber(source?.materialsOutput, 0),
     foodUpkeep: Math.max(0, toNumber(source?.foodUpkeep, 0)),
     materialsUpkeep: Math.max(0, toNumber(source?.materialsUpkeep, 0)),
     publicOrder: toNumber(source?.publicOrder, 0),
-    defense: Math.max(0, toNumber(source?.defense, 0)),
+    defense: 0,
+    siegeDefensePercent: clamp(toNumber(source?.siegeDefensePercent, 0), 0, 100),
+    garrisonUnits: normalizeGarrisonUnits(source?.garrisonUnits, unitCatalog),
     eventRollBonus: toNumber(source?.eventRollBonus, 0),
     grantsTags: normalizeTags(source?.grantsTags),
     requiredTagsAny: normalizeTags(source?.requiredTagsAny),
@@ -4629,6 +4817,7 @@ function normalizeBuilding(item, unitCatalog = TROOP_TYPES, catalogItem = null, 
     constructionBonus: Math.max(0, toNumber(source?.constructionBonus, 0)),
     recruitmentDiscount: clamp(toNumber(source?.recruitmentDiscount, 0), 0, 90),
     upkeepDiscount: clamp(toNumber(source?.upkeepDiscount, 0), 0, 90),
+    buildingUpkeepDiscount: clamp(toNumber(source?.buildingUpkeepDiscount, 0), 0, 90),
     requires: cleanString(source?.requires),
     bonus: toNumber(source?.bonus, 0),
     growth: toNumber(source?.growth, 0),
@@ -4654,7 +4843,7 @@ function normalizeTroop(item, unitCatalog = TROOP_TYPES, migrateLegacy = false) 
     type: type.id,
     count,
     maxCount,
-    mode: item?.mode === "campaign" ? "campaign" : "garrison",
+    mode: "garrison",
     garrisonCost: currentUpkeep.garrison,
     campaignCost: currentUpkeep.campaign,
     useRuleUpkeep: true,
@@ -4697,14 +4886,14 @@ function normalizeProject(item) {
     replacesBuildingId: cleanString(item?.replacesBuildingId),
     targetTier: settlementTierValue(item?.targetTier),
     targetLevel: clamp(Math.trunc(toNumber(item?.targetLevel, 1)), 1, 5),
-    targetSlotUse: Math.max(1, Math.trunc(toNumber(item?.targetSlotUse, 1))),
+    targetSlotUse: Math.max(0, Math.trunc(toNumber(item?.targetSlotUse, 1))),
     reservedSlotIds: normalizeTags(item?.reservedSlotIds),
     requiredCrown: Math.max(0, toNumber(item?.requiredCrown, 0)),
     crownPaid: Math.max(0, toNumber(item?.crownPaid, 0)),
     requiredMaterials: Math.max(0, toNumber(item?.requiredMaterials, 0)),
     materialsPaid: Math.max(0, toNumber(item?.materialsPaid, 0)),
-    requiredFood: Math.max(0, toNumber(item?.requiredFood, 0)),
-    foodPaid: Math.max(0, toNumber(item?.foodPaid, 0)),
+    requiredFood: 0,
+    foodPaid: 0,
     requiredCp: Math.max(0, toNumber(item?.requiredCp, 0)),
     cpPaid: Math.max(0, toNumber(item?.cpPaid, 0)),
     externalWorkers: Math.max(0, toNumber(item?.externalWorkers, 0)),
@@ -4723,12 +4912,11 @@ function normalizeSettlementSlots(items, settlement, rules) {
   const tier = tierRuleFor(settlement.tier, rules);
   const source = Array.isArray(items) ? items : [];
   const buildingProjects = settlement.projects.filter(project => project.kind === "building");
-  const activeBuildings = settlement.buildings.filter(building => building.active);
-  const economicBuildingBonus = Math.max(0, Math.trunc(activeBuildings.reduce((total, building) => total + building.bonusEconomicSlots, 0)));
-  const militaryBuildingBonus = Math.max(0, Math.trunc(activeBuildings.reduce((total, building) => total + building.bonusMilitarySlots, 0)));
+  const economicBuildingBonus = Math.max(0, Math.trunc(settlement.buildings.reduce((total, building) => total + building.bonusEconomicSlots, 0)));
+  const militaryBuildingBonus = Math.max(0, Math.trunc(settlement.buildings.reduce((total, building) => total + building.bonusMilitarySlots, 0)));
   const totalBonusSlots = settlement.slotBonus + economicBuildingBonus + militaryBuildingBonus;
   const occupiedDemand = settlement.buildings.reduce((total, building) => total + slotUse(building), 0)
-    + buildingProjects.filter(project => !project.replacesBuildingId && project.status !== "completed").reduce((total, project) => total + Math.max(1, project.targetSlotUse), 0);
+    + buildingProjects.filter(project => project.slotId && !project.replacesBuildingId && project.status !== "completed").reduce((total, project) => total + Math.max(1, project.targetSlotUse), 0);
   const requiredSlots = Math.max(
     1,
     tier.maxSlots + totalBonusSlots,
@@ -4786,6 +4974,11 @@ function normalizeSettlementSlots(items, settlement, rules) {
   }
 
   for (const project of buildingProjects) {
+    if (project.targetSlotUse <= 0 && !project.replacesBuildingId) {
+      project.slotId = "";
+      project.reservedSlotIds = [];
+      continue;
+    }
     const replaced = settlement.buildings.find(building => building.id === project.replacesBuildingId);
     if (replaced) {
       project.slotId = replaced.slotId;
@@ -4965,7 +5158,10 @@ function calculateSettlement(settlement, data = {}) {
   const activePolicy = policyFor(settlement.policyId, settlement.tier);
   const policyEffects = activePolicy.effects;
   const activeModifiers = aggregateActiveModifiers(settlement.activeEffects);
+  synchronizeAutomaticLabor(settlement);
+  const allBuildings = settlement.buildings;
   const activeBuildings = settlement.buildings.filter(building => building.active);
+  const operatingBuildings = activeBuildings.filter(buildingOperating);
   const economicWorkers = activeBuildings.filter(building => assignmentKind(building) === "economic").reduce((total, building) => total + assignedWorkers(building), 0);
   const militaryWorkers = activeBuildings.filter(building => assignmentKind(building) === "military").reduce((total, building) => total + assignedWorkers(building), 0);
   const troopManpowerUsed = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, unitCatalog), 0);
@@ -4973,76 +5169,86 @@ function calculateSettlement(settlement, data = {}) {
   const civilianPopulation = settlement.population;
   const freePopRaw = settlement.population - economicWorkers - militaryWorkers;
   const freePop = Math.max(0, freePopRaw);
+  const publicOrderPressure = publicOrderPressureFor(settlement.population, rules);
+  const buildingPublicOrder = operatingBuildings.reduce((total, building) => total + building.publicOrder, 0);
+  const effectivePublicOrder = clamp(Math.round(settlement.publicOrder + buildingPublicOrder + policyEffects.publicOrder + activeModifiers.publicOrder + publicOrderPressure), 0, 100);
+  const publicOrderBand = publicOrderState(effectivePublicOrder);
   const baseIncomePerFreePop = Math.max(0, toNumber(tier.baseIncomePerFreePop, 10));
   const baseIncome = freePop * baseIncomePerFreePop;
-  const buildingOutputs = activeBuildings.map(building => buildingOutput(building, settlement));
+  const buildingOutputs = allBuildings.map(building => buildingOutput(building, settlement));
   const buildingOutputTotal = buildingOutputs.reduce((total, output) => total + output.total, 0);
-  const grossIncome = Math.round((baseIncome + buildingOutputTotal) * rules.economy.incomeMultiplier * policyEffects.incomeMultiplier * percentMultiplier(activeModifiers.incomePercent));
-  const buildingUpkeepRaw = activeBuildings.reduce((total, building) => total + Math.max(0, building.buildingUpkeep), 0);
-  const buildingUpkeep = Math.round(buildingUpkeepRaw * percentMultiplier(activeModifiers.buildingUpkeepPercent));
+  const grossIncome = Math.round((baseIncome + buildingOutputTotal)
+    * rules.economy.incomeMultiplier
+    * policyEffects.incomeMultiplier
+    * percentMultiplier(activeModifiers.incomePercent)
+    * percentMultiplier(publicOrderBand.incomePercent));
+  const buildingUpkeepRaw = allBuildings.reduce((total, building) => total + buildingUpkeepCharge(building), 0);
+  const buildingUpkeepDiscount = settlementBuildingUpkeepDiscount(settlement, rules);
+  const buildingUpkeep = Math.round(buildingUpkeepRaw * (1 - buildingUpkeepDiscount / 100) * percentMultiplier(activeModifiers.buildingUpkeepPercent));
   const militaryCostRaw = settlement.troops.reduce((total, troop) => {
-    const mode = troop.mode === "campaign" ? "campaign" : "garrison";
     const type = troopType(troop.type, unitCatalog);
     const upkeep = unitUpkeepFromRules(type, rules);
-    return total + troop.count * (mode === "campaign" ? upkeep.campaign : upkeep.garrison);
+    return total + troop.count * upkeep.upkeep;
   }, 0);
   const upkeepDiscount = settlementUpkeepDiscount(settlement, rules);
   const militaryCost = Math.round(militaryCostRaw * (1 - upkeepDiscount / 100) * policyEffects.militaryUpkeepMultiplier * percentMultiplier(activeModifiers.militaryUpkeepPercent));
   const activeBuildingProjects = settlement.projects.filter(project => project.kind === "building" && project.status !== "completed");
   const activeProjectSlots = new Set(activeBuildingProjects.flatMap(project => [project.slotId, ...(project.reservedSlotIds || [])]).filter(Boolean));
-  const activeBuildingSlots = new Set(activeBuildings.flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean));
+  const activeBuildingSlots = new Set(allBuildings.flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean));
   const unlockedSlots = settlement.slots.filter(slot => slot.unlocked).length;
   const usedSlots = new Set([...activeBuildingSlots, ...activeProjectSlots]).size;
   const economicSlots = settlement.slots.filter(slot => slot.unlocked && slot.allowedCategory !== "military").length;
   const militarySlots = settlement.slots.filter(slot => slot.unlocked && slot.allowedCategory !== "economic").length;
-  const usedEconomicSlots = new Set(activeBuildings.filter(building => building.category === "economic").flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean)).size;
-  const usedMilitarySlots = new Set(activeBuildings.filter(building => building.category === "military").flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean)).size;
-  const militaryCapacity = Math.floor(activeBuildings.reduce((total, building) => total + building.militaryCapacity * buildingStaffing(building), 0));
-  const recruitmentCapacity = activeBuildings.reduce((total, building) => total + buildingRecruitmentCapacity(building), 0);
-  const constructionBonus = Math.floor(activeBuildings.reduce((total, building) => total + building.constructionBonus * buildingStaffing(building), 0));
+  const usedEconomicSlots = new Set(allBuildings.filter(building => building.category === "economic").flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean)).size;
+  const usedMilitarySlots = new Set(allBuildings.filter(building => building.category === "military").flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean)).size;
+  const recruitmentCapacity = operatingBuildings.reduce((total, building) => total + buildingRecruitmentCapacity(building), 0);
+  const constructionBonus = Math.floor(operatingBuildings.reduce((total, building) => total + building.constructionBonus, 0));
   const cpThisMonth = Math.max(0, Math.floor((freePop * rules.construction.cpPerFreePop + constructionBonus) * percentMultiplier(activeModifiers.constructionPercent)));
   const subsistenceFood = Math.floor(freePop * rules.economy.subsistenceFoodPerFreePop);
   const buildingFood = Math.round(buildingOutputs.reduce((total, output) => total + output.food, 0));
   const buildingMaterials = Math.round(buildingOutputs.reduce((total, output) => total + output.materials, 0));
-  const foodUpkeep = Math.round(activeBuildings.reduce((total, building) => total + building.foodUpkeep, 0));
-  const materialsUpkeep = Math.round(activeBuildings.reduce((total, building) => total + building.materialsUpkeep, 0));
+  const foodUpkeep = Math.round(operatingBuildings.reduce((total, building) => total + building.foodUpkeep, 0));
+  const materialsUpkeep = Math.round(operatingBuildings.reduce((total, building) => total + building.materialsUpkeep, 0));
   const foodProduction = subsistenceFood + Math.round(buildingFood * percentMultiplier(activeModifiers.foodOutputPercent));
   const populationFood = settlement.population * (rules.economy.foodPerPop + policyEffects.foodPerPop);
   const armyFood = settlement.troops.reduce((total, troop) => total + troop.count * troopType(troop.type, unitCatalog).foodUpkeep, 0) * policyEffects.armyFoodMultiplier;
   const foodConsumption = Math.round(populationFood + armyFood + foodUpkeep);
   const foodBalance = foodProduction - foodConsumption;
-  const foodAfterTurn = settlement.food + foodBalance;
-  const foodShortage = Math.max(0, -foodAfterTurn);
+  const foodShortage = Math.max(0, -foodBalance);
   const foodCoverage = foodConsumption > 0 ? foodProduction / foodConsumption : 1;
   const foodSecurity = foodSecurityState(foodCoverage);
-  const foodReserveMonths = foodConsumption > 0 ? settlement.food / foodConsumption : 0;
-  const foodReserveGrowth = foodReserveGrowthModifier(foodReserveMonths);
-  const foodSecurityGrowth = foodSecurity.growth + foodReserveGrowth;
+  const foodSecurityGrowth = foodSecurity.growth;
   const populationPressure = populationPressureFor(settlement.population, rules);
   const materialsProduction = Math.round(buildingMaterials * percentMultiplier(activeModifiers.materialsOutputPercent));
   const materialsBalance = materialsProduction - materialsUpkeep;
   const queuedManpower = settlement.recruitment
     .filter(order => order.status !== "completed")
-    .reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
+    .reduce((total, order) => total + Math.max(0, order.targetCount - order.trained) * troopType(order.troopType, unitCatalog).manpowerCost, 0);
   const manpowerCap = manpowerCapForSettlement(settlement, rules);
   const forceCapacityAvailable = Math.max(0, manpowerCap - troopManpowerUsed - queuedManpower);
-  const manpowerReserve = clamp(toNumber(settlement.manpowerReserve, 0), 0, manpowerCap);
+  const manpowerReserve = clamp(toNumber(settlement.manpowerReserve, 0), 0, forceCapacityAvailable);
+  settlement.manpowerReserve = manpowerReserve;
   const manpowerAvailable = Math.min(forceCapacityAvailable, manpowerReserve);
   const manpowerRecoveryRate = clamp(toNumber(rules.military.manpowerRecoveryRate, 10), 0, 100);
-  const manpowerRecovery = Math.min(Math.max(0, manpowerCap - manpowerReserve), Math.ceil(manpowerCap * manpowerRecoveryRate / 100));
-  const buildingPublicOrder = activeBuildings.reduce((total, building) => total + building.publicOrder * buildingStaffing(building), 0);
-  const effectivePublicOrder = clamp(Math.round(settlement.publicOrder + buildingPublicOrder + policyEffects.publicOrder + activeModifiers.publicOrder), 0, 100);
-  const publicOrderBand = publicOrderState(effectivePublicOrder);
-  const eventRollBonus = Math.round(activeBuildings.reduce((total, building) => total + building.eventRollBonus * buildingStaffing(building), 0) + policyEffects.eventRoll);
-  const buildingDefense = Math.round(activeBuildings.reduce((total, building) => total + building.defense * buildingStaffing(building), 0));
+  const manpowerRecovery = Math.min(Math.max(0, forceCapacityAvailable - manpowerReserve), Math.ceil(manpowerCap * manpowerRecoveryRate / 100));
+  const eventRollBonus = Math.round(operatingBuildings.reduce((total, building) => total + building.eventRollBonus, 0) + policyEffects.eventRoll);
+  const autoGarrisonMap = new Map();
+  for (const building of operatingBuildings) {
+    for (const entry of normalizeGarrisonUnits(building.garrisonUnits, unitCatalog)) {
+      autoGarrisonMap.set(entry.unitId, (autoGarrisonMap.get(entry.unitId) || 0) + entry.count);
+    }
+  }
+  const autoGarrison = Array.from(autoGarrisonMap, ([unitId, count]) => ({
+    unitId,
+    name: troopType(unitId, unitCatalog).name,
+    count,
+    power: Math.round(count * unitCombatRating(troopType(unitId, unitCatalog)))
+  }));
+  const autoGarrisonPower = autoGarrison.reduce((total, entry) => total + entry.power, 0);
   const armyPower = Math.round(settlement.troops.reduce((total, troop) => total + regimentPower(troop, unitCatalog), 0));
-  const garrisonPower = Math.round(settlement.troops.filter(troop => troop.mode !== "campaign").reduce((total, troop) => total + regimentPower(troop, unitCatalog), 0));
-  const defense = Math.round(buildingDefense + garrisonPower * 0.5);
-  const defenseTarget = Math.max(1, toNumber(tier.defenseTarget, 20));
-  const defenseCoverage = Math.round(defense / defenseTarget * 100);
-  const defenseMitigationPercent = clamp(Math.round(defense / defenseTarget * 25), 0, 50);
-  const defenseState = defenseCoverage >= 150 ? "Fortress" : defenseCoverage >= 100 ? "Fortified" : defenseCoverage >= 50 ? "Guarded" : "Exposed";
-  const strategicTags = Array.from(settlementGrantedTags(settlement));
+  const defendingPower = armyPower + autoGarrisonPower;
+  const siegeDefensePercent = clamp(Math.round(operatingBuildings.reduce((total, building) => total + building.siegeDefensePercent, 0)), 0, 75);
+  const strategicTags = settlement.terrainTags.slice();
   const growth = calculateGrowth(settlement, {
     totalPop: settlement.population,
     foodShortage,
@@ -5085,19 +5291,20 @@ function calculateSettlement(settlement, data = {}) {
     militaryCost,
     militaryCostRaw,
     upkeepDiscount,
+    buildingUpkeepDiscount,
     netIncome: grossIncome - buildingUpkeep - militaryCost,
-    foodStored: settlement.food,
+    foodStored: 0,
     foodProduction,
     populationFood: Math.round(populationFood),
     armyFood: Math.round(armyFood),
     foodConsumption,
     foodBalance,
-    foodAfterTurn: Math.max(0, foodAfterTurn),
+    foodAfterTurn: foodBalance,
     foodShortage,
     foodCoverage,
     foodSecurity,
-    foodReserveMonths,
-    foodReserveGrowth,
+    foodReserveMonths: 0,
+    foodReserveGrowth: 0,
     foodSecurityGrowth,
     foodSecurityEventRoll: foodSecurity.eventRoll,
     materialsStored: settlement.materials,
@@ -5107,19 +5314,25 @@ function calculateSettlement(settlement, data = {}) {
     materialsAfterTurn: Math.max(0, settlement.materials + materialsBalance),
     publicOrderBase: settlement.publicOrder,
     buildingPublicOrder,
+    publicOrderPressure,
     effectivePublicOrder,
     publicOrderBand,
     publicOrderGrowth: publicOrderBand.growth,
+    publicOrderIncomePercent: publicOrderBand.incomePercent,
     publicOrderEventRoll: publicOrderBand.eventRoll,
     eventRollBonus,
-    defense,
-    defenseTarget,
-    defenseCoverage,
-    defenseMitigationPercent,
-    defenseState,
-    buildingDefense,
+    defense: defendingPower,
+    defenseTarget: 0,
+    defenseCoverage: 0,
+    defenseMitigationPercent: siegeDefensePercent,
+    defenseState: `${formatNumber(siegeDefensePercent)}% Siege Defense`,
+    buildingDefense: 0,
     armyPower,
-    garrisonPower,
+    garrisonPower: autoGarrisonPower,
+    autoGarrison,
+    autoGarrisonPower,
+    defendingPower,
+    siegeDefensePercent,
     strategicTags,
     totalSlots: settlement.slots.length,
     unlockedSlots,
@@ -5128,7 +5341,7 @@ function calculateSettlement(settlement, data = {}) {
     militarySlots,
     usedEconomicSlots,
     usedMilitarySlots,
-    militaryCapacity,
+    militaryCapacity: manpowerCap,
     recruitmentCapacity,
     recruitmentDiscount: settlementRecruitmentDiscount(settlement, null, rules),
     recruitmentCostPercent: activeModifiers.recruitmentCostPercent,
@@ -5149,7 +5362,7 @@ function calculateGrowth(settlement, summary, rules = defaultRules()) {
   const buildingGrowth = settlement.buildings.reduce((total, building) => {
     return total + (building.active ? toNumber(building.growth, 0) * buildingStaffing(building) : 0);
   }, 0);
-  const foodPenalty = summary.foodShortage > 0 ? -Math.max(0, rules.events.foodShortagePenalty) : 0;
+  const foodPenalty = 0;
   const orderModifier = toNumber(summary.publicOrderGrowth, publicOrderState(summary.effectivePublicOrder).growth);
   const foodSecurityGrowth = toNumber(summary.foodSecurityGrowth, 0);
   const populationPressure = toNumber(summary.populationPressure, populationPressureFor(summary.totalPop, rules));
@@ -5203,6 +5416,15 @@ function populationPressureFor(population, rules = defaultRules()) {
   return -Math.min(cap, Math.log2(current / start) * perDoubling);
 }
 
+function publicOrderPressureFor(population, rules = defaultRules()) {
+  const start = Math.max(1, toNumber(rules.order?.populationPressureStart, 100));
+  const current = Math.max(0, toNumber(population, 0));
+  if (current <= start) return 0;
+  const perDoubling = Math.max(0, toNumber(rules.order?.populationPressurePerDoubling, 3));
+  const cap = Math.max(0, toNumber(rules.order?.populationPressureCap, 25));
+  return -Math.min(cap, Math.log2(current / start) * perDoubling);
+}
+
 function manpowerCapForSettlement(settlement, rules = defaultRules()) {
   if (cleanString(settlement?.manpowerOverride) !== "") return Math.max(0, Math.trunc(toNumber(settlement.manpowerOverride, 0)));
   const policyEffects = policyFor(settlement?.policyId, settlement?.tier).effects;
@@ -5211,9 +5433,10 @@ function manpowerCapForSettlement(settlement, rules = defaultRules()) {
 
 function recoverManpower(settlement, summary, rules = defaultRules()) {
   const cap = Math.max(0, toNumber(summary?.manpowerCap, manpowerCapForSettlement(settlement, rules)));
-  const current = clamp(toNumber(settlement.manpowerReserve, 0), 0, cap);
+  const target = Math.max(0, toNumber(summary?.forceCapacityAvailable, cap));
+  const current = clamp(toNumber(settlement.manpowerReserve, 0), 0, target);
   const rate = clamp(toNumber(rules.military.manpowerRecoveryRate, 10), 0, 100);
-  const recovered = Math.min(Math.max(0, cap - current), Math.ceil(cap * rate / 100));
+  const recovered = Math.min(Math.max(0, target - current), Math.ceil(cap * rate / 100));
   settlement.manpowerReserve = current + recovered;
   return recovered;
 }
@@ -5263,16 +5486,12 @@ function buildWarnings(settlement, data, summary = calculateSettlement(settlemen
   const warnings = [];
   const overrides = settlement.overrides;
 
-  if (summary.freePopRaw < 0 && !overrides.ignorePopulationLimits) warnings.push(`Assigned workers exceed Total POP by ${formatNumber(Math.abs(summary.freePopRaw))}.`);
   if (summary.troopManpowerUsed + summary.manpowerQueued > summary.manpowerCap && !overrides.ignoreManpowerLimits) warnings.push(`Army and recruitment exceed manpower cap by ${formatNumber(summary.troopManpowerUsed + summary.manpowerQueued - summary.manpowerCap)}.`);
-  if (summary.troopManpowerUsed > summary.militaryCapacity && !overrides.ignoreMilitaryCapacity) warnings.push(`Army uses ${formatNumber(summary.troopManpowerUsed)} Military Capacity, but staffed buildings provide ${formatNumber(summary.militaryCapacity)} (short by ${formatNumber(summary.troopManpowerUsed - summary.militaryCapacity)}).`);
   if (summary.usedSlots > summary.unlockedSlots && !overrides.ignoreSlotLimits) warnings.push(`Unlocked district slots exceeded by ${formatNumber(summary.usedSlots - summary.unlockedSlots)}.`);
-  if (summary.foodShortage > 0) warnings.push(`Projected food shortage: ${formatNumber(summary.foodShortage)} Food.`);
-  else if (summary.foodCoverage < 1) warnings.push(`Monthly Food production covers only ${formatNumber(summary.foodCoverage * 100)}% of consumption; stored reserves are masking the deficit.`);
+  if (summary.foodShortage > 0) warnings.push(`Monthly Food production covers ${formatNumber(summary.foodCoverage * 100)}% of demand (${summary.foodSecurity.label}, ${formatSigned(summary.foodSecurityGrowth)}% Growth).`);
 
   for (const building of settlement.buildings.filter(item => item.active)) {
-    if (building.assignedPop > workerCapacity(building)) warnings.push(`${building.name}: assigned workers exceed capacity by ${formatNumber(building.assignedPop - workerCapacity(building))}.`);
-    if (building.workers > 0 && building.assignedPop <= 0) warnings.push(`${building.name}: unstaffed and producing no effects.`);
+    if (building.workers > 0 && !buildingOperating(building)) warnings.push(`${building.name}: waiting for ${formatNumber(building.workers)} available POP; it produces no effects and pays half upkeep.`);
     if ((building.extraSlotIds || []).length < Math.max(0, building.slotUse - 1) && !overrides.ignoreSlotLimits) warnings.push(`${building.name}: needs ${formatNumber(building.slotUse)} district slots.`);
     if (!terrainRequirementMet(building, settlement) && !overrides.ignoreBuildingRequirements) warnings.push(`${building.name}: terrain requirement is not met.`);
   }
@@ -5283,7 +5502,7 @@ function buildWarnings(settlement, data, summary = calculateSettlement(settlemen
 function terrainRequirementMet(building, settlement) {
   const terrain = cleanString(building.terrain).toLowerCase();
   if (!terrain || terrain === "any" || terrain === "any settlement") return true;
-  const tags = [...settlement.terrainTags, ...settlement.biomeTags, settlement.region, settlement.type].map(tag => cleanString(tag).toLowerCase()).filter(Boolean);
+  const tags = [...settlement.terrainTags, settlement.region, settlement.type].map(tag => cleanString(tag).toLowerCase()).filter(Boolean);
   return tags.some(tag => terrain.includes(tag) || tag.includes(terrain));
 }
 
@@ -5311,6 +5530,28 @@ function workerCapacity(building) {
   return building.workers;
 }
 
+function synchronizeAutomaticLabor(settlement) {
+  let remaining = Math.max(0, Math.trunc(toNumber(settlement?.population, 0)));
+  for (const building of settlement?.buildings || []) {
+    const required = Math.max(0, Math.trunc(workerCapacity(building)));
+    if (!building.active) {
+      building.assignedPop = 0;
+      continue;
+    }
+    if (required === 0) {
+      building.assignedPop = 0;
+      continue;
+    }
+    if (remaining >= required) {
+      building.assignedPop = required;
+      remaining -= required;
+    } else {
+      building.assignedPop = 0;
+    }
+  }
+  return remaining;
+}
+
 function assignedWorkers(building) {
   return Math.min(Math.max(0, toNumber(building?.assignedPop, 0)), Math.max(0, workerCapacity(building)));
 }
@@ -5319,7 +5560,16 @@ function buildingStaffing(building) {
   if (!building?.active) return 0;
   const capacity = workerCapacity(building);
   if (capacity <= 0) return 1;
-  return clamp(toNumber(building.assignedPop, 0) / capacity, 0, 1);
+  return toNumber(building.assignedPop, 0) >= capacity ? 1 : 0;
+}
+
+function buildingOperating(building) {
+  return Boolean(building?.active) && buildingStaffing(building) > 0;
+}
+
+function buildingUpkeepCharge(building) {
+  const base = Math.max(0, toNumber(building?.buildingUpkeep, 0));
+  return buildingOperating(building) ? base : base * 0.5;
 }
 
 function buildingRecruitmentCapacity(building) {
@@ -5334,6 +5584,13 @@ function recruitmentSourceCandidate(building) {
 function sourceUnlocksUnit(building, unitId) {
   if (!unitId) return true;
   return (building.recruitableUnitIds || []).includes(unitId) || building.recruitType === unitId;
+}
+
+function buildingUnlocksUnit(building, unitId, catalog = BUILDING_CATALOG) {
+  if (!unitId) return Boolean(building?.recruitableUnitIds?.length || building?.recruitType);
+  if (sourceUnlocksUnit(building, unitId)) return true;
+  const ancestorIds = catalogAncestorIds(catalog, building.catalogId);
+  return Array.from(ancestorIds).some(id => sourceUnlocksUnit(catalog.find(item => item.id === id) || {}, unitId));
 }
 
 function recruitmentSourceLabel(building) {
@@ -5357,7 +5614,7 @@ function constructionCost(item) {
     crown: Math.max(0, toNumber(item?.crownCost, 0)),
     cp: Math.max(0, toNumber(item?.cpCost, 0)),
     materials: Math.max(0, toNumber(item?.materialCost, 0)),
-    food: Math.max(0, toNumber(item?.foodCost, 0))
+    food: 0
   };
 }
 
@@ -5375,10 +5632,18 @@ function settlementUpkeepDiscount(settlement, rules = defaultRules()) {
     .reduce((sum, building) => sum + Math.max(0, building.upkeepDiscount) * buildingStaffing(building), 0), 0, rules.economy.upkeepDiscountCap);
 }
 
+function settlementBuildingUpkeepDiscount(settlement, rules = defaultRules()) {
+  return clamp(settlement.buildings
+    .filter(buildingOperating)
+    .reduce((sum, building) => sum + Math.max(0, building.buildingUpkeepDiscount), 0), 0, rules.economy.upkeepDiscountCap);
+}
+
 function unitUpkeepFromRules(unit, rules = defaultRules()) {
+  const upkeep = Math.max(0, Math.round(unit.recruitCost * toNumber(rules.military.upkeepPercent, 20) / 100));
   return {
-    garrison: Math.max(0, Math.round(unit.recruitCost * rules.military.garrisonUpkeepPercent / 100)),
-    campaign: Math.max(0, Math.round(unit.recruitCost * rules.military.campaignUpkeepPercent / 100))
+    upkeep,
+    garrison: upkeep,
+    campaign: upkeep
   };
 }
 
@@ -5436,12 +5701,11 @@ function constructionBlockReasons(item, settlement, slot, current, data, permiss
   }
   if (settlement.treasure < item.crownCost) reasons.push(`Needs ${formatNumber(item.crownCost - settlement.treasure)} more Crown.`);
   if (settlement.materials < item.materialCost) reasons.push(`Needs ${formatNumber(item.materialCost - settlement.materials)} more Materials.`);
-  if (settlement.food < item.foodCost) reasons.push(`Needs ${formatNumber(item.foodCost - settlement.food)} more Food.`);
   return reasons;
 }
 
 function settlementGrantedTags(settlement) {
-  const tags = new Set([...settlement.terrainTags, ...settlement.biomeTags, settlement.region, settlement.type]
+  const tags = new Set([...settlement.terrainTags, settlement.region, settlement.type]
     .map(tag => cleanString(tag).toLowerCase()).filter(Boolean));
   for (const building of settlement.buildings.filter(item => item.active && buildingStaffing(item) > 0)) {
     for (const tag of normalizeTags(building.grantsTags)) tags.add(tag.toLowerCase());
@@ -5603,6 +5867,27 @@ function normalizeTags(value) {
 
 function splitTags(value) {
   return cleanString(value).split(",").map(part => part.trim()).filter(Boolean);
+}
+
+function normalizeGarrisonUnits(value, unitCatalog = TROOP_TYPES) {
+  const entries = Array.isArray(value)
+    ? value
+    : splitTags(value).map(entry => {
+      const [unitId, count] = entry.split(":");
+      return { unitId, count };
+    });
+  const counts = new Map();
+  for (const entry of entries) {
+    const unitId = cleanString(entry?.unitId || entry?.id);
+    const count = Math.max(0, Math.trunc(toNumber(entry?.count, 0)));
+    if (!unitId || count <= 0 || !unitCatalog.some(unitItem => unitItem.id === unitId)) continue;
+    counts.set(unitId, (counts.get(unitId) || 0) + count);
+  }
+  return Array.from(counts, ([unitId, count]) => ({ unitId, count }));
+}
+
+function garrisonUnitsText(value, unitCatalog = TROOP_TYPES) {
+  return normalizeGarrisonUnits(value, unitCatalog).map(entry => `${entry.unitId}:${entry.count}`).join(", ");
 }
 
 function arrayPayload(value) {

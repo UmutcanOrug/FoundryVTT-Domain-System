@@ -2313,12 +2313,85 @@
 
 .ds-replenish-bar {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(160px, 1fr) 74px 34px;
+  grid-template-columns: minmax(180px, 1fr) 74px 34px;
   align-items: center;
   gap: 7px;
   padding: 8px;
   border-top: 1px solid #754747;
   background: #211818;
+}
+
+/* v0.1.12 compact branch workspace and flow-based economy controls */
+.ds-district-branch-overlay {
+  bottom: auto;
+  max-height: min(540px, calc(100vh - 210px));
+  padding: 11px;
+  gap: 9px;
+}
+
+.ds-district-branch-overlay > header {
+  top: -11px;
+  padding-bottom: 8px;
+}
+
+.ds-root-branch-group > div {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+}
+
+.ds-branch-workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 275px);
+  gap: 12px;
+}
+
+.ds-slot-tree-tier {
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 76px;
+}
+
+.ds-slot-tree-tier:not(:last-child)::after {
+  top: 50px;
+  bottom: -27px;
+  left: 26px;
+}
+
+.ds-tree-tier-label {
+  width: 52px;
+  min-height: 34px;
+}
+
+.ds-slot-tree-nodes {
+  grid-template-columns: repeat(var(--tree-columns, 1), minmax(128px, 144px));
+  gap: 8px;
+}
+
+.ds-branch-node,
+.ds-root button.ds-branch-node {
+  grid-template-rows: 38px auto auto;
+  width: 132px;
+  min-height: 84px;
+  padding: 6px;
+}
+
+.ds-branch-node > img,
+.ds-branch-node > i {
+  height: 38px;
+}
+
+.ds-branch-detail-panel {
+  top: 45px;
+  min-height: 196px;
+  padding: 10px;
+}
+
+.ds-recruit-controls {
+  grid-template-columns: 74px 34px;
+  justify-content: end;
+}
+
+.ds-effect-badges .workers {
+  border-color: #6d6650;
+  color: #ddd0a4;
 }
 
 .ds-replenish-bar > span { color: #dfb0aa; }

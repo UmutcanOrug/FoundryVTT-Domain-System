@@ -1,39 +1,43 @@
 # DS: Domain System
 
-DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, economy, construction, army, and month management in Astargon campaigns. The panel opens with `K`.
+DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, economy, construction, recruitment, and month management in Astargon campaigns. Open the panel with `K`.
 
 ## Core Loop
 
-1. Assign civilian POP to completed buildings. Unassigned Free POP produces tier-based Crown, subsistence Food, and construction CP; Total POP determines manpower cap.
-2. Build from clickable Overview districts or the detailed Construction board. Every building belongs to a five-tier family aligned with Hamlet through Metropolis.
-3. Pay Crown, Materials, and any Food cost when construction is queued. Progress is driven by CP, not a fixed month duration.
-4. Choose a branch inside each district and invest toward City and Metropolis nodes. Built-in economic families can be developed in up to two districts, while military families remain unique.
-5. Recruit only the units unlocked by a staffed military building. Track casualties as Current / Maximum Strength and replenish losses from a monthly recovering manpower reserve.
-6. Process one settlement or close the global month. Manpower recovery, Crown, Food, Materials, recruitment, growth, construction, and a pending d100 event are resolved in order.
-7. Review the d100 result as GM, then apply a timed percentage modifier, keep it narrative-only, reroll it, or ignore it.
+1. Operating buildings automatically reserve their full required POP. Halt buildings to release workers; halted or labor-starved buildings pay half upkeep and produce no effects.
+2. Develop clickable Overview districts through five-tier Food, Materials, Commerce, Civic, Recruitment, Defense, and Siege trees.
+3. Pay Crown and Materials when construction enters the queue. Free POP and building bonuses generate CP each month, so projects have no fixed month duration.
+4. Balance monthly Food production against population and army consumption. Food is a flow, not stored currency.
+5. Recruit any unit unlocked by completed military ancestry from one shared monthly Recruitment Capacity pool.
+6. Track regiment Current / Maximum strength. Replenishment uses Crown and manpower, requires no building, consumes no Recruitment Capacity, and resolves at month end.
+7. Process one settlement or close the global month, then let the GM approve, narrate, reroll, or ignore the d100 result.
 
-## Features
+## Key Systems
 
-- Hamlet, Village, Town, City, and Metropolis progression with editable POP, Crown, Materials, Food, CP, and slot rules.
-- Crown, Food, Materials, Public Order, construction CP, manpower, defense, and abstract army power.
-- Four color-coded five-tier economic families: Food, Materials, Commerce, and Civic development.
-- Three five-tier military families: Recruitment, Defense, and Siege, plus tierless GM landmarks that do not consume a district.
-- Explicit branch choices such as Infantry Yard into Drill Hall or Stable Compound.
-- Real multi-slot buildings, building-granted bonus slots, purchasable districts, category restrictions, and GM locks.
-- Staffing ratios that scale output, recruitment, capacity, defense, public order, and building bonuses.
-- Building-specific unit rosters, strategic resource tags, one military capacity pool, a monthly recovering manpower reserve, and per-unit limits.
-- One readable Power value per unit, Current / Maximum regiment strength, troop Food use, and month-end replenishment that spends manpower without consuming recruitment-building capacity.
-- One active settlement policy with tier-gated tradeoffs for growth, taxation, army upkeep, Food, manpower, Public Order, and d100 events.
-- Tier-based Free POP Crown income of 10/20/30/40/50 from Hamlet through Metropolis, with specialist economic districts that deliberately trade direct Crown for Food, Materials, Growth, Order, or military support.
-- Pure Grain and Stone production paths, hybrid Pastoral and Iron paths, dedicated Commerce income, and non-income Civic development with visible strategic tradeoffs.
-- Ratio-based Food Security, capped reserve bonuses, and logarithmic Population Pressure that makes large settlements require continued Food and Growth investment.
-- A paged 4x2 Overview district board, opaque Total War-style branch overlays, fixed lineage columns, a readable building-detail panel, branch colors, and player rosters that hide locked units.
-- GM-editable building, unit, and d100 event libraries with timed income, upkeep, output, construction, recruitment, growth, and Public Order modifiers.
-- GM Direct building placement, recruitment records, regiment creation, queue repair, resource correction, and manual tier controls.
-- Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town templates plus custom template creation.
-- Individual settlement processing, pending-only global month close, duplicate-process protection, and restorable pre-turn snapshots.
-- De Laurent remains an ordinary player settlement; Laurent Manor is a single tierless, 5-POP landmark and is never used as a reusable template.
-- Schema v7 migration preserves settlement identity, ownership, custom images, custom catalog entries, regiments, notes, rules, and logs while refreshing built-in economic balance.
+- Hamlet, Village, Town, City, and Metropolis progression with editable population, costs, CP, open slots, and maximum slots.
+- Default district limits of `2/3`, `3/4`, `4/6`, `6/8`, and `8/10` from Hamlet through Metropolis.
+- Tier-based Free POP Crown income of `10/20/30/40/50`.
+- Pure Grain and Stone branches, hybrid Pastoral and Foundry branches, dedicated Commerce income, and Civic Order/Growth development.
+- Inland Commerce lowers settlement building upkeep; maritime Commerce favors higher Crown and event rolls.
+- Exact Food Security bands from `-3%` Growth below 50% coverage to `+1.5%` Growth at 200% coverage.
+- Exact Public Order income modifiers of `-50/-25/0/+10/+20%`, plus Growth and event-roll effects.
+- Population pressure on both Growth and Public Order, configurable by the GM.
+- One manpower cap based on Total POP, a recovering manpower reserve, and a separate pooled monthly Recruitment Capacity.
+- One unit upkeep value, defaulting to 20% of recruit price per month.
+- Defense buildings with explicit free auto-garrisons, Public Order, and Siege Defense percentages.
+- Current / Maximum regiment strength, per-regiment images and Actor UUID links, and building-free replenishment.
+- A paged 4x2 Overview district board, compact branch selector, aligned lineage trees, branch colors, and hidden locked player units.
+- Tierless landmarks that consume no district, plus immediate or queued GM landmark placement.
+- Controlled player Treasury deposits and withdrawals with Chronicle audit entries.
+- GM-editable building, unit, event, permission, economy, military, Growth, Order, and settlement-tier rules.
+- Blank Hamlet, Starter Hamlet, Starter Village, and Starter Town templates.
+- Individual settlement processing, pending-only global month close, duplicate-process protection, and pre-turn snapshots.
+- De Laurent remains a player settlement and never becomes a reusable template.
+- Schema v8 migration preserves custom settlements, ownership, catalog entries, images, regiments, logs, and customized Laurent Manor values while removing obsolete Biome and strategic-resource data.
+
+## Balance Reference
+
+The automated v0.1.12 City scenario uses eight City districts plus Laurent Manor. It produces `141,488` gross Crown, pays `14,973` building upkeep, sustains approximately `1,013 Men-at-Arms`, and retains `192%` Food coverage. This is a regression target, not a mandatory campaign build.
 
 See `KULLANIM-KILAVUZU.md` for the complete Turkish workflow and rule reference.
 
@@ -54,5 +58,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.11.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.12.zip
 ```

@@ -83,7 +83,7 @@ data.settlements[0].pendingEvents = [{
 data.settlements[0].recruitment.push({
   id: "preview-replenishment",
   kind: "replenishment",
-  sourceBuildingId: "dl-manor",
+  sourceBuildingId: "",
   regimentId: "dl-maa",
   regimentName: "Men-at-Arms",
   imageUrl: "",
@@ -95,7 +95,7 @@ data.settlements[0].recruitment.push({
   crownPaid: 2736,
   status: "inProgress",
   createdAt: Date.now(),
-  notes: "Month-end preview order."
+  notes: "Independent month-end replenishment preview."
 });
 data.settlements[0].turnSnapshots = [{
   id: "preview-snapshot",
