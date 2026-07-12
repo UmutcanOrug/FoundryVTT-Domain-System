@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.11
+
+- Rebalanced every built-in economic family around a distinct role instead of making every district another Crown generator.
+- Split Food development into a pure Grain path and a Crown/Food Pastoral hybrid with Growth, Horses, and recruitment support.
+- Split Materials development into a pure Stone/Construction path and a Crown/Materials Iron hybrid with military discounts.
+- Kept Commerce as the dedicated Crown family and Civic as the no-income Order, Growth, event-control, and mitigation family.
+- Added ratio-based Food Security bands from Critical to Overflowing, bounded Growth and d100 modifiers, and a capped stored-reserve bonus.
+- Added logarithmic Population Pressure that begins at 100 POP by default, grows with each population doubling, and can be configured by the GM.
+- Allowed up to two built-in economic districts from the same family so large settlements can reinvest in Food, Materials, Commerce, or Civic development.
+- Added Food Security, reserve depth, Building Growth, Growth Rate, and Population Pressure to Overview, Town, Rules, and Chronicle output.
+- Aligned Overview, Construction, and Content Library technology-tree nodes to persistent lineage columns so parent and child paths remain vertically readable.
+- Added schema v7 migration that refreshes built-in economic values and starter templates while preserving settlement identity, assignments, notes, images, custom catalog entries, and GM rules.
+- Expanded automated balance coverage for pure/hybrid roles, Food thresholds, reserve caps, population pressure, large-settlement viability, migration preservation, and tree alignment.
+
 ## 0.1.10
 
 - Fixed Laurent Manor assignments being forced back to zero; it now requires and preserves 5 assigned POP, and its recruitment, Military Capacity, Defense, Public Order, and bonus-slot effects work at full staffing.

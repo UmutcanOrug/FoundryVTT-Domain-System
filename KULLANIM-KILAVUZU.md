@@ -64,11 +64,13 @@ Subsistence Food = Free POP x 0,25
 Food Consumption = Total POP x 1 + Army Food + Policy Food + Building Food Upkeep
 Food Change = Subsistence + Building Food - Food Consumption
 Materials Change = Staffed Building Materials - Building Materials Upkeep
+Food Coverage = Monthly Food Production / Monthly Food Consumption
+Food Reserve Months = Stored Food / Monthly Food Consumption
 ```
 
 Ay islenince Net Crown Treasure'a, Food Change Food deposuna ve Materials Change Materials deposuna eklenir. Food veya Materials sifirin altina inmez. Food acigi growth ve d100 olay zarini kotulestirir; Public Order da duser. Built-in Food binalari Materials, Materials binalari Food uretmez.
 
-Fiyatlar yuksek seviye 5e oyunlarina gore ayarlanmistir. 20.000 Crown genellikle yalnizca bir Hamlet kok binasini karsilar. Town, City ve Metropolis yatirimlari yuz binlerce veya milyonlarca Crown ister. Tam staffed her ekonomik bina, ayni iscileri Free POP birakmaktan daha fazla net Crown ve/veya kendi ana kaynagini saglayacak sekilde dengelenmistir.
+Fiyatlar yuksek seviye 5e oyunlarina gore ayarlanmistir. 20.000 Crown genellikle yalnizca bir Hamlet kok binasini karsilar. Town, City ve Metropolis yatirimlari yuz binlerce veya milyonlarca Crown ister. Commerce dogrudan gelir motorudur. Saf Food, Materials ve Civic binalari Crown kazandirmak yerine Free POP gelirinden vazgecirerek stratejik kaynak veya uzun vadeli avantaj uretir. Hybrid Pastoral ve Iron dallari bu Crown kaybini azaltir fakat saf dal kadar ana kaynak uretmez.
 
 GM `Settlement Ledger` icinden POP, Treasure, Food, Materials, Public Order, Manpower Reserve ve bonus slotlari dogrudan duzeltebilir.
 
@@ -93,10 +95,10 @@ GM her slotun adini, acma bedelini, kategorisini ve kilidini degistirebilir. `Di
 
 Ekonomik aileler ve renkleri:
 
-- Yesil `Food`: Land Clearance -> Farmstead -> Grain Estate veya Pastoral Ranch -> Grand Granary/Royal Stockyards -> Agrarian Heartland/Royal Pastures. Grain yolu daha fazla Food ve kitlik korumasi; Pastoral yolu daha fazla Crown, growth, horses ve cavalry destegi verir.
-- Gumus `Materials`: Survey Camp -> Stone Quarry veya Iron Mine -> Masonry/Ironworks -> Builders Guild/Grand Foundry -> Metropolis uretim dugumleri.
-- Sari `Commerce`: Trading Post -> Market District veya River Jetty -> Guild ya da Harbor dallari.
-- Turkuaz `Civic`: Village Commons -> Tavern Quarter veya Shrine District -> kultur ya da inanc/egitim dallari.
+- Yesil `Food`: Land Clearance -> Farmstead -> Grain Estate veya Pastoral Ranch -> Grand Granary/Royal Stockyards -> Agrarian Heartland/Royal Pastures. Grain saf Food ve kitlik korumasi verir. Pastoral yari Crown/yari Food mantigiyla Growth, Horses ve recruitment destegi ekler.
+- Gumus `Materials`: Survey Camp -> Stone Quarry veya Iron Mine -> Masonry/Ironworks -> Builders Guild/Grand Foundry -> Metropolis uretim dugumleri. Stone saf Materials ve Construction CP verir. Iron yari Crown/yari Materials mantigiyla Iron tag'i ve askeri indirimler saglar.
+- Sari `Commerce`: Trading Post -> Market District veya River Jetty -> Guild ya da Harbor dallari. Bu aile dogrudan Crown icindir; inland yol guvenilir ve terrainsiz, harbor yolu daha pahali ama daha yuksek gelir ve event bonusu verir.
+- Turkuaz `Civic`: Village Commons -> Tavern Quarter veya Shrine District -> kultur ya da inanc/egitim dallari. Culture Public Order ve event kontrolu; Welfare Growth ve kriz mitigation'i verir. Built-in Civic binalari Crown uretmez.
 
 Askeri aileler kirmizi renkle gosterilir:
 
@@ -109,9 +111,9 @@ Askeri aileler kirmizi renkle gosterilir:
 
 `Laurent Manor`, De Laurent'e ait tek bir tierless Landmark'tir. Normal slota yerlesmez, 5 POP ister ve T1-T5 upgrade zinciri yoktur. Tam staffed iken recruitment, Military Capacity, Defense, Public Order ve bonus slot etkileri verir. Eski Laurent Estate tierleri veri gecisinde bu tek Landmark'a birlestirilir.
 
-Bir familyada `One family per settlement` isaretliyse ayni yerleskede o aileden bir yol bulunur. Bir dugumun dallari ayni slotta birbirini dislar; farkli yol gerekiyorsa GM Content Library'de bu limiti degistirebilir veya uygun ozel bina yaratabilir.
+Built-in ekonomik aileler varsayilan olarak ayni yerleskede iki district'e kadar kurulabilir. Bu sayede buyuyen bir sehir ikinci Food, Materials, Commerce veya Civic yatirimi yapabilir. Ayni dugumun varsayilan limiti de ikidir. Askeri aileler `One family per settlement` ile benzersiz kalir. Her district kendi dal secimini korur; bir slottaki iki kardes dal ayni anda kurulamaz.
 
-Overview branch paneli tamamen opak bir zeminde acilir. T1-T5 dugumleri solda kalir; secilen veya uzerine gelinen binanin aciklamasi, maliyeti, output'u, gereksinimi ve `Allows recruitment of` bilgisi sagdaki sabit Building Details panelinde gorulur. Construction ve Content Library ekranlarinda da aileler yukaridan asagi T1-T5 olarak cizilir.
+Overview branch paneli tamamen opak bir zeminde acilir. T1-T5 dugumleri solda kalir; secilen veya uzerine gelinen binanin aciklamasi, maliyeti, output'u, gereksinimi ve `Allows recruitment of` bilgisi sagdaki sabit Building Details panelinde gorulur. Overview, Construction ve Content Library agaclari soy hattina gore sabit kolon kullanir; bir dalin T3-T5 dugumleri ayni dikey hatta kalir.
 
 ## Construction ve CP
 
@@ -187,10 +189,14 @@ Unit sablonuna veya tek bir regiment/recruitment kaydina Foundry Actor UUID atan
 
 ## Growth, Public Order ve Defense
 
-Growth; Base, Safety, Food, Migration, War, Famine, Plague, Tax, Raid, Other, bina bonuslari, Food shortage ve Public Order etkilerinden olusur.
+Growth; Base, Safety, GM Food Modifier, Migration, War, Famine, Plague, Tax, Raid, Other, bina bonuslari, Food Security, Food Reserve, Population Pressure, Food shortage ve Public Order etkilerinden olusur.
 
 - Varsayilan dunya siniri ayda yuzde -5 ile +5'tir.
 - GM yuzdeyi veya dogrudan POP degisimini override edebilir.
+- Food Coverage yuzde 50'nin altinda `Critical` (-1,5 growth, d100 -4), yuzde 50-99 `Strained` (-0,75, -2), yuzde 100-124 `Sustained`, yuzde 125-149 `Secure` (+0,35, +1), yuzde 150-199 `Abundant` (+0,7, +2), yuzde 200 ve ustunde `Overflowing` (+1, +3) olur. Daha fazla Food bu tavanlari gecmez.
+- Stored Food bir aydan azsa growth -0,25 olur. Uc aylik rezerv +0,1, alti aylik veya daha derin rezerv en fazla +0,2 verir.
+- Population Pressure varsayilan olarak 100 POP'ta baslar. Nufus her iki katina ciktiginda growth -0,25 daha alir ve toplam ceza -3'te durur. GM baslangic, ikiye katlanma cezasi ve tavani Rules ekranindan degistirebilir.
+- Bu nedenle tek bir erken Growth binasi sonsuza kadar yeterli olmaz. Buyuk sehir yeni Food/Civic districtlerine yatirim yaparak baskiyi asabilir.
 - Public Order 0-100 arasindadir. Staffed civic ve defense binalari etkin degeri degistirir. Built-in Food binalari Public Order vermez.
 - `Unrest` 0-24: growth -0,75 ve d100 -5.
 - `Unstable` 25-49: growth -0,25 ve d100 -2.
@@ -240,7 +246,7 @@ Yerleske ay sirasi:
 d100 sonucu:
 
 ```text
-Final Roll = 1d100 + Public Order Modifier + Building/Policy Bonus - Food Shortage Penalty
+Final Roll = 1d100 + Public Order Modifier + Food Security Modifier + Building/Policy Bonus - Food Shortage Penalty
 ```
 
 Final Roll 1-100 arasinda tutulur. Eventler dogrudan Crown, Food, Materials veya POP eklemez. GM `Pending Month Events` kartinda Income, Building Upkeep, Food Output, Materials Output, Construction, Recruitment Cost, Military Upkeep, Growth ve Public Order modifierlarini ve 0-12 aylik suresini duzenleyebilir:
@@ -288,7 +294,7 @@ Building kutuphanesinin ust kismi branchleri renkli T1-T5 agacinda gosterir; alt
 
 ## Veri Gecisi
 
-v0.1.9 ve daha eski veriler schema v6'ya otomatik tasinir.
+v0.1.10 ve daha eski veriler schema v7'ye otomatik tasinir.
 
 - Yerleske kimligi, sahiplik, bina instance'lari, regimentler, kuyruklar, notlar ve loglar korunur.
 - Eski built-in bina kimlikleri yeni ailelerdeki en yakin dugume eslenir.
@@ -298,6 +304,8 @@ v0.1.9 ve daha eski veriler schema v6'ya otomatik tasinir.
 - Metropolis'ten dusurulen yerleskelerde bos eski slotlar yeni tier azamisine kadar daralir; dolu slotlar korunur.
 - De Laurent'in bilinen eski Estate dugumleri tek tierless Laurent Manor Landmark'ina birlestirilir; normal district kullanmaz ve 5 POP ile tam staffed hale getirilir.
 - v0.1.9 dunyalarinda Laurent Manor'un sifira kilitlenen POP degeri 5/5 olarak onarilir; GM'in ozel ekonomi ve Rules degerleri korunur.
+- Built-in ekonomik katalog ve mevcut built-in ekonomik bina instance'lari yeni saf/hybrid dengeye yenilenir. Settlement kimligi, slotu, assigned POP, active durumu, resim ve notlar korunur.
+- GM'in custom katalog binalari ve ozel Rules degerleri yenileme sirasinda degistirilmez.
 - Food, Materials, Public Order, Manpower Reserve, aktif modifier, event, policy, replenishment ve snapshot alanlari eksik kayitlara eklenir.
 - Hazir Hamlet-Town sablonlari dunya verisine eklenir.
 - De Laurent mevcut oyuncu kaydi olarak kalir.
@@ -319,5 +327,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Download:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.10.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.11.zip
 ```

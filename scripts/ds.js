@@ -5,7 +5,7 @@ const SOCKET_NAME = `module.${MODULE_ID}`;
 const TEMPLATE_PATH = `modules/${MODULE_ID}/templates/ds-panel.hbs`;
 const ACTION_CONFIRM_TIMEOUT_MS = 15000;
 const DIRECT_RECRUITMENT_SOURCE = "__direct__";
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const DISTRICT_PAGE_SIZE = 8;
 
 const TABS = [
@@ -64,6 +64,15 @@ const PUBLIC_ORDER_BANDS = [
   { id: "prosperous", label: "Prosperous", min: 90, max: 100, growth: 0.5, eventRoll: 4, className: "ds-good" }
 ];
 
+const FOOD_SECURITY_BANDS = [
+  { id: "critical", label: "Critical", min: 0, max: 0.5, growth: -1.5, eventRoll: -4, className: "ds-bad" },
+  { id: "strained", label: "Strained", min: 0.5, max: 1, growth: -0.75, eventRoll: -2, className: "ds-warn" },
+  { id: "sustained", label: "Sustained", min: 1, max: 1.25, growth: 0, eventRoll: 0, className: "" },
+  { id: "secure", label: "Secure", min: 1.25, max: 1.5, growth: 0.35, eventRoll: 1, className: "ds-good" },
+  { id: "abundant", label: "Abundant", min: 1.5, max: 2, growth: 0.7, eventRoll: 2, className: "ds-good" },
+  { id: "overflowing", label: "Overflowing", min: 2, max: Number.POSITIVE_INFINITY, growth: 1, eventRoll: 3, className: "ds-good" }
+];
+
 const EVENT_EFFECT_KEYS = [
   "incomePercent",
   "buildingUpkeepPercent",
@@ -120,44 +129,44 @@ const TROOP_TYPES = [
 ];
 
 const BUILDING_CATALOG = [
-  eco("land-clearance", "Land Clearance", "Any", 10, 14, 20000, 800, { chainId: "food", nodeTier: 1, materialCost: 100, buildingUpkeep: 20, foodOutput: 200, uniqueChain: true, description: "Prepares open land for a future grain or pastoral specialization." }),
-  eco("farmstead", "Farmstead", "Farmlands or Plains", 20, 28, 65000, 2500, { chainId: "food", nodeTier: 2, parentIds: ["land-clearance"], materialCost: 500, buildingUpkeep: 100, foodOutput: 700, growth: 0.15, uniqueChain: true, description: "A mixed farm that can develop into high-yield grain or growth-focused pastoral land." }),
-  eco("grain-estate", "Grain Estate", "Farmlands or Plains", 35, 42, 220000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 300, materialCost: 1800, buildingUpkeep: 300, foodOutput: 2200, growth: 0.1, uniqueChain: true, description: "Commits the district to maximum Food output and later famine protection." }),
-  eco("horse-ranch", "Pastoral Ranch", "Plains or Grassland", 30, 50, 240000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 500, materialCost: 1700, buildingUpkeep: 300, foodOutput: 1500, growth: 0.45, grantsTags: ["horses"], uniqueChain: true, description: "Trades raw Food for Crown, population growth, horses, and future cavalry support." }),
-  eco("grand-granary", "Grand Granary", "Any", 45, 75, 700000, 24000, { chainId: "food", nodeTier: 4, parentIds: ["grain-estate"], flatOutput: 1800, materialCost: 6000, buildingUpkeep: 1000, foodOutput: 6000, growth: 0.15, mitigationTags: ["famine"], uniqueChain: true, description: "Stores vast grain reserves, maximizing Food and reducing the impact of famine events." }),
-  eco("royal-stud", "Royal Stockyards", "Plains or Grassland", 45, 95, 820000, 26000, { chainId: "food", nodeTier: 4, parentIds: ["horse-ranch"], flatOutput: 3000, materialCost: 6500, buildingUpkeep: 1400, foodOutput: 4000, growth: 0.7, grantsTags: ["horses"], recruitmentDiscount: 6, uniqueChain: true, description: "Expands pastoral wealth and growth while lowering recruitment costs for horse-dependent armies." }),
-  eco("agrarian-heartland", "Agrarian Heartland", "Any", 70, 155, 2600000, 75000, { chainId: "food", nodeTier: 5, parentIds: ["grand-granary"], flatOutput: 7000, materialCost: 22000, buildingUpkeep: 3500, foodOutput: 16000, growth: 0.25, mitigationTags: ["famine", "migration"], special: true, uniqueChain: true, description: "Turns the region into a metropolitan breadbasket with unmatched Food security." }),
-  eco("imperial-stud", "Royal Pastures", "Plains or Grassland", 65, 200, 3000000, 85000, { chainId: "food", nodeTier: 5, parentIds: ["royal-stud"], flatOutput: 12000, materialCost: 25000, buildingUpkeep: 5000, foodOutput: 9000, growth: 1.2, grantsTags: ["horses"], recruitmentDiscount: 10, special: true, uniqueChain: true, description: "A wealthy pastoral domain focused on growth, Crown, horses, and reduced recruitment cost." }),
+  eco("land-clearance", "Land Clearance", "Any", 10, 0, 20000, 800, { chainId: "food", nodeTier: 1, materialCost: 100, buildingUpkeep: 40, foodOutput: 180, description: "Opens the first agricultural district. It produces Food rather than Crown and can later specialize in grain or pastoral development." }),
+  eco("farmstead", "Farmstead", "Farmlands or Plains", 20, 0, 65000, 2500, { chainId: "food", nodeTier: 2, parentIds: ["land-clearance"], materialCost: 500, buildingUpkeep: 120, foodOutput: 650, growth: 0.1, description: "A mixed food district that supports a Village and prepares the choice between maximum Food security and population-focused pastoral land." }),
+  eco("grain-estate", "Grain Estate", "Farmlands or Plains", 35, 0, 220000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], materialCost: 1800, buildingUpkeep: 350, foodOutput: 2400, description: "The grain branch sacrifices side benefits for the highest sustainable Food output at Town tier." }),
+  eco("horse-ranch", "Pastoral Ranch", "Plains or Grassland", 30, 25, 240000, 8000, { chainId: "food", nodeTier: 3, parentIds: ["farmstead"], flatOutput: 500, materialCost: 1700, buildingUpkeep: 400, foodOutput: 1600, growth: 0.4, grantsTags: ["horses"], description: "The hybrid pastoral branch produces moderate Crown and Food while adding Growth, Horses, and future cavalry support." }),
+  eco("grand-granary", "Grand Granary", "Any", 45, 0, 700000, 24000, { chainId: "food", nodeTier: 4, parentIds: ["grain-estate"], materialCost: 6000, buildingUpkeep: 1200, foodOutput: 7500, mitigationTags: ["famine"], description: "A City-scale grain reserve with exceptional Food output and protection against famine events." }),
+  eco("royal-stud", "Royal Stockyards", "Plains or Grassland", 45, 45, 820000, 26000, { chainId: "food", nodeTier: 4, parentIds: ["horse-ranch"], flatOutput: 1000, materialCost: 6500, buildingUpkeep: 1500, foodOutput: 4800, growth: 0.8, grantsTags: ["horses"], recruitmentDiscount: 6, description: "Hybrid City stockyards split their value between Crown and Food, then add Growth, Horses, and cheaper recruitment." }),
+  eco("agrarian-heartland", "Agrarian Heartland", "Any", 70, 0, 2600000, 75000, { chainId: "food", nodeTier: 5, parentIds: ["grand-granary"], materialCost: 22000, buildingUpkeep: 4000, foodOutput: 26000, mitigationTags: ["famine", "migration"], special: true, description: "The pure Food endpoint, able to feed a metropolis and build deep Food Security without producing Crown." }),
+  eco("imperial-stud", "Royal Pastures", "Plains or Grassland", 65, 70, 3000000, 85000, { chainId: "food", nodeTier: 5, parentIds: ["royal-stud"], flatOutput: 2500, materialCost: 25000, buildingUpkeep: 5000, foodOutput: 16000, growth: 1.25, grantsTags: ["horses"], recruitmentDiscount: 10, special: true, description: "The hybrid pastoral endpoint combines Crown and Food with major Growth, Horses, and recruitment savings." }),
 
-  eco("survey-camp", "Survey Camp", "Any", 8, 14, 25000, 900, { chainId: "materials", nodeTier: 1, materialCost: 50, buildingUpkeep: 20, materialsOutput: 200, uniqueChain: true }),
-  eco("stone-quarry", "Stone Quarry", "Hills or Mountains", 20, 28, 75000, 2700, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], materialCost: 400, buildingUpkeep: 100, materialsOutput: 700, uniqueChain: true, description: "Begins the stone path: high Materials and increasingly powerful construction bonuses." }),
-  eco("iron-mine", "Iron Mine", "Hills or Mountains", 20, 30, 90000, 3000, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], materialCost: 450, buildingUpkeep: 120, materialsOutput: 650, grantsTags: ["iron"], uniqueChain: true, description: "Begins the iron path: slightly less Materials in exchange for military discounts and Iron access." }),
-  eco("masonry-district", "Masonry District", "Any", 35, 48, 240000, 8500, { chainId: "materials", nodeTier: 3, parentIds: ["stone-quarry"], flatOutput: 400, materialCost: 1700, buildingUpkeep: 350, materialsOutput: 1800, constructionBonus: 60, uniqueChain: true }),
-  eco("ironworks", "Ironworks", "Any", 35, 52, 280000, 9500, { chainId: "materials", nodeTier: 3, parentIds: ["iron-mine"], flatOutput: 500, materialCost: 2000, buildingUpkeep: 400, materialsOutput: 1700, grantsTags: ["iron"], recruitmentDiscount: 3, uniqueChain: true }),
-  eco("builders-guild", "Builders Guild", "Any", 50, 85, 780000, 26000, { chainId: "materials", nodeTier: 4, parentIds: ["masonry-district"], flatOutput: 2000, materialCost: 6500, buildingUpkeep: 1200, materialsOutput: 4500, constructionBonus: 250, uniqueChain: true }),
-  eco("grand-foundry", "Grand Foundry", "Any", 50, 90, 900000, 30000, { chainId: "materials", nodeTier: 4, parentIds: ["ironworks"], flatOutput: 2500, materialCost: 7500, buildingUpkeep: 1400, materialsOutput: 4200, grantsTags: ["iron"], recruitmentDiscount: 6, upkeepDiscount: 3, uniqueChain: true }),
-  eco("monumental-works", "Monumental Works", "Any", 80, 150, 3000000, 85000, { chainId: "materials", nodeTier: 5, parentIds: ["builders-guild"], flatOutput: 8000, materialCost: 26000, buildingUpkeep: 3500, materialsOutput: 12000, constructionBonus: 800, special: true, uniqueChain: true, description: "The peak stone industry, producing maximum Materials and exceptional Construction CP." }),
-  eco("industrial-complex", "Industrial Complex", "Any", 80, 165, 3400000, 95000, { chainId: "materials", nodeTier: 5, parentIds: ["grand-foundry"], flatOutput: 10000, materialCost: 30000, buildingUpkeep: 4200, materialsOutput: 11000, grantsTags: ["iron"], recruitmentDiscount: 10, upkeepDiscount: 6, special: true, uniqueChain: true }),
+  eco("survey-camp", "Survey Camp", "Any", 8, 0, 25000, 900, { chainId: "materials", nodeTier: 1, materialCost: 50, buildingUpkeep: 40, materialsOutput: 180, description: "Maps usable deposits and starts a Materials district. It creates building resources rather than Crown." }),
+  eco("stone-quarry", "Stone Quarry", "Hills or Mountains", 20, 0, 75000, 2700, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], materialCost: 400, buildingUpkeep: 120, materialsOutput: 750, constructionBonus: 20, description: "The stone path favors maximum Materials and faster construction." }),
+  eco("iron-mine", "Iron Mine", "Hills or Mountains", 20, 20, 90000, 3000, { chainId: "materials", nodeTier: 2, parentIds: ["survey-camp"], flatOutput: 100, materialCost: 450, buildingUpkeep: 140, materialsOutput: 600, grantsTags: ["iron"], recruitmentDiscount: 2, description: "The hybrid iron path splits output between Crown and Materials while granting Iron and military procurement benefits." }),
+  eco("masonry-district", "Masonry District", "Any", 35, 0, 240000, 8500, { chainId: "materials", nodeTier: 3, parentIds: ["stone-quarry"], materialCost: 1700, buildingUpkeep: 400, materialsOutput: 2400, constructionBonus: 120, description: "Organized masons greatly increase Materials and add direct Construction CP." }),
+  eco("ironworks", "Ironworks", "Any", 35, 30, 280000, 9500, { chainId: "materials", nodeTier: 3, parentIds: ["iron-mine"], flatOutput: 500, materialCost: 2000, buildingUpkeep: 450, materialsOutput: 1900, grantsTags: ["iron"], recruitmentDiscount: 4, upkeepDiscount: 2, description: "Hybrid forging produces Crown and Materials together while reducing recruitment and army upkeep." }),
+  eco("builders-guild", "Builders Guild", "Any", 50, 0, 780000, 26000, { chainId: "materials", nodeTier: 4, parentIds: ["masonry-district"], materialCost: 6500, buildingUpkeep: 1400, materialsOutput: 7000, constructionBonus: 450, description: "A City construction industry focused on raw Materials and rapid project completion." }),
+  eco("grand-foundry", "Grand Foundry", "Any", 50, 45, 900000, 30000, { chainId: "materials", nodeTier: 4, parentIds: ["ironworks"], flatOutput: 1500, materialCost: 7500, buildingUpkeep: 1600, materialsOutput: 5400, grantsTags: ["iron"], recruitmentDiscount: 7, upkeepDiscount: 4, description: "A hybrid military foundry with balanced Crown and Materials plus meaningful army cost reductions." }),
+  eco("monumental-works", "Monumental Works", "Any", 80, 0, 3000000, 85000, { chainId: "materials", nodeTier: 5, parentIds: ["builders-guild"], materialCost: 26000, buildingUpkeep: 4000, materialsOutput: 20000, constructionBonus: 1500, special: true, description: "The stone endpoint: unmatched Materials and Construction CP for metropolitan projects." }),
+  eco("industrial-complex", "Industrial Complex", "Any", 80, 65, 3400000, 95000, { chainId: "materials", nodeTier: 5, parentIds: ["grand-foundry"], flatOutput: 3500, materialCost: 30000, buildingUpkeep: 4800, materialsOutput: 15000, grantsTags: ["iron"], recruitmentDiscount: 12, upkeepDiscount: 8, special: true, description: "The hybrid iron endpoint combines Crown and Materials with the strongest industrial military discounts." }),
 
-  eco("trading-post", "Trading Post", "Any", 10, 18, 30000, 1000, { chainId: "commerce", nodeTier: 1, flatOutput: 500, materialCost: 100, buildingUpkeep: 50, uniqueChain: true }),
-  eco("market-town", "Market District", "Any", 20, 36, 85000, 2800, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1500, materialCost: 500, buildingUpkeep: 180, uniqueChain: true, description: "A reliable inland commerce path with steady Crown and no terrain dependency." }),
-  eco("river-jetty", "River Jetty", "Coast, River, or Lake", 20, 34, 95000, 3200, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1300, materialCost: 650, buildingUpkeep: 160, uniqueChain: true, description: "A terrain-limited trade path that grows into the highest-output metropolitan port." }),
-  eco("merchants-guild", "Merchants Guild", "Any", 35, 65, 260000, 9000, { chainId: "commerce", nodeTier: 3, parentIds: ["market-town"], flatOutput: 4000, materialCost: 1800, buildingUpkeep: 600, uniqueChain: true }),
-  eco("trade-harbor", "Trade Harbor", "Coast, River, or Lake", 40, 65, 320000, 10500, { chainId: "commerce", nodeTier: 3, parentIds: ["river-jetty"], flatOutput: 4500, materialCost: 2400, buildingUpkeep: 700, uniqueChain: true }),
-  eco("grand-bazaar", "Grand Bazaar", "Any", 50, 110, 850000, 28000, { chainId: "commerce", nodeTier: 4, parentIds: ["merchants-guild"], flatOutput: 11000, materialCost: 7000, buildingUpkeep: 1800, uniqueChain: true }),
-  eco("grand-harbor", "Grand Harbor", "Coast, River, or Lake", 60, 105, 980000, 32000, { chainId: "commerce", nodeTier: 4, parentIds: ["trade-harbor"], flatOutput: 13000, materialCost: 8500, buildingUpkeep: 2200, uniqueChain: true }),
-  eco("world-market", "World Market", "Any", 75, 220, 3200000, 90000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-bazaar"], flatOutput: 35000, materialCost: 26000, buildingUpkeep: 6500, eventRollBonus: 3, special: true, uniqueChain: true }),
-  eco("imperial-port", "Imperial Port", "Coast, River, or Lake", 85, 210, 3600000, 100000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-harbor"], flatOutput: 40000, materialCost: 30000, buildingUpkeep: 7500, eventRollBonus: 2, special: true, uniqueChain: true }),
+  eco("trading-post", "Trading Post", "Any", 10, 24, 30000, 1000, { chainId: "commerce", nodeTier: 1, flatOutput: 500, materialCost: 100, buildingUpkeep: 60, description: "The entry-level Crown district and the only economic root dedicated to direct income." }),
+  eco("market-town", "Market District", "Any", 20, 55, 110000, 3200, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 1800, materialCost: 600, buildingUpkeep: 220, description: "Reliable inland commerce with strong Crown, moderate staffing, and no terrain requirement." }),
+  eco("river-jetty", "River Jetty", "Coast, River, or Lake", 20, 50, 120000, 3600, { chainId: "commerce", nodeTier: 2, parentIds: ["trading-post"], flatOutput: 2200, materialCost: 750, buildingUpkeep: 300, eventRollBonus: 1, description: "Terrain-limited foreign trade with slightly higher risk, Crown potential, and event quality." }),
+  eco("merchants-guild", "Merchants Guild", "Any", 35, 100, 320000, 10000, { chainId: "commerce", nodeTier: 3, parentIds: ["market-town"], flatOutput: 7000, materialCost: 2200, buildingUpkeep: 800, description: "A stable inland guild that turns workers into dependable Crown without strategic terrain." }),
+  eco("trade-harbor", "Trade Harbor", "Coast, River, or Lake", 40, 95, 390000, 12000, { chainId: "commerce", nodeTier: 3, parentIds: ["river-jetty"], flatOutput: 9000, materialCost: 2800, buildingUpkeep: 1200, eventRollBonus: 2, description: "A higher-output harbor with greater upkeep and stronger trade-event results." }),
+  eco("grand-bazaar", "Grand Bazaar", "Any", 50, 170, 1000000, 32000, { chainId: "commerce", nodeTier: 4, parentIds: ["merchants-guild"], flatOutput: 18000, materialCost: 8000, buildingUpkeep: 2500, description: "A low-risk City market combining excellent Crown with predictable costs." }),
+  eco("grand-harbor", "Grand Harbor", "Coast, River, or Lake", 60, 165, 1200000, 38000, { chainId: "commerce", nodeTier: 4, parentIds: ["trade-harbor"], flatOutput: 24000, materialCost: 10000, buildingUpkeep: 3500, eventRollBonus: 3, description: "A costly maritime hub that surpasses inland income and improves event rolls." }),
+  eco("world-market", "World Market", "Any", 75, 300, 3600000, 100000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-bazaar"], flatOutput: 45000, materialCost: 30000, buildingUpkeep: 7500, bonusEconomicSlots: 1, special: true, description: "The inland endpoint: very high stable Crown and one additional Economic district slot." }),
+  eco("imperial-port", "Imperial Port", "Coast, River, or Lake", 85, 290, 4200000, 115000, { chainId: "commerce", nodeTier: 5, parentIds: ["grand-harbor"], flatOutput: 60000, materialCost: 36000, buildingUpkeep: 9000, eventRollBonus: 5, special: true, description: "The maritime endpoint: the highest Crown output and event bonus, paid for with terrain limits, workers, upkeep, and cost." }),
 
-  eco("village-commons", "Village Commons", "Any", 6, 14, 18000, 700, { chainId: "civic", nodeTier: 1, flatOutput: 200, materialCost: 80, buildingUpkeep: 40, publicOrder: 3, eventRollBonus: 1, uniqueChain: true }),
-  eco("tavern-quarter", "Tavern Quarter", "Any", 15, 30, 70000, 2400, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], flatOutput: 800, materialCost: 450, buildingUpkeep: 150, publicOrder: 6, uniqueChain: true }),
-  eco("shrine-district", "Shrine District", "Any", 12, 28, 75000, 2600, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], flatOutput: 500, materialCost: 500, buildingUpkeep: 120, publicOrder: 8, growth: 0.15, uniqueChain: true }),
-  eco("festival-hall", "Festival Hall", "Any", 25, 55, 230000, 8000, { chainId: "civic", nodeTier: 3, parentIds: ["tavern-quarter"], flatOutput: 2000, materialCost: 1700, buildingUpkeep: 500, publicOrder: 12, eventRollBonus: 2, uniqueChain: true }),
-  eco("temple-school", "Temple School", "Any", 25, 50, 250000, 8500, { chainId: "civic", nodeTier: 3, parentIds: ["shrine-district"], flatOutput: 1800, materialCost: 1900, buildingUpkeep: 500, publicOrder: 14, growth: 0.35, mitigationTags: ["plague", "unrest"], uniqueChain: true }),
-  eco("grand-theatre", "Grand Theatre", "Any", 40, 90, 720000, 24000, { chainId: "civic", nodeTier: 4, parentIds: ["festival-hall"], flatOutput: 6000, materialCost: 6000, buildingUpkeep: 1500, publicOrder: 20, eventRollBonus: 4, uniqueChain: true }),
-  eco("cathedral-academy", "Cathedral Academy", "Any", 40, 85, 760000, 26000, { chainId: "civic", nodeTier: 4, parentIds: ["temple-school"], flatOutput: 5500, materialCost: 6500, buildingUpkeep: 1500, publicOrder: 22, growth: 0.65, mitigationTags: ["plague", "unrest", "famine"], uniqueChain: true }),
-  eco("cultural-capital", "Cultural Capital", "Any", 65, 160, 2900000, 82000, { chainId: "civic", nodeTier: 5, parentIds: ["grand-theatre"], flatOutput: 20000, materialCost: 23000, buildingUpkeep: 5000, publicOrder: 35, eventRollBonus: 8, special: true, uniqueChain: true }),
-  eco("sacred-university", "Sacred University", "Any", 65, 155, 3100000, 88000, { chainId: "civic", nodeTier: 5, parentIds: ["cathedral-academy"], flatOutput: 19000, materialCost: 25000, buildingUpkeep: 5000, publicOrder: 38, growth: 1, mitigationTags: ["plague", "unrest", "famine", "migration"], special: true, uniqueChain: true }),
+  eco("village-commons", "Village Commons", "Any", 6, 0, 18000, 700, { chainId: "civic", nodeTier: 1, materialCost: 80, buildingUpkeep: 50, publicOrder: 3, growth: 0.05, description: "The first Civic district. It produces no Crown, instead supporting Order and long-term population development." }),
+  eco("tavern-quarter", "Tavern Quarter", "Any", 15, 0, 70000, 2400, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], materialCost: 450, buildingUpkeep: 180, publicOrder: 7, eventRollBonus: 1, description: "The culture path focuses on Public Order and favorable monthly events." }),
+  eco("shrine-district", "Shrine District", "Any", 12, 0, 75000, 2600, { chainId: "civic", nodeTier: 2, parentIds: ["village-commons"], materialCost: 500, buildingUpkeep: 160, publicOrder: 4, growth: 0.25, mitigationTags: ["plague"], description: "The welfare path gives less Order but adds Growth and early protection from plague." }),
+  eco("festival-hall", "Festival Hall", "Any", 25, 0, 230000, 8000, { chainId: "civic", nodeTier: 3, parentIds: ["tavern-quarter"], materialCost: 1700, buildingUpkeep: 600, publicOrder: 14, eventRollBonus: 3, description: "Festivals stabilize a Town and push its d100 results toward opportunities." }),
+  eco("temple-school", "Temple School", "Any", 25, 0, 250000, 8500, { chainId: "civic", nodeTier: 3, parentIds: ["shrine-district"], materialCost: 1900, buildingUpkeep: 650, publicOrder: 8, growth: 0.55, mitigationTags: ["plague", "unrest"], description: "Education and care counter population pressure through Growth and crisis protection." }),
+  eco("grand-theatre", "Grand Theatre", "Any", 40, 0, 720000, 24000, { chainId: "civic", nodeTier: 4, parentIds: ["festival-hall"], materialCost: 6000, buildingUpkeep: 1800, publicOrder: 24, eventRollBonus: 5, description: "The culture City branch delivers exceptional Order and event control without direct income." }),
+  eco("cathedral-academy", "Cathedral Academy", "Any", 40, 0, 760000, 26000, { chainId: "civic", nodeTier: 4, parentIds: ["temple-school"], materialCost: 6500, buildingUpkeep: 1900, publicOrder: 12, growth: 0.95, mitigationTags: ["plague", "unrest", "famine"], description: "A City welfare institution that gives up Order for major Growth and broad protection." }),
+  eco("cultural-capital", "Cultural Capital", "Any", 65, 0, 2900000, 82000, { chainId: "civic", nodeTier: 5, parentIds: ["grand-theatre"], materialCost: 23000, buildingUpkeep: 5500, publicOrder: 38, eventRollBonus: 10, special: true, description: "The culture endpoint: maximum Public Order and event control, with no Crown production." }),
+  eco("sacred-university", "Sacred University", "Any", 65, 0, 3100000, 88000, { chainId: "civic", nodeTier: 5, parentIds: ["cathedral-academy"], materialCost: 25000, buildingUpkeep: 6000, publicOrder: 18, growth: 1.4, mitigationTags: ["plague", "unrest", "famine", "migration"], special: true, description: "The welfare endpoint: the strongest building Growth and disaster protection, balanced by lower Order and high upkeep." }),
 
   mil("muster-field", "Muster Field", 8, 30000, 1200, { chainId: "recruitment", nodeTier: 1, materialCost: 200, buildingUpkeep: 100, militaryCapacity: 120, canRecruit: true, recruitPerLevel: 20, recruitableUnitIds: ["militia", "watchman"], defense: 10, uniqueChain: true }),
   mil("infantry-yard", "Infantry Yard", 15, 90000, 3200, { chainId: "recruitment", nodeTier: 2, parentIds: ["muster-field"], materialCost: 800, buildingUpkeep: 250, militaryCapacity: 260, canRecruit: true, recruitPerLevel: 18, recruitableUnitIds: ["spearman", "men-at-arms"], defense: 18, uniqueChain: true }),
@@ -415,8 +424,9 @@ function eco(id, name, terrain, workers, rate, crownCost, cpCost, extra = {}) {
     constructionBonus: 0,
     recruitmentDiscount: 0,
     upkeepDiscount: 0,
-    uniqueChain: true,
-    maxPerSettlement: 1,
+    growth: 0,
+    uniqueChain: false,
+    maxPerSettlement: 2,
     enabled: true,
     maxLevel: 5,
     ...extra
@@ -468,6 +478,7 @@ function mil(id, name, workers, crownCost, cpCost, extra = {}) {
     constructionBonus: 0,
     recruitmentDiscount: 0,
     upkeepDiscount: 0,
+    growth: 0,
     uniqueChain: true,
     maxPerSettlement: 1,
     enabled: true,
@@ -879,6 +890,13 @@ function summaryContext(summary) {
     armyFood: formatNumber(summary.armyFood),
     foodBalance: formatSigned(summary.foodBalance),
     foodAfterTurn: formatNumber(summary.foodAfterTurn),
+    foodCoverage: `${formatNumber(summary.foodCoverage * 100)}%`,
+    foodSecurity: summary.foodSecurity.label,
+    foodSecurityClass: summary.foodSecurity.className,
+    foodSecurityGrowth: `${formatSigned(summary.foodSecurityGrowth)}% Growth`,
+    foodSecurityEventRoll: `${formatSigned(summary.foodSecurityEventRoll)} Event Roll`,
+    foodReserveMonths: `${formatNumber(summary.foodReserveMonths)} month(s)`,
+    foodReserveGrowth: `${formatSigned(summary.foodReserveGrowth)}% Growth`,
     materialsStored: formatNumber(summary.materialsStored),
     materialsProduction: formatNumber(summary.materialsProduction),
     materialsUpkeep: formatNumber(summary.materialsUpkeep),
@@ -908,6 +926,8 @@ function summaryContext(summary) {
     recruitmentDiscount: `${formatNumber(summary.recruitmentDiscount)}%`,
     constructionBonus: formatNumber(summary.constructionBonus),
     growthRate: `${formatSigned(summary.growthRate)}%`,
+    buildingGrowth: `${formatSigned(summary.buildingGrowth)}%`,
+    populationPressure: `${formatSigned(summary.populationPressure)}%`,
     popChange: formatSigned(summary.popChange),
     projectedPop: formatNumber(summary.projectedPop)
   };
@@ -1195,16 +1215,60 @@ function buildingTooltip(item, unitCatalog = TROOP_TYPES) {
 
 function buildingTreeGroups(items) {
   return BRANCHES.map(branch => {
-    const branchItems = items.filter(item => (item.branch || item.chainId) === branch.id);
+    const branchItems = items
+      .filter(item => (item.branch || item.chainId) === branch.id)
+      .sort((a, b) => a.nodeTier - b.nodeTier || items.indexOf(a) - items.indexOf(b));
     const tiers = branch.id === "landmark" ? [0] : [1, 2, 3, 4, 5];
+    const layout = treeLineageLayout(branchItems);
+    const nodes = branchItems.map(item => ({ ...item, treeStyle: layout.styles.get(item.id) }));
     return {
       ...branch,
       className: `ds-branch-${branch.color}`,
-      nodes: branchItems.sort((a, b) => a.nodeTier - b.nodeTier || a.name.localeCompare(b.name)),
-      levels: tiers.map(tier => ({ tier, tierLabel: tier === 0 ? "Landmark" : `Tier ${tier}`, nodes: branchItems.filter(item => item.nodeTier === tier).sort((a, b) => a.name.localeCompare(b.name)) })),
+      columnCount: layout.columnCount,
+      nodes,
+      levels: tiers.map(tier => ({
+        tier,
+        tierLabel: tier === 0 ? "Landmark" : `Tier ${tier}`,
+        columnCount: layout.columnCount,
+        nodes: nodes.filter(item => item.nodeTier === tier)
+      })),
       hasNodes: branchItems.length > 0
     };
   }).filter(group => group.hasNodes);
+}
+
+function treeLineageLayout(items = []) {
+  const byId = new Map(items.map(item => [item.id, item]));
+  const children = new Map(items.map(item => [item.id, []]));
+  for (const item of items) {
+    for (const parentId of item.parentIds || []) {
+      if (children.has(parentId)) children.get(parentId).push(item.id);
+    }
+  }
+
+  const leaves = items.filter(item => !(children.get(item.id) || []).length);
+  const orderedLeaves = leaves.length ? leaves : items;
+  const leafColumns = new Map(orderedLeaves.map((item, index) => [item.id, index + 1]));
+  const memo = new Map();
+  const descendants = (itemId, trail = new Set()) => {
+    if (memo.has(itemId)) return memo.get(itemId);
+    if (trail.has(itemId)) return [];
+    if (leafColumns.has(itemId)) return [leafColumns.get(itemId)];
+    const nextTrail = new Set(trail).add(itemId);
+    const result = Array.from(new Set((children.get(itemId) || []).flatMap(childId => descendants(childId, nextTrail)))).sort((a, b) => a - b);
+    memo.set(itemId, result);
+    return result;
+  };
+
+  const columnCount = Math.max(1, orderedLeaves.length);
+  const styles = new Map();
+  for (const item of items) {
+    const columns = descendants(item.id);
+    const start = columns.length ? columns[0] : 1;
+    const end = columns.length ? columns.at(-1) : start;
+    styles.set(item.id, `grid-column: ${start} / span ${Math.max(1, end - start + 1)};`);
+  }
+  return { columnCount, styles };
 }
 
 function catalogEventContext(item) {
@@ -1381,14 +1445,17 @@ function overviewBranchPickerContext(slot, settlement, data, permissions, summar
   const ancestorIds = catalogAncestorIds(data.catalog, current.catalogId);
   const family = data.catalog
     .filter(item => item.enabled && !item.landmark && item.chainId === current.chainId && (isGM || !item.gmOnly))
-    .sort((a, b) => a.nodeTier - b.nodeTier || a.name.localeCompare(b.name));
+    .sort((a, b) => a.nodeTier - b.nodeTier || data.catalog.indexOf(a) - data.catalog.indexOf(b));
+  const layout = treeLineageLayout(family);
   context.branchLabel = branch.label;
   context.branchClass = `ds-branch-${branch.color}`;
+  context.columnCount = layout.columnCount;
   const currentCatalog = data.catalog.find(item => item.id === current.catalogId);
   context.detail = currentCatalog ? constructionOptionContext(currentCatalog, settlement, permissions, summary, data, slot, current, isGM) : null;
   context.levels = [1, 2, 3, 4, 5].map(tier => ({
     tier,
     tierRoman: romanTier(tier),
+    columnCount: layout.columnCount,
     nodes: family.filter(item => item.nodeTier === tier).map(item => {
       const option = constructionOptionContext(item, settlement, permissions, summary, data, slot, current, isGM);
       const isCurrent = item.id === current.catalogId;
@@ -1399,6 +1466,7 @@ function overviewBranchPickerContext(slot, settlement, data, permissions, summar
         isCurrent,
         completed,
         directChoice,
+        treeStyle: layout.styles.get(item.id),
         future: !isCurrent && !completed && !directChoice,
         canQueue: directChoice && option.canQueue,
         stateLabel: isCurrent ? "Current" : completed ? "Built" : directChoice ? option.canQueue ? "Available" : "Blocked" : "Future"
@@ -1427,7 +1495,9 @@ function buildingChainsContext(settlement, data, permissions, summary, isGM) {
   }
   return Array.from(groups.entries()).map(([chainId, items]) => {
     const branch = branchMeta(chainId, items[0]?.category);
-    const nodes = items.sort((a, b) => a.nodeTier - b.nodeTier || a.name.localeCompare(b.name)).map(item => ({
+    const sortedItems = items.sort((a, b) => a.nodeTier - b.nodeTier || data.catalog.indexOf(a) - data.catalog.indexOf(b));
+    const layout = treeLineageLayout(sortedItems);
+    const nodes = sortedItems.map(item => ({
       ...item,
       tooltip: buildingTooltip(item, data.unitCatalog),
       effectBadges: buildingEffectBadges(item, data.unitCatalog),
@@ -1441,7 +1511,8 @@ function buildingChainsContext(settlement, data, permissions, summary, isGM) {
       cpCostDisplay: formatNumber(item.cpCost),
       materialCostDisplay: formatNumber(item.materialCost),
       foodOutputDisplay: formatSigned(item.foodOutput),
-      materialsOutputDisplay: formatSigned(item.materialsOutput)
+      materialsOutputDisplay: formatSigned(item.materialsOutput),
+      treeStyle: layout.styles.get(item.id)
     }));
     return {
     id: chainId,
@@ -1450,8 +1521,9 @@ function buildingChainsContext(settlement, data, permissions, summary, isGM) {
     color: branch.color,
     className: `ds-branch-${branch.color}`,
     category: items[0]?.category || "economic",
+    columnCount: layout.columnCount,
     nodes,
-    levels: [1, 2, 3, 4, 5].map(tier => ({ tier, nodes: nodes.filter(node => node.nodeTier === tier) }))
+    levels: [1, 2, 3, 4, 5].map(tier => ({ tier, columnCount: layout.columnCount, nodes: nodes.filter(node => node.nodeTier === tier) }))
   };
   });
 }
@@ -2285,6 +2357,9 @@ function updateRulesGrowth(data, payload, user) {
   requireGM(user);
   data.rules.growth.minimumRate = toNumber(payload.minimumRate, data.rules.growth.minimumRate);
   data.rules.growth.maximumRate = Math.max(data.rules.growth.minimumRate, toNumber(payload.maximumRate, data.rules.growth.maximumRate));
+  data.rules.growth.populationPressureStart = Math.max(1, toNumber(payload.populationPressureStart, data.rules.growth.populationPressureStart));
+  data.rules.growth.populationPressurePerDoubling = Math.max(0, toNumber(payload.populationPressurePerDoubling, data.rules.growth.populationPressurePerDoubling));
+  data.rules.growth.populationPressureCap = Math.max(0, toNumber(payload.populationPressureCap, data.rules.growth.populationPressureCap));
 }
 
 function updateRulesEvents(data, payload, user) {
@@ -3288,6 +3363,7 @@ async function processSettlementTurn(data, settlement, gmTurnNote) {
       `Net Income: ${formatSigned(before.netIncome)} Crown`,
       `Treasure: ${formatNumber(treasureBefore)} -> ${formatNumber(settlement.treasure)} Crown`,
       `Food: ${formatNumber(foodBefore)} -> ${formatNumber(settlement.food)} (${formatSigned(before.foodBalance)})`,
+      `Food Security: ${before.foodSecurity.label} / ${formatNumber(before.foodCoverage * 100)}% coverage / ${formatNumber(before.foodReserveMonths)} reserve month(s) / ${formatSigned(before.foodSecurityGrowth)}% Growth`,
       `Materials: ${formatNumber(materialsBefore)} -> ${formatNumber(settlement.materials)} (${formatSigned(before.materialsBalance)})`,
       `Manpower Reserve: ${formatNumber(manpowerBefore)} -> ${formatNumber(settlement.manpowerReserve)} (+${formatNumber(manpowerRecovered)})`,
       `Public Order: ${formatNumber(publicOrderBefore)} -> ${formatNumber(after.effectivePublicOrder)}`,
@@ -3295,6 +3371,7 @@ async function processSettlementTurn(data, settlement, gmTurnNote) {
       `Construction CP Applied: ${formatNumber(construction.cpApplied)}`,
       `Completed Projects: ${construction.completed.length ? construction.completed.map(project => project.name).join(", ") : "None"}`,
       `Recruitment: ${recruitmentResult.lines.length ? recruitmentResult.lines.join("; ") : "None"}`,
+      `Growth Pressure: ${formatSigned(before.populationPressure)}%`,
       `POP Change: ${formatSigned(growth.popChange)} (${formatSigned(growth.rate)}%)`,
       `New POP: ${formatNumber(after.totalPop)}`,
       `Month Event: ${monthEvent ? `${monthEvent.rawRoll}${monthEvent.modifier ? ` ${formatSigned(monthEvent.modifier)}` : ""} -> ${monthEvent.finalRoll} / ${monthEvent.name} (GM approval pending)` : "Disabled"}`
@@ -3537,7 +3614,7 @@ async function createPendingMonthEvent(data, settlement, month, replaceEventId =
   const summary = calculateSettlement(settlement, data);
   const orderModifier = summary.publicOrderEventRoll;
   const shortageModifier = summary.foodShortage > 0 ? -Math.max(1, Math.trunc(data.rules.events.foodShortagePenalty)) : 0;
-  const modifier = orderModifier + summary.eventRollBonus + shortageModifier;
+  const modifier = orderModifier + summary.foodSecurityEventRoll + summary.eventRollBonus + shortageModifier;
   const finalRoll = clamp(rawRoll + modifier, 1, 100);
   const candidates = data.eventCatalog.filter(event => event.enabled && finalRoll >= event.minRoll && finalRoll <= event.maxRoll);
   const template = candidates[Math.floor(Math.random() * Math.max(1, candidates.length))] || data.eventCatalog.find(event => event.enabled) || normalizeMonthEvent({});
@@ -3927,7 +4004,10 @@ function defaultRules() {
     },
     growth: {
       minimumRate: -5,
-      maximumRate: 5
+      maximumRate: 5,
+      populationPressureStart: 100,
+      populationPressurePerDoubling: 0.25,
+      populationPressureCap: 3
     },
     events: {
       enabled: true,
@@ -4049,21 +4129,61 @@ function normalizeData(raw) {
   const rules = normalizeRules(source.rules || fallback.rules, migrateLegacy);
   const unitCatalog = normalizeUnitCatalog(source.unitCatalog || fallback.unitCatalog, migrateLegacy);
   const catalog = normalizeCatalog(source.catalog || fallback.catalog, unitCatalog, migrateLegacy);
+  const refreshEconomicBalance = sourceSchema < 7;
+  if (refreshEconomicBalance) refreshEconomicCatalog(catalog, unitCatalog);
   const eventCatalog = normalizeEventCatalog(source.eventCatalog || fallback.eventCatalog, migrateLegacy);
   const settlements = Array.isArray(source.settlements) && source.settlements.length
     ? source.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, migrateLegacy))
     : fallback.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules));
   if (sourceSchema < 6) migrateLaurentStaffing(catalog, settlements);
+  if (refreshEconomicBalance) refreshEconomicBuildings(settlements, catalog, unitCatalog, rules);
   return {
     schemaVersion: SCHEMA_VERSION,
     month: Math.max(1, Math.trunc(toNumber(source.month, fallback.month))),
     rules,
-    settlementTemplates: normalizeSettlementTemplates(source.settlementTemplates || fallback.settlementTemplates, migrateLegacy),
+    settlementTemplates: normalizeSettlementTemplates(source.settlementTemplates || fallback.settlementTemplates, migrateLegacy || refreshEconomicBalance),
     catalog,
     unitCatalog,
     eventCatalog,
     settlements
   };
+}
+
+function refreshEconomicCatalog(catalog, unitCatalog) {
+  for (const builtIn of BUILDING_CATALOG.filter(item => item.category === "economic")) {
+    const index = catalog.findIndex(item => item.id === builtIn.id);
+    const current = index >= 0 ? catalog[index] : {};
+    const refreshed = normalizeCatalogItem({
+      ...builtIn,
+      imageUrl: current.imageUrl || builtIn.imageUrl || "",
+      enabled: current.enabled === undefined ? builtIn.enabled !== false : Boolean(current.enabled),
+      gmOnly: current.gmOnly === undefined ? Boolean(builtIn.gmOnly) : Boolean(current.gmOnly)
+    }, unitCatalog);
+    if (index >= 0) catalog[index] = refreshed;
+    else catalog.push(refreshed);
+  }
+}
+
+function refreshEconomicBuildings(settlements, catalog, unitCatalog, rules) {
+  const economicIds = new Set(BUILDING_CATALOG.filter(item => item.category === "economic").map(item => item.id));
+  for (const settlement of settlements) {
+    settlement.buildings = settlement.buildings.map(building => {
+      if (!economicIds.has(building.catalogId)) return building;
+      const template = catalog.find(item => item.id === building.catalogId);
+      if (!template) return building;
+      return buildingFromCatalog(template, {
+        id: building.id,
+        name: building.name || template.name,
+        slotId: building.slotId,
+        extraSlotIds: building.extraSlotIds,
+        assignedPop: Math.min(Math.max(0, toNumber(building.assignedPop, 0)), template.workers),
+        active: building.active,
+        imageUrl: building.imageUrl || template.imageUrl,
+        notes: building.notes
+      }, unitCatalog);
+    });
+    settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, rules);
+  }
 }
 
 function migrateLaurentStaffing(catalog, settlements) {
@@ -4140,7 +4260,10 @@ function normalizeRules(value, migrateLegacy = false) {
     },
     growth: {
       minimumRate: toNumber(source.growth?.minimumRate, fallback.growth.minimumRate),
-      maximumRate: toNumber(source.growth?.maximumRate, fallback.growth.maximumRate)
+      maximumRate: toNumber(source.growth?.maximumRate, fallback.growth.maximumRate),
+      populationPressureStart: Math.max(1, toNumber(source.growth?.populationPressureStart, fallback.growth.populationPressureStart)),
+      populationPressurePerDoubling: Math.max(0, toNumber(source.growth?.populationPressurePerDoubling, fallback.growth.populationPressurePerDoubling)),
+      populationPressureCap: Math.max(0, toNumber(source.growth?.populationPressureCap, fallback.growth.populationPressureCap))
     },
     events: {
       enabled: source.events?.enabled === undefined ? fallback.events.enabled : Boolean(source.events.enabled),
@@ -4890,6 +5013,12 @@ function calculateSettlement(settlement, data = {}) {
   const foodBalance = foodProduction - foodConsumption;
   const foodAfterTurn = settlement.food + foodBalance;
   const foodShortage = Math.max(0, -foodAfterTurn);
+  const foodCoverage = foodConsumption > 0 ? foodProduction / foodConsumption : 1;
+  const foodSecurity = foodSecurityState(foodCoverage);
+  const foodReserveMonths = foodConsumption > 0 ? settlement.food / foodConsumption : 0;
+  const foodReserveGrowth = foodReserveGrowthModifier(foodReserveMonths);
+  const foodSecurityGrowth = foodSecurity.growth + foodReserveGrowth;
+  const populationPressure = populationPressureFor(settlement.population, rules);
   const materialsProduction = Math.round(buildingMaterials * percentMultiplier(activeModifiers.materialsOutputPercent));
   const materialsBalance = materialsProduction - materialsUpkeep;
   const queuedManpower = settlement.recruitment
@@ -4914,7 +5043,16 @@ function calculateSettlement(settlement, data = {}) {
   const defenseMitigationPercent = clamp(Math.round(defense / defenseTarget * 25), 0, 50);
   const defenseState = defenseCoverage >= 150 ? "Fortress" : defenseCoverage >= 100 ? "Fortified" : defenseCoverage >= 50 ? "Guarded" : "Exposed";
   const strategicTags = Array.from(settlementGrantedTags(settlement));
-  const growth = calculateGrowth(settlement, { totalPop: settlement.population, foodShortage, effectivePublicOrder, publicOrderGrowth: publicOrderBand.growth, policyGrowth: policyEffects.growth, activeGrowth: activeModifiers.growth }, rules);
+  const growth = calculateGrowth(settlement, {
+    totalPop: settlement.population,
+    foodShortage,
+    effectivePublicOrder,
+    publicOrderGrowth: publicOrderBand.growth,
+    policyGrowth: policyEffects.growth,
+    activeGrowth: activeModifiers.growth,
+    foodSecurityGrowth,
+    populationPressure
+  }, rules);
 
   return {
     totalPop: settlement.population,
@@ -4956,6 +5094,12 @@ function calculateSettlement(settlement, data = {}) {
     foodBalance,
     foodAfterTurn: Math.max(0, foodAfterTurn),
     foodShortage,
+    foodCoverage,
+    foodSecurity,
+    foodReserveMonths,
+    foodReserveGrowth,
+    foodSecurityGrowth,
+    foodSecurityEventRoll: foodSecurity.eventRoll,
     materialsStored: settlement.materials,
     materialsProduction,
     materialsUpkeep,
@@ -4993,6 +5137,8 @@ function calculateSettlement(settlement, data = {}) {
     growthRate: growth.rate,
     popChange: growth.popChange,
     projectedPop: Math.max(0, settlement.population + growth.popChange),
+    buildingGrowth: growth.buildingGrowth,
+    populationPressure: growth.populationPressure,
     activeModifiers,
     pendingEventCount: settlement.pendingEvents.filter(event => event.status === "pending").length
   };
@@ -5005,14 +5151,16 @@ function calculateGrowth(settlement, summary, rules = defaultRules()) {
   }, 0);
   const foodPenalty = summary.foodShortage > 0 ? -Math.max(0, rules.events.foodShortagePenalty) : 0;
   const orderModifier = toNumber(summary.publicOrderGrowth, publicOrderState(summary.effectivePublicOrder).growth);
+  const foodSecurityGrowth = toNumber(summary.foodSecurityGrowth, 0);
+  const populationPressure = toNumber(summary.populationPressure, populationPressureFor(summary.totalPop, rules));
   const rawRate = cleanString(growth.overrideRate) !== ""
     ? toNumber(growth.overrideRate, 0)
-    : growth.baseRate + growth.safeBonus + growth.foodBonus + growth.migrationBonus + growth.warPenalty + growth.faminePenalty + growth.plaguePenalty + growth.taxPenalty + growth.raidPenalty + growth.otherModifier + buildingGrowth + foodPenalty + orderModifier + toNumber(summary.policyGrowth, 0) + toNumber(summary.activeGrowth, 0);
+    : growth.baseRate + growth.safeBonus + growth.foodBonus + growth.migrationBonus + growth.warPenalty + growth.faminePenalty + growth.plaguePenalty + growth.taxPenalty + growth.raidPenalty + growth.otherModifier + buildingGrowth + foodPenalty + foodSecurityGrowth + populationPressure + orderModifier + toNumber(summary.policyGrowth, 0) + toNumber(summary.activeGrowth, 0);
   const rate = settlement.overrides.ignoreGrowthLimits ? rawRate : clamp(rawRate, rules.growth.minimumRate, rules.growth.maximumRate);
   const overridePopChange = cleanString(growth.overridePopChange);
   const calculated = summary.totalPop * rate / 100;
   const popChange = overridePopChange !== "" ? Math.trunc(toNumber(overridePopChange, 0)) : growth.roundDown ? Math.floor(calculated) : Math.round(calculated);
-  return { rate, popChange, foodPenalty, orderModifier, buildingGrowth };
+  return { rate, popChange, foodPenalty, foodSecurityGrowth, populationPressure, orderModifier, buildingGrowth };
 }
 
 function aggregateActiveModifiers(items = []) {
@@ -5031,6 +5179,28 @@ function percentMultiplier(percent) {
 function publicOrderState(value) {
   const order = clamp(Math.round(toNumber(value, 50)), 0, 100);
   return PUBLIC_ORDER_BANDS.find(band => order >= band.min && order <= band.max) || PUBLIC_ORDER_BANDS[2];
+}
+
+function foodSecurityState(value) {
+  const coverage = Math.max(0, toNumber(value, 0));
+  return FOOD_SECURITY_BANDS.find(band => coverage >= band.min && coverage < band.max) || FOOD_SECURITY_BANDS.at(-1);
+}
+
+function foodReserveGrowthModifier(months) {
+  const reserve = Math.max(0, toNumber(months, 0));
+  if (reserve < 1) return -0.25;
+  if (reserve < 3) return 0;
+  if (reserve < 6) return 0.1;
+  return 0.2;
+}
+
+function populationPressureFor(population, rules = defaultRules()) {
+  const start = Math.max(1, toNumber(rules.growth?.populationPressureStart, 100));
+  const current = Math.max(0, toNumber(population, 0));
+  if (current <= start) return 0;
+  const perDoubling = Math.max(0, toNumber(rules.growth?.populationPressurePerDoubling, 0.25));
+  const cap = Math.max(0, toNumber(rules.growth?.populationPressureCap, 3));
+  return -Math.min(cap, Math.log2(current / start) * perDoubling);
 }
 
 function manpowerCapForSettlement(settlement, rules = defaultRules()) {
@@ -5098,6 +5268,7 @@ function buildWarnings(settlement, data, summary = calculateSettlement(settlemen
   if (summary.troopManpowerUsed > summary.militaryCapacity && !overrides.ignoreMilitaryCapacity) warnings.push(`Army uses ${formatNumber(summary.troopManpowerUsed)} Military Capacity, but staffed buildings provide ${formatNumber(summary.militaryCapacity)} (short by ${formatNumber(summary.troopManpowerUsed - summary.militaryCapacity)}).`);
   if (summary.usedSlots > summary.unlockedSlots && !overrides.ignoreSlotLimits) warnings.push(`Unlocked district slots exceeded by ${formatNumber(summary.usedSlots - summary.unlockedSlots)}.`);
   if (summary.foodShortage > 0) warnings.push(`Projected food shortage: ${formatNumber(summary.foodShortage)} Food.`);
+  else if (summary.foodCoverage < 1) warnings.push(`Monthly Food production covers only ${formatNumber(summary.foodCoverage * 100)}% of consumption; stored reserves are masking the deficit.`);
 
   for (const building of settlement.buildings.filter(item => item.active)) {
     if (building.assignedPop > workerCapacity(building)) warnings.push(`${building.name}: assigned workers exceed capacity by ${formatNumber(building.assignedPop - workerCapacity(building))}.`);

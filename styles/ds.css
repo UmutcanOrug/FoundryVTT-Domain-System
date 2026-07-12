@@ -1824,9 +1824,17 @@
 .ds-slot-tree-tier { position: relative; display: grid; grid-template-columns: 62px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 92px; }
 .ds-slot-tree-tier:not(:last-child)::after { position: absolute; z-index: 0; top: 58px; bottom: -34px; left: 30px; width: 2px; background: var(--ds-branch); content: ""; }
 .ds-tree-tier-label { position: relative; z-index: 1; display: grid; place-items: center; width: 58px; min-height: 38px; border: 1px solid var(--ds-branch); border-radius: 4px; background: #10130f; color: var(--ds-branch); font-weight: 700; }
-.ds-slot-tree-nodes { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-width: 0; }
+.ds-slot-tree-nodes {
+  display: grid;
+  grid-template-columns: repeat(var(--tree-columns, 1), minmax(148px, 168px));
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
 .ds-slot-tree-nodes form,
 .ds-root-branch-group form { margin: 0; }
+.ds-slot-tree-nodes > form { display: grid; justify-items: center; min-width: 0; }
+.ds-slot-tree-nodes > article { justify-self: center; }
 
 .ds-branch-node,
 .ds-root button.ds-branch-node {
@@ -2025,6 +2033,9 @@
   .ds-slot-tree-tier { grid-template-columns: 1fr; }
   .ds-slot-tree-tier:not(:last-child)::after { display: none; }
   .ds-tree-tier-label { width: 100%; min-height: 30px; }
+  .ds-slot-tree-nodes { grid-template-columns: 1fr; }
+  .ds-slot-tree-nodes > form,
+  .ds-slot-tree-nodes > article { grid-column: 1 !important; }
   .ds-branch-node { width: 112px; }
   .ds-landmark-card { grid-template-columns: 64px minmax(0, 1fr); }
   .ds-landmark-card > img,
@@ -2164,8 +2175,14 @@
 
 .ds-branch-level-nodes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  grid-template-columns: repeat(var(--tree-columns, 1), minmax(112px, 1fr));
+  justify-content: center;
   gap: 7px;
+}
+
+.ds-branch-level-nodes > .ds-tree-node {
+  justify-self: center;
+  width: min(100%, 176px);
 }
 
 .ds-tree-node {
@@ -2325,4 +2342,6 @@
   .ds-replenish-bar { grid-template-columns: 1fr 74px 34px; }
   .ds-replenish-bar > span { grid-column: 1 / -1; }
   .ds-tier-editor-list form { grid-template-columns: 1fr; }
+  .ds-branch-level-nodes { grid-template-columns: 1fr; }
+  .ds-branch-level-nodes > .ds-tree-node { grid-column: 1 !important; width: 100%; max-width: none; }
 }

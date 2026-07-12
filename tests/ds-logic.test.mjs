@@ -66,6 +66,10 @@ vm.runInContext(`${source}\n;globalThis.__dsTest = {
   undoSettlementTurn,
   calculateSettlement,
   buildWarnings,
+  foodSecurityState,
+  foodReserveGrowthModifier,
+  populationPressureFor,
+  treeLineageLayout,
   updateTroop,
   recruitableUnitsContext,
   permissionsFor,
@@ -90,7 +94,7 @@ const richSettlement = data => {
   return settlement;
 };
 
-// Schema v6 preserves the v5 systems while repairing Laurent staffing.
+// Schema v7 preserves prior systems, repairs Laurent staffing, and refreshes built-in economic balance.
 const stale = api.defaultWorldData();
 stale.schemaVersion = 3;
 stale.catalog.find(item => item.id === "drill-hall").parentIds = ["muster-field"];
@@ -124,7 +128,7 @@ stale.settlements = [{
   projects: []
 }];
 const migrated = api.normalizeData(stale);
-assert.equal(migrated.schemaVersion, 6);
+assert.equal(migrated.schemaVersion, 7);
 assert.deepEqual([...migrated.catalog.find(item => item.id === "drill-hall").parentIds], ["infantry-yard"]);
 assert.deepEqual([...migrated.catalog.find(item => item.id === "stable").parentIds], ["infantry-yard"]);
 assert.equal(migrated.catalog.some(item => item.id === "tannery"), false);
@@ -166,6 +170,34 @@ assert.equal(repairedSchemaFiveWorld.catalog.find(building => building.id === "l
 assert.equal(repairedManor.workers, 5);
 assert.equal(repairedManor.assignedPop, 5);
 
+const schemaSixWorld = api.defaultWorldData();
+schemaSixWorld.schemaVersion = 6;
+schemaSixWorld.rules.economy.incomeMultiplier = 1.23;
+schemaSixWorld.rules.growth.populationPressureStart = 250;
+const staleSurveyCatalog = schemaSixWorld.catalog.find(building => building.id === "survey-camp");
+staleSurveyCatalog.materialsOutput = 1;
+staleSurveyCatalog.rate = 999;
+staleSurveyCatalog.imageUrl = "custom/survey.webp";
+const staleSurveyBuilding = schemaSixWorld.settlements[0].buildings.find(building => building.catalogId === "survey-camp");
+staleSurveyBuilding.materialsOutput = 1;
+staleSurveyBuilding.rate = 999;
+staleSurveyBuilding.notes = "Keep this settlement note";
+const customEconomic = structuredClone(staleSurveyCatalog);
+customEconomic.id = "custom-salt-works";
+customEconomic.name = "Custom Salt Works";
+customEconomic.materialsOutput = 777;
+schemaSixWorld.catalog.push(customEconomic);
+const migratedSchemaSix = api.normalizeData(schemaSixWorld);
+assert.equal(migratedSchemaSix.schemaVersion, 7);
+assert.equal(migratedSchemaSix.rules.economy.incomeMultiplier, 1.23);
+assert.equal(migratedSchemaSix.rules.growth.populationPressureStart, 250);
+assert.equal(migratedSchemaSix.catalog.find(building => building.id === "survey-camp").materialsOutput, 180);
+assert.equal(migratedSchemaSix.catalog.find(building => building.id === "survey-camp").rate, 0);
+assert.equal(migratedSchemaSix.catalog.find(building => building.id === "survey-camp").imageUrl, "custom/survey.webp");
+assert.equal(migratedSchemaSix.settlements[0].buildings.find(building => building.catalogId === "survey-camp").materialsOutput, 180);
+assert.equal(migratedSchemaSix.settlements[0].buildings.find(building => building.catalogId === "survey-camp").notes, "Keep this settlement note");
+assert.equal(migratedSchemaSix.catalog.find(building => building.id === "custom-salt-works").materialsOutput, 777);
+
 // Tier downgrade shrinks empty Metropolis slots while preserving occupied districts.
 const downgradeData = freshWorld();
 const downgradeSettlement = richSettlement(downgradeData);
@@ -200,18 +232,59 @@ for (const building of catalogWorld.catalog) {
 for (const [branchId, tiers] of tiersByBranch) {
   assert.deepEqual([...tiers].sort(), [1, 2, 3, 4, 5], `${branchId} must span all settlement tiers`);
 }
+for (const building of catalogWorld.catalog.filter(item => !item.landmark && item.parentIds.length)) {
+  for (const parentId of building.parentIds) {
+    const parent = catalogWorld.catalog.find(item => item.id === parentId);
+    assert.ok(building.crownCost > parent.crownCost, `${building.id} Crown cost must progress beyond ${parentId}`);
+    assert.ok(building.cpCost > parent.cpCost, `${building.id} CP cost must progress beyond ${parentId}`);
+    assert.ok(building.materialCost >= parent.materialCost, `${building.id} Materials cost must not regress below ${parentId}`);
+  }
+}
 
-// Food and Materials are separate branches, and staffed economic buildings beat Free POP income.
-for (const building of catalogWorld.catalog.filter(item => item.category === "economic")) {
+// Economic families have explicit pure, hybrid, Crown, and civic identities.
+const economicBuildings = catalogWorld.catalog.filter(item => item.category === "economic");
+for (const building of economicBuildings) {
+  assert.equal(building.uniqueChain, false, `${building.id} should permit more than one district in its family`);
+  assert.equal(building.maxPerSettlement, 2, `${building.id} should support a second long-term investment`);
   if (building.branch === "food") {
     assert.equal(building.materialsOutput, 0, `${building.id} mixes Food and Materials`);
     assert.equal(building.publicOrder, 0, `${building.id} should not provide Public Order`);
   }
   if (building.branch === "materials") assert.equal(building.foodOutput, 0, `${building.id} mixes Materials and Food`);
-  const tier = catalogWorld.rules.tiers[building.nodeTier - 1];
-  const staffedCrown = building.workers * building.rate + building.flatOutput - building.buildingUpkeep;
-  const freePopCrown = building.workers * tier.baseIncomePerFreePop;
-  assert.ok(staffedCrown >= freePopCrown, `${building.id} loses Crown compared with leaving workers free`);
+}
+for (const id of ["land-clearance", "farmstead", "grain-estate", "grand-granary", "agrarian-heartland"]) {
+  const building = economicBuildings.find(item => item.id === id);
+  assert.equal(building.rate, 0, `${id} must be pure Food`);
+  assert.equal(building.flatOutput, 0, `${id} must be pure Food`);
+  assert.ok(building.foodOutput > 0, `${id} needs Food output`);
+}
+for (const id of ["horse-ranch", "royal-stud", "imperial-stud"]) {
+  const building = economicBuildings.find(item => item.id === id);
+  assert.ok(building.rate > 0 || building.flatOutput > 0, `${id} needs hybrid Crown output`);
+  assert.ok(building.foodOutput > 0, `${id} needs hybrid Food output`);
+  assert.ok(building.growth > 0, `${id} needs a Growth identity`);
+}
+for (const id of ["survey-camp", "stone-quarry", "masonry-district", "builders-guild", "monumental-works"]) {
+  const building = economicBuildings.find(item => item.id === id);
+  assert.equal(building.rate, 0, `${id} must be pure Materials`);
+  assert.equal(building.flatOutput, 0, `${id} must be pure Materials`);
+  assert.ok(building.materialsOutput > 0, `${id} needs Materials output`);
+}
+for (const id of ["iron-mine", "ironworks", "grand-foundry", "industrial-complex"]) {
+  const building = economicBuildings.find(item => item.id === id);
+  assert.ok(building.rate > 0 || building.flatOutput > 0, `${id} needs hybrid Crown output`);
+  assert.ok(building.materialsOutput > 0, `${id} needs hybrid Materials output`);
+  assert.ok(building.grantsTags.includes("iron"), `${id} needs Iron access`);
+}
+for (const building of economicBuildings.filter(item => item.branch === "commerce")) {
+  assert.ok(building.rate > 0 || building.flatOutput > 0, `${building.id} needs Crown output`);
+  assert.equal(building.foodOutput, 0);
+  assert.equal(building.materialsOutput, 0);
+}
+for (const building of economicBuildings.filter(item => item.branch === "civic")) {
+  assert.equal(building.rate, 0, `${building.id} should not print Crown`);
+  assert.equal(building.flatOutput, 0, `${building.id} should not print Crown`);
+  assert.ok(building.publicOrder > 0 || building.growth > 0 || building.eventRollBonus > 0 || building.mitigationTags.length > 0);
 }
 assert.deepEqual([...catalogWorld.rules.tiers.map(tier => tier.baseIncomePerFreePop)], [10, 20, 30, 40, 50]);
 
@@ -223,6 +296,30 @@ assert.ok(pastoralRanch.growth > grainEstate.growth);
 assert.ok(pastoralRanch.workers * pastoralRanch.rate + pastoralRanch.flatOutput - pastoralRanch.buildingUpkeep
   > grainEstate.workers * grainEstate.rate + grainEstate.flatOutput - grainEstate.buildingUpkeep);
 assert.ok(pastoralRanch.grantsTags.includes("horses"));
+
+const stoneQuarry = catalogWorld.catalog.find(item => item.id === "stone-quarry");
+const ironMine = catalogWorld.catalog.find(item => item.id === "iron-mine");
+assert.ok(stoneQuarry.materialsOutput > ironMine.materialsOutput);
+assert.ok(stoneQuarry.constructionBonus > ironMine.constructionBonus);
+assert.ok(ironMine.rate > 0 && ironMine.recruitmentDiscount > 0);
+const worldMarket = catalogWorld.catalog.find(item => item.id === "world-market");
+const imperialPort = catalogWorld.catalog.find(item => item.id === "imperial-port");
+assert.ok(imperialPort.workers * imperialPort.rate + imperialPort.flatOutput - imperialPort.buildingUpkeep
+  > worldMarket.workers * worldMarket.rate + worldMarket.flatOutput - worldMarket.buildingUpkeep);
+assert.ok(imperialPort.eventRollBonus > worldMarket.eventRollBonus);
+assert.equal(worldMarket.bonusEconomicSlots, 1);
+const culturalCapital = catalogWorld.catalog.find(item => item.id === "cultural-capital");
+const sacredUniversity = catalogWorld.catalog.find(item => item.id === "sacred-university");
+assert.ok(culturalCapital.publicOrder > sacredUniversity.publicOrder);
+assert.ok(culturalCapital.eventRollBonus > sacredUniversity.eventRollBonus);
+assert.ok(sacredUniversity.growth > culturalCapital.growth);
+assert.ok(sacredUniversity.mitigationTags.length > culturalCapital.mitigationTags.length);
+const valuesFor = (ids, field) => ids.map(id => catalogWorld.catalog.find(item => item.id === id)[field]);
+const assertIncreasing = (values, label) => values.slice(1).forEach((value, index) => assert.ok(value > values[index], `${label} must increase by tier`));
+assertIncreasing(valuesFor(["land-clearance", "farmstead", "grain-estate", "grand-granary", "agrarian-heartland"], "foodOutput"), "pure Food output");
+assertIncreasing(valuesFor(["horse-ranch", "royal-stud", "imperial-stud"], "foodOutput"), "hybrid Food output");
+assertIncreasing(valuesFor(["survey-camp", "stone-quarry", "masonry-district", "builders-guild", "monumental-works"], "materialsOutput"), "pure Materials output");
+assertIncreasing(valuesFor(["iron-mine", "ironworks", "grand-foundry", "industrial-complex"], "materialsOutput"), "hybrid Materials output");
 
 // De Laurent remains a Village with one tierless landmark and a sustainable economy.
 const deLaurent = catalogWorld.settlements[0];
@@ -382,6 +479,56 @@ assert.equal(orderSummary.publicOrderBand.id, "prosperous");
 assert.equal(orderSummary.publicOrderGrowth, 0.5);
 assert.equal(orderSummary.defenseTarget, 160);
 
+// Food Security is ratio-based and capped; reserve depth and POP pressure remain bounded.
+assert.equal(api.foodSecurityState(0.49).id, "critical");
+assert.equal(api.foodSecurityState(0.5).id, "strained");
+assert.equal(api.foodSecurityState(1).id, "sustained");
+assert.equal(api.foodSecurityState(1.25).id, "secure");
+assert.equal(api.foodSecurityState(1.5).id, "abundant");
+assert.equal(api.foodSecurityState(2).id, "overflowing");
+assert.equal(api.foodSecurityState(20).growth, 1);
+assert.equal(api.foodReserveGrowthModifier(0.9), -0.25);
+assert.equal(api.foodReserveGrowthModifier(1), 0);
+assert.equal(api.foodReserveGrowthModifier(3), 0.1);
+assert.equal(api.foodReserveGrowthModifier(60), 0.2);
+assert.equal(api.populationPressureFor(100, catalogWorld.rules), 0);
+assert.equal(api.populationPressureFor(800, catalogWorld.rules), -0.75);
+assert.ok(api.populationPressureFor(8_000, catalogWorld.rules) < api.populationPressureFor(2_000, catalogWorld.rules));
+assert.equal(api.populationPressureFor(1_000_000_000, catalogWorld.rules), -3);
+
+const growthScenario = (population, tier, buildingIds = []) => {
+  const data = freshWorld();
+  const settlement = data.settlements[0];
+  settlement.population = population;
+  settlement.food = population * 8;
+  settlement.treasure = 100_000_000;
+  settlement.materials = 1_000_000;
+  api.setSettlementTier(data, { settlementId: settlement.id, tier }, gm);
+  for (const catalogId of buildingIds) api.addBuilding(data, { settlementId: settlement.id, catalogId }, gm);
+  return api.calculateSettlement(settlement, data);
+};
+for (const scenario of [
+  growthScenario(100, "village", ["farmstead"]),
+  growthScenario(500, "town", ["horse-ranch", "shrine-district"]),
+  growthScenario(2_000, "city", ["grand-granary", "cathedral-academy"]),
+  growthScenario(8_000, "metropolis", ["agrarian-heartland", "sacred-university"])
+]) {
+  assert.ok(scenario.foodCoverage >= 1, "invested settlements should cover Food consumption");
+  assert.ok(scenario.growthRate > 0, "sensible Food and Growth investment should remain viable");
+}
+const uninvestedMetropolis = growthScenario(8_000, "metropolis");
+const investedMetropolis = growthScenario(8_000, "metropolis", ["agrarian-heartland", "sacred-university"]);
+assert.ok(uninvestedMetropolis.growthRate < 0, "an uninvested metropolis should stagnate");
+assert.ok(investedMetropolis.growthRate > 0, "top-tier Food and Civic investment should overcome pressure");
+assert.ok(investedMetropolis.foodSecurityGrowth <= 1.2, "Food Security plus reserves must stay capped");
+
+const treeLayout = api.treeLineageLayout(catalogWorld.catalog.filter(item => item.chainId === "recruitment"));
+assert.equal(treeLayout.columnCount, 3);
+assert.match(treeLayout.styles.get("muster-field"), /span 3/);
+assert.equal(treeLayout.styles.get("drill-hall"), treeLayout.styles.get("royal-barracks"));
+assert.equal(treeLayout.styles.get("stable"), treeLayout.styles.get("cavalry-yard"));
+assert.equal(treeLayout.styles.get("marksmen-range"), treeLayout.styles.get("rangers-lodge"));
+
 // Month events create editable temporary percentage modifiers and never inject flat resources.
 const eventData = freshWorld();
 const eventSettlement = eventData.settlements[0];
@@ -499,6 +646,9 @@ assert.match(hbs, /ds-branch-workspace/);
 assert.match(hbs, /data-branch-detail-content/);
 assert.match(hbs, /Month-End Replenishment/);
 assert.match(hbs, /Narrative Only/);
+assert.match(hbs, /Growth and Food Security/);
+assert.match(hbs, /--tree-columns/);
+assert.match(hbs, /style="\{\{treeStyle\}\}"/);
 assert.match(css, /\.ds-unit-recruit-grid,[\s\S]*grid-template-columns:\s*repeat\(2,/);
 assert.match(css, /\.ds-overview-slot-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,/);
 assert.match(css, /\.ds-overview-districts\s*\{[\s\S]*align-content:\s*start/);
@@ -507,5 +657,6 @@ assert.match(css, /\.ds-district-branch-overlay\s*\{[\s\S]*background-color:\s*#
 assert.match(css, /\.ds-branch-detail-panel\s*\{/);
 assert.match(css, /\.ds-branch-green/);
 assert.match(css, /\.ds-node-tooltip/);
+assert.match(css, /grid-template-columns:\s*repeat\(var\(--tree-columns/);
 
-console.log("DS v0.1.10 logic tests passed");
+console.log("DS v0.1.11 logic tests passed");
