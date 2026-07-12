@@ -60,6 +60,9 @@ vm.runInContext(`${source}\n;globalThis.__preview = { defaultWorldData, buildCon
 context.__preview.registerHandlebarsHelpers();
 const render = Handlebars.compile(template);
 const data = context.__preview.defaultWorldData();
+const previewImage = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120"><rect width="160" height="120" fill="#263128"/><path d="M18 96h124L112 50 86 76 64 58z" fill="#c8a35e"/><circle cx="48" cy="34" r="12" fill="#78a77d"/></svg>')}`;
+data.catalog.forEach((item, index) => { if (index % 3 === 0) item.imageUrl = previewImage; });
+data.unitCatalog.forEach((item, index) => { if (index % 2 === 0) item.imageUrl = previewImage; });
 data.settlements[0].treasure = 250000;
 data.settlements[0].troops[0].count = 58;
 data.settlements[0].ownerUserIds = [player.id];
@@ -125,7 +128,7 @@ for (const [name, catalogKind] of previews) {
   const html = render(context.__preview.buildContext(data));
   fs.writeFileSync(path.join(testDir, `ui-preview-${name}.html`), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=0111">
+<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=0113">
 <style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"+";font-size:.72em}</style>
 </head><body><div class="ds-window"><div class="window-content">${html}</div></div></body></html>`, "utf8");
 }
@@ -136,7 +139,7 @@ for (const name of ["player-construction", "player-recruitment"]) {
   const html = render(context.__preview.buildContext(data));
   fs.writeFileSync(path.join(testDir, `ui-preview-${name}.html`), `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=0111">
+<title>DS ${name} Preview</title><link rel="stylesheet" href="../styles/ds.css?v=0113">
 <style>html,body{margin:0;width:100%;height:100%;background:#0d0f0d}.ds-window,.window-content{width:100%;height:100%}.fa-solid:before{content:"+";font-size:.72em}</style>
 </head><body><div class="ds-window"><div class="window-content">${html}</div></div></body></html>`, "utf8");
 }

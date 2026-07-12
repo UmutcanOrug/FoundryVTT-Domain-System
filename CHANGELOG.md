@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.13
+
+- Removed Terrain and Biome from settlement profiles, starter/custom templates, building editors, catalog search, construction requirements, warnings, and strategic summaries. Existing worlds migrate these fields to empty values without changing settlement descriptions or visuals.
+- Rebalanced Food around civilian tier capacity without changing the existing Growth formula. Farmstead now produces 500 Food; the T3-T5 pure/hybrid endpoints scale to 2,200/1,650, 8,000/6,200, and 18,000/14,000 Food.
+- Added regression scenarios proving that one suitable Food district sustains an army-free settlement through its next population threshold, while raised troops still reduce Food coverage.
+- Replaced building `Economic Bonus Slots` and `Military Bonus Slots` with one generic `Bonus District Slots` value. Laurent Manor grants two generic slots and World Market grants one.
+- Added schema v9 migration for Terrain/Biome cleanup, generic bonus slots, refreshed built-in Food output, and unit-tree metadata while preserving custom settlement tier rules, Laurent staffing/economy values, images, and notes.
+- Rebuilt Content Library Units as readable Infantry, Ranged, Cavalry, and Siege T1-T5 trees with a separate full-width Unique Units roster.
+- Added Unit Family, parent-unit lineage, and direct Recruitment Buildings assignment to the unit editor, so a GM can configure unlock sources from either side of the catalog.
+- Added separate `Unit` and `Unique` creation commands and retained Actor UUID, image, Power, Food, recruit cost, upkeep, and settlement-limit controls.
+- Replaced wrapping `Tier 1`/`Tier 2` labels with stable T1-T5 markers and widened Landmark/Unique labels.
+- Constrained catalog images to stable node dimensions and verified that mixed image/no-image trees do not resize, overlap, or create horizontal page overflow.
+- Fixed the Overview branch selector clipping Tier IV-V. The district section now moves into view when opened, the tree has an independent vertical scroller, and narrow windows use a single-column scrollable workspace.
+- Updated the representative balance scenario to a 5,000 POP City with one Food district: 249,150 gross Crown, 15,066 building upkeep, about 1,957 sustainable Men-at-Arms, and 142% Food coverage.
+
 ## 0.1.12
 
 - Replaced manual POP assignment with automatic full-workforce reservation. Players can Halt or Continue a building; halted or labor-starved buildings produce no effects and pay half upkeep.

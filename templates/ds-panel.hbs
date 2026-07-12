@@ -247,8 +247,6 @@
                 <div class="ds-form-grid">
                   <label><span>Name</span><input name="name" value="{{selected.name}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
                   <label><span>Region</span><input name="region" value="{{selected.region}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
-                  <fieldset class="ds-full ds-check-grid"><legend>Terrain</legend>{{#each selected.terrainOptions}}<label><input type="checkbox" name="terrainTags" value="{{name}}" {{#if checked}}checked{{/if}} {{#unless @root.selected.canEditBasics}}disabled{{/unless}}><span>{{name}}</span></label>{{/each}}</fieldset>
-                  <label class="ds-full"><span>Custom Terrain Tags</span><input name="customTerrainTags" value="{{selected.customTerrainTagsText}}" {{#unless selected.canEditBasics}}disabled{{/unless}}></label>
                   <label class="ds-full"><span>Public Notes</span><textarea name="notes" rows="3" {{#unless selected.canEditBasics}}disabled{{/unless}}>{{selected.notes}}</textarea></label>
                 </div>
               </form>
@@ -337,8 +335,7 @@
                           <label class="ds-full"><span>Free Garrison (unit-id:count)</span><input name="garrisonUnits" value="{{garrisonUnitsText}}"></label>
                           <label><span>Event Roll Bonus</span><input type="number" name="eventRollBonus" value="{{eventRollBonus}}"></label>
                           <label><span>Slot Use</span><input type="number" name="slotUse" value="{{slotUse}}" min="0"></label>
-                          <label><span>Economic Bonus Slots</span><input type="number" name="bonusEconomicSlots" value="{{bonusEconomicSlots}}"></label>
-                          <label><span>Military Bonus Slots</span><input type="number" name="bonusMilitarySlots" value="{{bonusMilitarySlots}}"></label>
+                          <label><span>Bonus District Slots</span><input type="number" name="bonusSlots" value="{{bonusSlots}}" min="0"></label>
                           <label><span>Construction Bonus</span><input type="number" name="constructionBonus" value="{{constructionBonus}}" min="0"></label>
                           <label><span>Recruit / Month</span><input type="number" name="recruitPerLevel" value="{{recruitPerLevel}}" min="0"></label>
                           <label><span>Recruit Discount %</span><input type="number" name="recruitmentDiscount" value="{{recruitmentDiscount}}" min="0" max="90"></label>
@@ -551,7 +548,7 @@
         {{#if (eq activeTab "catalog")}}
           <section class="ds-pane">
             <section class="ds-section">
-              <div class="ds-section-heading"><div><h2>Content Library</h2><p>Five-tier building families, unit templates, and d100 events</p></div><div class="ds-section-actions"><div class="ds-segmented"><button type="button" data-catalog-kind="buildings" class="{{#if catalogBuildingsActive}}active{{/if}}"><i class="fa-solid fa-building"></i> Buildings</button><button type="button" data-catalog-kind="units" class="{{#if catalogUnitsActive}}active{{/if}}"><i class="fa-solid fa-shield-halved"></i> Units</button><button type="button" data-catalog-kind="events" class="{{#if catalogEventsActive}}active{{/if}}"><i class="fa-solid fa-dice-d20"></i> Events</button></div><input type="search" data-search-catalog value="{{catalogSearch}}" placeholder="Search library">{{#if catalogBuildingsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogBuilding" data-building-kind="economic"><i class="fa-solid fa-coins"></i><span>Economic</span></button><button type="button" class="ds-primary" data-click-action="addCatalogBuilding" data-building-kind="military"><i class="fa-solid fa-shield-halved"></i><span>Military</span></button><button type="button" class="ds-primary" data-click-action="addCatalogBuilding" data-building-kind="landmark"><i class="fa-solid fa-crown"></i><span>Landmark</span></button>{{else if catalogUnitsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogUnit"><i class="fa-solid fa-plus"></i><span>Unit</span></button>{{else}}<button type="button" class="ds-primary" data-click-action="addCatalogEvent"><i class="fa-solid fa-plus"></i><span>Event</span></button>{{/if}}</div></div>
+              <div class="ds-section-heading"><div><h2>Content Library</h2><p>Five-tier building and unit families, unique content, and d100 events</p></div><div class="ds-section-actions"><div class="ds-segmented"><button type="button" data-catalog-kind="buildings" class="{{#if catalogBuildingsActive}}active{{/if}}"><i class="fa-solid fa-building"></i> Buildings</button><button type="button" data-catalog-kind="units" class="{{#if catalogUnitsActive}}active{{/if}}"><i class="fa-solid fa-shield-halved"></i> Units</button><button type="button" data-catalog-kind="events" class="{{#if catalogEventsActive}}active{{/if}}"><i class="fa-solid fa-dice-d20"></i> Events</button></div><input type="search" data-search-catalog value="{{catalogSearch}}" placeholder="Search library">{{#if catalogBuildingsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogBuilding" data-building-kind="economic"><i class="fa-solid fa-coins"></i><span>Economic</span></button><button type="button" class="ds-primary" data-click-action="addCatalogBuilding" data-building-kind="military"><i class="fa-solid fa-shield-halved"></i><span>Military</span></button><button type="button" class="ds-primary" data-click-action="addCatalogBuilding" data-building-kind="landmark"><i class="fa-solid fa-crown"></i><span>Landmark</span></button>{{else if catalogUnitsActive}}<button type="button" class="ds-primary" data-click-action="addCatalogUnit" data-unit-kind="standard"><i class="fa-solid fa-plus"></i><span>Unit</span></button><button type="button" class="ds-primary" data-click-action="addCatalogUnit" data-unit-kind="unique"><i class="fa-solid fa-crown"></i><span>Unique</span></button>{{else}}<button type="button" class="ds-primary" data-click-action="addCatalogEvent"><i class="fa-solid fa-plus"></i><span>Event</span></button>{{/if}}</div></div>
               {{#if catalogBuildingsActive}}
                 <div class="ds-library-tree-grid">
                   {{#each catalogBuildingTrees}}
@@ -574,7 +571,6 @@
                           <label><span>Tier (1-5, 0 Landmark)</span><input type="number" name="nodeTier" value="{{nodeTier}}" min="0" max="5"></label>
                           <label class="ds-full"><span>Parent Node IDs</span><input name="parentIds" value="{{parentIdsText}}"></label>
                           <label><span>Settlement Tier</span><input value="{{settlementTierLabel}}" disabled></label>
-                          <label><span>Terrain</span><input name="terrain" value="{{terrain}}"></label>
                           <label><span>Crown Cost</span><input type="number" name="crownCost" value="{{crownCost}}" min="0"></label>
                           <label><span>Materials Cost</span><input type="number" name="materialCost" value="{{materialCost}}" min="0"></label>
                           <label><span>CP Cost</span><input type="number" name="cpCost" value="{{cpCost}}" min="0"></label>
@@ -597,8 +593,7 @@
                           <label><span>Building Upkeep Discount %</span><input type="number" name="buildingUpkeepDiscount" value="{{buildingUpkeepDiscount}}" min="0" max="100"></label>
                           <label><span>Growth %</span><input type="number" step="0.01" name="growth" value="{{growth}}"></label>
                           <label><span>Slot Use</span><input type="number" name="slotUse" value="{{slotUse}}" min="0"></label>
-                          <label><span>Economic Bonus Slots</span><input type="number" name="bonusEconomicSlots" value="{{bonusEconomicSlots}}"></label>
-                          <label><span>Military Bonus Slots</span><input type="number" name="bonusMilitarySlots" value="{{bonusMilitarySlots}}"></label>
+                          <label><span>Bonus District Slots</span><input type="number" name="bonusSlots" value="{{bonusSlots}}" min="0"></label>
                           <label><span>Max per Settlement</span><input type="number" name="maxPerSettlement" value="{{maxPerSettlement}}" min="0"></label>
                           <label class="ds-full"><span>Event Mitigation Tags</span><input name="mitigationTags" value="{{mitigationTagsText}}"></label>
                            <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
@@ -620,28 +615,40 @@
                   {{/each}}
                 </div>
               {{else if catalogUnitsActive}}
+                <div class="ds-library-tree-grid ds-unit-library-trees">
+                  {{#each catalogUnitTrees}}
+                    <article class="ds-branch-tree {{className}}"><header><i class="fa-solid {{icon}}"></i><strong>{{label}}</strong><span>{{nodes.length}} units</span></header><div class="ds-branch-levels">{{#each levels}}<div class="ds-branch-level"><span class="ds-tier-marker">{{tierLabel}}</span><div class="ds-branch-level-nodes" style="--tree-columns: {{columnCount}};">{{#each nodes}}<div class="ds-tree-node ds-unit-tree-node" tabindex="0" style="{{treeStyle}}">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}<strong>{{name}}</strong><small>{{sourceBuildingNames}}</small><div class="ds-node-tooltip"><h4>{{name}}</h4><p>{{description}}</p><span class="ds-effect-badges">{{#each effectBadges}}<em class="{{kind}}"><i class="fa-solid {{icon}}"></i>{{label}}</em>{{/each}}</span><small>{{parentNames}}</small></div></div>{{/each}}</div></div>{{/each}}</div></article>
+                  {{/each}}
+                </div>
                 <div class="ds-editor-list">
-                  {{#each catalogUnits}}
-                    <details class="ds-record-card">
-                      <summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid fa-shield-halved"></i>{{/if}}</div><div><h3>{{name}}{{#if special}} <i class="fa-solid fa-star ds-special-mark"></i>{{/if}}</h3><p>Tier {{tier}} / Power {{powerDisplay}}</p><small>{{recruitCostDisplay}} Crown recruit / {{upkeepDisplay}} Crown upkeep / {{foodUpkeepDisplay}} Food</small></div><i class="fa-solid fa-chevron-down"></i></summary>
-                      <form class="ds-editor-body" data-action-form="updateCatalogUnit">
-                        <input type="hidden" name="unitId" value="{{id}}">
-                        <div class="ds-form-grid">
-                          <label><span>Name</span><input name="name" value="{{name}}"></label>
-                          <label><span>Building Tier</span><input type="number" name="tier" value="{{tier}}" min="1" max="5"></label>
-                          <label><span>Recruit Cost / Troop</span><input type="number" name="recruitCost" value="{{recruitCost}}" min="0"></label>
-                          <label><span>Power per Soldier</span><input type="number" step="0.1" name="power" value="{{power}}" min="0.1"></label>
-                          <label><span>Food per Soldier</span><input type="number" step="0.05" name="foodUpkeep" value="{{foodUpkeep}}" min="0"></label>
-                          <label><span>Max per Settlement</span><input type="number" name="maxPerSettlement" value="{{maxPerSettlement}}" min="0"></label>
-                          <label class="ds-full"><span>Foundry Actor UUID</span><div class="ds-input-action"><input name="actorUuid" value="{{actorUuid}}" data-actor-drop><button type="button" data-open-actor="{{actorUuid}}" {{#unless actorUuid}}disabled{{/unless}}><i class="fa-solid fa-address-card"></i></button></div></label>
-                          <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
-                          <label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label>
-                          <label class="ds-toggle"><input type="checkbox" name="special" data-bool {{specialChecked}}><span>Special Unit</span></label>
-                          <label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label>
-                        </div>
-                        <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Unit</span></button><button type="button" data-click-action="applyCatalogUnit" data-unit-id="{{id}}"><i class="fa-solid fa-arrows-rotate"></i><span>Apply Existing</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogUnit" data-unit-id="{{id}}" data-confirm="Delete this unused unit template?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
-                      </form>
-                    </details>
+                  {{#each catalogUnitTrees}}
+                    <details class="ds-library-branch {{className}}"><summary><i class="fa-solid {{icon}}"></i><strong>{{label}}</strong><span>{{nodes.length}} units</span><i class="fa-solid fa-chevron-down"></i></summary><div class="ds-library-branch-body">
+                    {{#each nodes}}
+                      <details class="ds-record-card {{branchClass}}">
+                        <summary><div class="ds-summary-image">{{#if hasImage}}<img src="{{imageUrl}}" alt="{{name}}">{{else}}<i class="fa-solid {{categoryIcon}}"></i>{{/if}}</div><div><h3>{{name}}{{#if special}} <i class="fa-solid fa-crown ds-special-mark"></i>{{/if}}</h3><p>{{branchLabel}} / Tier {{tier}} / Power {{powerDisplay}}</p><small>{{sourceBuildingNames}}</small><span class="ds-effect-badges">{{#each effectBadges}}<em class="{{kind}}"><i class="fa-solid {{icon}}"></i>{{label}}</em>{{/each}}</span></div><i class="fa-solid fa-chevron-down"></i></summary>
+                        <form class="ds-editor-body" data-action-form="updateCatalogUnit">
+                          <input type="hidden" name="unitId" value="{{id}}">
+                          <div class="ds-form-grid">
+                            <label><span>Name</span><input name="name" value="{{name}}"></label>
+                            {{#if special}}<label><span>Family</span><input value="Unique Units" disabled></label>{{else}}<label><span>Family</span><select name="branch">{{#each branchOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>{{/if}}
+                            <label><span>Building Tier</span><input type="number" name="tier" value="{{tier}}" min="1" max="5"></label>
+                            {{#unless special}}<label><span>Parent Unit IDs</span><input name="parentIds" value="{{parentIdsText}}" placeholder="Earlier unit IDs"></label>{{/unless}}
+                            <label><span>Recruit Cost / Troop</span><input type="number" name="recruitCost" value="{{recruitCost}}" min="0"></label>
+                            <label><span>Power per Soldier</span><input type="number" step="0.1" name="power" value="{{power}}" min="0.1"></label>
+                            <label><span>Food per Soldier</span><input type="number" step="0.05" name="foodUpkeep" value="{{foodUpkeep}}" min="0"></label>
+                            <label><span>Max per Settlement</span><input type="number" name="maxPerSettlement" value="{{maxPerSettlement}}" min="0"></label>
+                            <fieldset class="ds-check-grid ds-full"><legend>Recruitment Buildings</legend><input type="hidden" name="sourceBuildingIds" value="">{{#each sourceBuildingOptions}}<label><input type="checkbox" name="sourceBuildingIds" value="{{id}}" {{#if checked}}checked{{/if}}> {{label}}</label>{{/each}}</fieldset>
+                            <label class="ds-full"><span>Foundry Actor UUID</span><div class="ds-input-action"><input name="actorUuid" value="{{actorUuid}}" data-actor-drop><button type="button" data-open-actor="{{actorUuid}}" {{#unless actorUuid}}disabled{{/unless}}><i class="fa-solid fa-address-card"></i></button></div></label>
+                            <label class="ds-full"><span>Image</span><div class="ds-input-action"><input name="imageUrl" value="{{imageUrl}}"><button type="button" data-file-picker="[name='imageUrl']"><i class="fa-solid fa-image"></i></button></div></label>
+                            <label class="ds-toggle"><input type="checkbox" name="enabled" data-bool {{enabledChecked}}><span>Enabled</span></label>
+                            <label class="ds-toggle"><input type="checkbox" name="special" data-bool {{specialChecked}}><span>Unique Unit</span></label>
+                            <label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label>
+                          </div>
+                          <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Unit</span></button><button type="button" data-click-action="applyCatalogUnit" data-unit-id="{{id}}"><i class="fa-solid fa-arrows-rotate"></i><span>Apply Existing</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteCatalogUnit" data-unit-id="{{id}}" data-confirm="Delete this unused unit template?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
+                        </form>
+                      </details>
+                    {{/each}}
+                    </div></details>
                   {{/each}}
                 </div>
               {{else}}
@@ -811,7 +818,7 @@
 
             <section class="ds-gm-command-grid">
               <form class="ds-panel" data-action-form="updatePermissions"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Player Permissions</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><input type="checkbox" name="playersCanEditBasics" data-bool {{#if selected.permissions.playersCanEditBasics}}checked{{/if}}> Edit settlement profile</label><label><input type="checkbox" name="playersCanEditAssignments" data-bool {{#if selected.permissions.playersCanEditAssignments}}checked{{/if}}> Halt buildings and edit regiment records</label><label><input type="checkbox" name="playersCanManageConstruction" data-bool {{#if selected.permissions.playersCanManageConstruction}}checked{{/if}}> Manage construction</label><label><input type="checkbox" name="playersCanManageRecruitment" data-bool {{#if selected.permissions.playersCanManageRecruitment}}checked{{/if}}> Recruit and replenish units</label><label><input type="checkbox" name="playersCanTransferTreasure" data-bool {{#if selected.permissions.playersCanTransferTreasure}}checked{{/if}}> Deposit or withdraw Treasury Crown</label><label><input type="checkbox" name="playersCanWriteTurnNotes" data-bool {{#if selected.permissions.playersCanWriteTurnNotes}}checked{{/if}}> Write turn notes</label></form>
-              <form class="ds-panel" data-action-form="updateOverrides"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Rule Overrides</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><input type="checkbox" name="ignorePopulationLimits" data-bool {{#if selected.overrides.ignorePopulationLimits}}checked{{/if}}> Ignore population progression limits</label><label><input type="checkbox" name="ignoreManpowerLimits" data-bool {{#if selected.overrides.ignoreManpowerLimits}}checked{{/if}}> Ignore manpower limits</label><label><input type="checkbox" name="ignoreBuildingRequirements" data-bool {{#if selected.overrides.ignoreBuildingRequirements}}checked{{/if}}> Ignore building and terrain requirements</label><label><input type="checkbox" name="ignoreSlotLimits" data-bool {{#if selected.overrides.ignoreSlotLimits}}checked{{/if}}> Ignore slot limits</label><label><input type="checkbox" name="ignoreGrowthLimits" data-bool {{#if selected.overrides.ignoreGrowthLimits}}checked{{/if}}> Ignore growth clamp</label></form>
+              <form class="ds-panel" data-action-form="updateOverrides"><input type="hidden" name="settlementId" value="{{selected.id}}"><div class="ds-panel-heading"><h2>Rule Overrides</h2><button type="submit"><i class="fa-solid fa-floppy-disk"></i></button></div><label><input type="checkbox" name="ignorePopulationLimits" data-bool {{#if selected.overrides.ignorePopulationLimits}}checked{{/if}}> Ignore population progression limits</label><label><input type="checkbox" name="ignoreManpowerLimits" data-bool {{#if selected.overrides.ignoreManpowerLimits}}checked{{/if}}> Ignore manpower limits</label><label><input type="checkbox" name="ignoreBuildingRequirements" data-bool {{#if selected.overrides.ignoreBuildingRequirements}}checked{{/if}}> Ignore building requirements</label><label><input type="checkbox" name="ignoreSlotLimits" data-bool {{#if selected.overrides.ignoreSlotLimits}}checked{{/if}}> Ignore slot limits</label><label><input type="checkbox" name="ignoreGrowthLimits" data-bool {{#if selected.overrides.ignoreGrowthLimits}}checked{{/if}}> Ignore growth clamp</label></form>
             </section>
 
             <section class="ds-section">
@@ -858,7 +865,7 @@
                     <summary><div><h3>{{name}}</h3><p>{{tier}} / {{population}} POP / {{buildingCount}} buildings</p></div><i class="fa-solid fa-chevron-down"></i></summary>
                     <form class="ds-editor-body" data-action-form="updateSettlementTemplate">
                       <input type="hidden" name="templateId" value="{{id}}">
-                      <div class="ds-form-grid"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Tier</span><select name="tier">{{#each tierOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><label><span>Population</span><input type="number" name="population" value="{{population}}" min="0"></label><label><span>Treasure</span><input type="number" name="treasure" value="{{treasure}}" min="0"></label><label><span>Materials</span><input type="number" name="materials" value="{{materials}}" min="0"></label><label><span>Public Order</span><input type="number" name="publicOrder" value="{{publicOrder}}" min="0" max="100"></label><label><span>Manpower Bonus</span><input type="number" name="manpowerBonus" value="{{manpowerBonus}}"></label><label class="ds-full"><span>Terrain Tags</span><input name="terrainTags" value="{{terrainTagsText}}"></label><label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label></div>
+                      <div class="ds-form-grid"><label><span>Name</span><input name="name" value="{{name}}"></label><label><span>Tier</span><select name="tier">{{#each tierOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><label><span>Population</span><input type="number" name="population" value="{{population}}" min="0"></label><label><span>Treasure</span><input type="number" name="treasure" value="{{treasure}}" min="0"></label><label><span>Materials</span><input type="number" name="materials" value="{{materials}}" min="0"></label><label><span>Public Order</span><input type="number" name="publicOrder" value="{{publicOrder}}" min="0" max="100"></label><label><span>Manpower Bonus</span><input type="number" name="manpowerBonus" value="{{manpowerBonus}}"></label><label class="ds-full"><span>Description</span><textarea name="description" rows="2">{{description}}</textarea></label></div>
                       <div class="ds-record-actions"><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>Save Template</span></button>{{#unless isBuiltIn}}<button type="button" class="ds-danger" data-click-action="deleteSettlementTemplate" data-template-id="{{id}}" data-confirm="Delete this custom settlement template?"><i class="fa-solid fa-trash"></i></button>{{/unless}}</div>
                     </form>
                   </details>

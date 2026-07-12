@@ -57,6 +57,8 @@ vm.runInContext(`${source}\n;globalThis.__dsTest = {
   addBuilding,
   queueConstruction,
   addCatalogBuilding,
+  addCatalogUnit,
+  updateCatalogUnit,
   queueGmConstruction,
   setSettlementTier,
   queueRecruitment,
@@ -69,6 +71,7 @@ vm.runInContext(`${source}\n;globalThis.__dsTest = {
   populationPressureFor,
   publicOrderPressureFor,
   treeLineageLayout,
+  unitTreeGroups,
   updateTroop,
   recruitableUnitsContext,
   permissionsFor,
@@ -98,9 +101,9 @@ const prepareSettlement = (data, population = 500) => {
   return settlement;
 };
 
-// Schema v8 and settlement hierarchy defaults.
+// Schema v9 and settlement hierarchy defaults.
 const defaults = api.defaultWorldData();
-assert.equal(defaults.schemaVersion, 8);
+assert.equal(defaults.schemaVersion, 9);
 assert.deepEqual(
   [...defaults.rules.tiers.map(tier => [tier.openSlots, tier.maxSlots])],
   [[2, 3], [3, 4], [4, 6], [6, 8], [8, 10]]
@@ -109,15 +112,16 @@ assert.equal(defaults.rules.military.upkeepPercent, 20);
 assert.equal(defaults.rules.military.manpowerRecoveryRate, 10);
 assert.equal(defaults.rules.economy.replenishmentCostPercent, 35);
 
-// v0.1.11 data migrates once without overwriting custom Laurent values or custom slot rules.
+// v0.1.12 data migrates once without overwriting custom Laurent values or custom slot rules.
 const stale = api.defaultWorldData();
-stale.schemaVersion = 7;
+stale.schemaVersion = 8;
 stale.rules.tiers.find(tier => tier.id === "city").openSlots = 7;
 stale.rules.tiers.find(tier => tier.id === "city").maxSlots = 9;
 const staleSettlement = stale.settlements[0];
 staleSettlement.food = 99_999;
 staleSettlement.biomeTags = ["Farmlands"];
 staleSettlement.terrainTags.push("Iron", "Horses");
+stale.settlementTemplates.find(template => template.id === "starter-village").buildings.find(building => building.catalogId === "farmstead").foodOutput = 220;
 const staleManor = staleSettlement.buildings.find(building => building.catalogId === "laurent-manor");
 staleManor.workers = 20;
 staleManor.buildingUpkeep = 3_000;
@@ -125,7 +129,7 @@ staleManor.recruitPerLevel = 17;
 staleManor.imageUrl = "world/laurent-custom.webp";
 const migrated = api.normalizeData(stale);
 const migratedManor = migrated.settlements[0].buildings.find(building => building.catalogId === "laurent-manor");
-assert.equal(migrated.schemaVersion, 8);
+assert.equal(migrated.schemaVersion, 9);
 assert.equal(migrated.rules.tiers.find(tier => tier.id === "city").openSlots, 7);
 assert.equal(migrated.rules.tiers.find(tier => tier.id === "city").maxSlots, 9);
 assert.equal(migratedManor.workers, 20);
@@ -134,15 +138,18 @@ assert.equal(migratedManor.recruitPerLevel, 17);
 assert.equal(migratedManor.imageUrl, "world/laurent-custom.webp");
 assert.equal(migratedManor.siegeDefensePercent, 10);
 assert.ok(migratedManor.garrisonUnits.length > 0);
+assert.equal(migratedManor.bonusSlots, 2);
 assert.equal(migrated.settlements[0].food, 0);
 assert.deepEqual([...migrated.settlements[0].biomeTags], []);
-assert.equal(migrated.settlements[0].terrainTags.some(tag => ["iron", "horse", "horses"].includes(tag.toLowerCase())), false);
+assert.deepEqual([...migrated.settlements[0].terrainTags], []);
+assert.equal(migrated.settlementTemplates.find(template => template.id === "starter-village").buildings.find(building => building.catalogId === "farmstead").foodOutput, 500);
 
 // Built-in trees are complete, described, and no longer depend on strategic resources.
 const catalogWorld = api.defaultWorldData();
 const tiersByBranch = new Map();
 for (const building of catalogWorld.catalog) {
   assert.ok(building.description.length > 20, `${building.id} needs a useful description`);
+  assert.equal(Object.hasOwn(building, "terrain"), false, `${building.id} still carries a terrain field`);
   assert.equal(building.requiredTagsAny.length, 0, `${building.id} still has a strategic-resource gate`);
   assert.equal(building.grantsTags.some(tag => ["iron", "horse", "horses"].includes(tag.toLowerCase())), false);
   assert.ok(api.buildingEffectBadges(building, catalogWorld.unitCatalog).some(badge => badge.label.includes("Requires") || building.workers === 0));
@@ -154,6 +161,10 @@ for (const [branchId, tiers] of tiersByBranch) {
   assert.deepEqual([...tiers].sort(), [1, 2, 3, 4, 5], `${branchId} must span T1-T5`);
 }
 for (const unit of catalogWorld.unitCatalog) assert.deepEqual([...unit.requiredTags], []);
+assert.equal(catalogWorld.unitCatalog.find(unit => unit.id === "spearman").branch, "infantry");
+assert.deepEqual([...catalogWorld.unitCatalog.find(unit => unit.id === "spearman").parentIds], ["militia"]);
+assert.equal(catalogWorld.unitCatalog.find(unit => unit.id === "knight").branch, "unique");
+assert.equal(catalogWorld.unitCatalog.find(unit => unit.id === "knight").special, true);
 
 // Economic branches have distinct pure and hybrid roles.
 const byBuildingId = id => catalogWorld.catalog.find(item => item.id === id);
@@ -164,6 +175,8 @@ assert.ok(byBuildingId("stone-quarry").materialsOutput > byBuildingId("iron-mine
 assert.equal(byBuildingId("stone-quarry").rate, 0);
 assert.ok(byBuildingId("iron-mine").materialsOutput > 0 && byBuildingId("iron-mine").rate > 0 && byBuildingId("iron-mine").recruitmentDiscount > 0);
 assert.ok(byBuildingId("world-market").buildingUpkeepDiscount > 0);
+assert.equal(byBuildingId("world-market").bonusSlots, 1);
+assert.equal(byBuildingId("laurent-manor").bonusSlots, 2);
 assert.ok(byBuildingId("imperial-port").eventRollBonus > byBuildingId("world-market").eventRollBonus);
 assert.ok(byBuildingId("imperial-port").workers * byBuildingId("imperial-port").rate + byBuildingId("imperial-port").flatOutput
   > byBuildingId("world-market").workers * byBuildingId("world-market").rate + byBuildingId("world-market").flatOutput);
@@ -214,8 +227,8 @@ foodSettlement.food = 0;
 assert.equal(api.calculateSettlement(foodSettlement, foodData).foodCoverage, foodSummary.foodCoverage);
 api.addBuilding(foodData, { settlementId: foodSettlement.id, catalogId: "land-clearance" }, gm);
 foodSummary = api.calculateSettlement(foodSettlement, foodData);
-assert.ok(foodSummary.foodCoverage >= 1 && foodSummary.foodCoverage < 1.25);
-assert.equal(foodSummary.foodSecurity.id, "sustained");
+assert.ok(foodSummary.foodCoverage >= 1.25 && foodSummary.foodCoverage < 1.5);
+assert.equal(foodSummary.foodSecurity.id, "well-fed");
 api.addBuilding(foodData, { settlementId: foodSettlement.id, catalogId: "land-clearance" }, gm);
 foodSummary = api.calculateSettlement(foodSettlement, foodData);
 assert.ok(foodSummary.foodCoverage >= 2);
@@ -228,6 +241,26 @@ assert.equal(api.foodSecurityState(1).id, "sustained");
 assert.equal(api.foodSecurityState(1.25).id, "well-fed");
 assert.equal(api.foodSecurityState(1.5).id, "plentiful");
 assert.equal(api.foodSecurityState(2).id, "abundant");
+
+// One tier-appropriate Food district sustains civilians up to the next population threshold.
+for (const scenario of [
+  { tier: "village", population: 500, building: "farmstead" },
+  { tier: "town", population: 2_000, building: "grain-estate" },
+  { tier: "town", population: 2_000, building: "horse-ranch" },
+  { tier: "city", population: 8_000, building: "grand-granary" },
+  { tier: "city", population: 8_000, building: "royal-stud" },
+  { tier: "metropolis", population: 16_000, building: "agrarian-heartland" },
+  { tier: "metropolis", population: 16_000, building: "imperial-stud" }
+]) {
+  const scenarioData = freshWorld();
+  const settlement = prepareSettlement(scenarioData, scenario.population);
+  api.setSettlementTier(scenarioData, { settlementId: settlement.id, tier: scenario.tier }, gm);
+  api.addBuilding(scenarioData, { settlementId: settlement.id, catalogId: scenario.building }, gm);
+  const civilianSummary = api.calculateSettlement(settlement, scenarioData);
+  assert.ok(civilianSummary.foodCoverage >= 1, `${scenario.building} does not feed ${scenario.population} civilian POP`);
+  settlement.troops.push({ id: `army-${scenario.building}`, name: "Food Pressure", type: "men-at-arms", count: Math.round(scenario.population * 0.2), maxCount: Math.round(scenario.population * 0.2) });
+  assert.ok(api.calculateSettlement(settlement, scenarioData).foodCoverage < civilianSummary.foodCoverage, `${scenario.building} ignores army Food pressure`);
+}
 
 // Public Order affects Crown and Growth exactly; population adds visible Order pressure.
 const orderData = freshWorld();
@@ -358,17 +391,49 @@ assert.match(treeLayout.styles.get("muster-field"), /span 3/);
 assert.equal(treeLayout.styles.get("drill-hall"), treeLayout.styles.get("royal-barracks"));
 assert.equal(treeLayout.styles.get("stable"), treeLayout.styles.get("cavalry-yard"));
 assert.equal(treeLayout.styles.get("marksmen-range"), treeLayout.styles.get("rangers-lodge"));
+const unitTrees = api.unitTreeGroups(catalogWorld.unitCatalog.map(unit => ({ ...unit, parentNames: "", sourceBuildingNames: "" })));
+assert.deepEqual([...unitTrees.map(tree => tree.id)], ["infantry", "ranged", "cavalry", "siege", "unique"]);
+assert.ok(unitTrees.find(tree => tree.id === "unique").nodes.some(unit => unit.id === "knight"));
+
+// Unit Library editing assigns a custom unit directly to recruitment buildings and existing instances.
+const unitLibraryData = freshWorld();
+const unitLibrarySettlement = prepareSettlement(unitLibraryData, 2_000);
+api.setSettlementTier(unitLibraryData, { settlementId: unitLibrarySettlement.id, tier: "city" }, gm);
+api.addBuilding(unitLibraryData, { settlementId: unitLibrarySettlement.id, catalogId: "marksmen-range" }, gm);
+api.addCatalogUnit(unitLibraryData, { unitKind: "standard" }, gm);
+const customUnit = unitLibraryData.unitCatalog.at(-1);
+api.updateCatalogUnit(unitLibraryData, {
+  unitId: customUnit.id,
+  name: "Longbow Retinue",
+  enabled: true,
+  recruitCost: 2_000,
+  tier: 4,
+  branch: "ranged",
+  parentIds: "crossbowman",
+  power: 5,
+  foodUpkeep: 1.25,
+  maxPerSettlement: 0,
+  special: false,
+  imageUrl: "",
+  actorUuid: "",
+  description: "A custom ranged unit used to verify library building assignment.",
+  sourceBuildingIds: ["marksmen-range"]
+}, gm);
+assert.ok(unitLibraryData.catalog.find(building => building.id === "marksmen-range").recruitableUnitIds.includes(customUnit.id));
+assert.ok(unitLibrarySettlement.buildings.find(building => building.catalogId === "marksmen-range").recruitableUnitIds.includes(customUnit.id));
+assert.equal(customUnit.branch, "ranged");
+assert.deepEqual([...customUnit.parentIds], ["crossbowman"]);
 
 // Representative City simulation: eight districts plus a landmark must support long-term growth and a meaningful army.
 const cityData = freshWorld();
-const city = prepareSettlement(cityData, 2_000);
+const city = prepareSettlement(cityData, 5_000);
 api.setSettlementTier(cityData, { settlementId: city.id, tier: "city" }, gm);
 for (const catalogId of [
   "grand-granary",
-  "royal-stud",
   "grand-bazaar",
   "grand-harbor",
   "builders-guild",
+  "grand-foundry",
   "cathedral-academy",
   "royal-barracks",
   "citadel"
@@ -378,7 +443,7 @@ let citySummary = api.calculateSettlement(city, cityData);
 assert.equal(citySummary.usedSlots, 8);
 assert.equal(citySummary.unlockedSlots, 8);
 assert.ok(citySummary.netIncome > 100_000);
-assert.ok(citySummary.foodCoverage >= 2);
+assert.ok(citySummary.foodCoverage >= 1.5);
 assert.ok(citySummary.materialsBalance > 0);
 assert.ok(citySummary.growthRate > 0);
 assert.equal(citySummary.recruitmentCapacity, 50);
@@ -396,7 +461,7 @@ for (let count = 0; count <= city.population; count += 1) {
 cityRegiment.count = sustainableArmy;
 cityRegiment.maxCount = sustainableArmy;
 citySummary = api.calculateSettlement(city, cityData);
-assert.ok(sustainableArmy >= 950 && sustainableArmy <= 1_100, `unexpected sustainable City army: ${sustainableArmy}`);
+assert.ok(sustainableArmy >= 1_800 && sustainableArmy <= 2_100, `unexpected sustainable City army: ${sustainableArmy}`);
 assert.ok(citySummary.netIncome >= 0);
 assert.ok(citySummary.foodCoverage >= 1);
 console.log(`City balance: ${citySummary.grossIncome} gross, ${citySummary.buildingUpkeep} building upkeep, ${sustainableArmy} Men-at-Arms sustainable, ${Math.round(citySummary.foodCoverage * 100)}% food coverage.`);
@@ -413,17 +478,21 @@ await assert.rejects(() => api.processSingleSettlement(turnData, { settlementId:
 // Static UI contracts: obsolete controls are gone and the new workflows are visible.
 const hbs = fs.readFileSync(new URL("../templates/ds-panel.hbs", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../styles/ds.css", import.meta.url), "utf8");
-assert.doesNotMatch(hbs, /Biome|Strategic Resource|Assigned POP|Garrison Upkeep|Campaign Upkeep|Promotion Food|Food Cost|Food Required|Food Paid|name="sourceBuildingId"/);
+assert.doesNotMatch(hbs, /Terrain|Biome|Strategic Resource|Assigned POP|Garrison Upkeep|Campaign Upkeep|Promotion Food|Food Cost|Food Required|Food Paid|name="sourceBuildingId"|bonusEconomicSlots|bonusMilitarySlots/);
 assert.match(hbs, /Food Flow/);
 assert.match(hbs, /toggleBuildingOperation/);
 assert.match(hbs, /playersCanTransferTreasure/);
 assert.match(hbs, /queueGmConstruction/);
 assert.match(hbs, /Military Building Trees/);
+assert.match(hbs, /Unique Units/);
+assert.match(hbs, /Recruitment Buildings/);
+assert.match(hbs, /Bonus District Slots/);
 assert.match(hbs, /no building or recruitment-capacity requirement/);
 assert.match(hbs, /Starvation below 50% gives -3% Growth/);
 assert.match(hbs, /Unrest 0-24 gives -50% Crown/);
-assert.match(css, /max-height:\s*min\(540px/);
+assert.match(css, /\.ds-overview-districts:has\(\.ds-district-branch-overlay\)/);
+assert.match(css, /overscroll-behavior:\s*contain/);
 assert.match(css, /\.ds-regiment-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,/);
 assert.match(css, /\.ds-slot-tree-nodes\s*\{[\s\S]*repeat\(var\(--tree-columns/);
 
-console.log("DS v0.1.12 logic tests passed");
+console.log("DS v0.1.13 logic tests passed");

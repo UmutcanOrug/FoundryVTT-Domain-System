@@ -12,7 +12,7 @@ DS, Foundry VTT v13 build 351 icin Astargon yerleskelerini uzun vadeli bir Total
 - `Recruitment`: askeri bina agaclari, acilmis unitler, ortak recruitment havuzu, replenishment ve regimentler.
 - `Chronicle`: Treasury transferleri, ay sonuclari, oyuncu notlari ve GM kayitlari.
 - `Rules`: tum temel formuller, Food/Public Order bantlari ve GM dunya ayarlari.
-- `Content Library`: GM icin ayri Economic, Military, Landmark, Unit ve d100 Event sablonlari.
+- `Content Library`: GM icin bina agaclari, Infantry/Ranged/Cavalry/Siege unit agaclari, ayri Unique Unit ve Landmark bolumleri ile d100 Event sablonlari.
 - `GM Controls`: ay yonetimi, ledger, rank, gorseller, landmark, dogrudan yerlestirme, olay ve geri alma.
 
 ## Yerleske Hiyerarsisi
@@ -29,7 +29,7 @@ Normal bina Tier 1-5, yerleske kademesiyle eslesir. Landmark tier kullanmaz ve n
 
 Food bir terfi veya insaat para birimi degildir. Terfi Crown ve Materials pesin odendikten sonra CP ile tamamlanir. GM `Settlement Rank` ile masrafsiz dogrudan kademe degistirebilir.
 
-GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v8 gecisi oyuncunun daha once degistirdigi custom slot degerlerini korur.
+GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v9 gecisi oyuncunun daha once degistirdigi custom slot degerlerini korur.
 
 ## Otomatik Is Gucu
 
@@ -46,7 +46,7 @@ Free POP = Total POP - calisan binalarin gerekli POP toplami
 - Bir bina ya yuzde 100 calisir ya hic calismaz; kismi iscilik yoktur.
 - Oyuncu izinliyse `Halt` ve `Continue` dugmelerini kullanabilir.
 - Halt edilen bina districti terk etmez ve branch ilerlemesini kaybetmez.
-- Yapinin verdigi bonus slotlar halt edilince yok olmaz.
+- Yapinin verdigi bonus slotlar genel district slotudur; Economic/Military ayrimi yoktur ve bina halt edilince kaybolmaz.
 - Her bina karti `Requires X POP` bilgisini gosterir.
 - Free POP, kademe gelirini, subsistence Food'u ve Construction CP'yi uretir.
 
@@ -88,7 +88,7 @@ Food Coverage = Production / Consumption
 | 150-199% | Plentiful | +1% | +2 |
 | 200%+ | Abundant | +1,5% | +3 |
 
-Bir onceki aydan Food biriktirmek acigi gizlemez. Saf Food dali yerleskeyi beslemeye odaklanir. Hybrid Pastoral dali daha az Food karsiliginda Crown, Growth ve recruitment indirimi verir. Iki Food yatirimi, buyuk ordu veya hizli Growth icin anlamli bir tercihtir.
+Bir onceki aydan Food biriktirmek acigi gizlemez. Uygun tierdeki tek Food binasi, ordusu olmayan yerleskeyi bir sonraki nufus esigine kadar besleyebilir. Saf dal ordu ve krizler icin daha buyuk rezerv saglar; Hybrid Pastoral dali sivil ihtiyaci karsilarken Food rezervinin bir kismini Crown, Growth ve recruitment indirimine cevirir. Ikinci Food yatirimi normal sivil ekonomi icin zorunlu degil, buyuk ordu veya cok yuksek surplus icin stratejik tercihtir.
 
 ## Ekonomik Bina Aileleri
 
@@ -114,7 +114,7 @@ Bir onceki aydan Food biriktirmek acigi gizlemez. Saf Food dali yerleskeyi besle
 
 - `Trading Post` koktur.
 - Inland market dali duzenli Crown ve settlement Building Upkeep indirimi verir.
-- River/Harbor dali daha yuksek Crown ve daha iyi event roll verir, fakat uygun terrain ister.
+- River/Harbor dali daha yuksek Crown ve daha iyi event roll verir; artik terrain gereksinimi yoktur ve secim yerleskenin temasina gore yapilir.
 - Bir dal her durumda dogrudan digerinden iyi degildir.
 
 ### Civic, turkuaz
@@ -275,6 +275,8 @@ GM Controls icinde:
 - `GM Construction Queue`: normal bina veya landmarki CP projesi olarak kuyruga koyar.
 - Building editoru gerekli POP, Crown/Materials/CP cost, output, upkeep, discount, recruitment, Siege Defense ve `unit-id:count` garrison listesini duzenler.
 - Unit editoru recruit cost, tek upkeep yuzdesi, Power, Food, limit, Actor ve resmi duzenler.
+- Unitler Infantry, Ranged, Cavalry ve Siege ailelerinde T1-T5 agaci olarak okunur. `Unique Unit` isaretli unitler ayri bolumde gorunur.
+- Unit editorundeki `Recruitment Buildings` listesi, birimin hangi askeri bina veya Landmark tarafindan acildigini dogrudan belirler.
 
 ## De Laurent Korunmasi
 
@@ -286,18 +288,21 @@ Laurent Manor:
 - Normal district harcamaz.
 - Varsayilan 5 POP ister.
 - Varsayilan +10 Recruitment Capacity verir.
+- Varsayilan +2 genel district slotu verir.
 - Varsayilan 20 Town Guard + 10 Men-at-Arms auto garrison verir.
 - Varsayilan +10% Siege Defense ve +6 Public Order verir.
-- Custom workers, upkeep, recruitment, resim ve not degerleri schema v8 gecisinde korunur.
+- Custom workers, upkeep, recruitment, resim ve not degerleri schema v9 gecisinde korunur.
 
-## Schema v8 Gecisi
+## Schema v9 Gecisi
 
-v0.1.11 ve daha eski dunya verileri otomatik tasinir.
+v0.1.12 ve daha eski dunya verileri otomatik tasinir.
 
-- Biome alanlari temizlenir.
+- Terrain ve Biome alanlari profil, sablon, bina editoru ve kurulum kosullarindan kaldirilir.
 - Iron/Horse resource ve unit gereksinimleri kaldirilir.
 - Stored Food ve construction Food cost kayitlari sifirlanir.
-- Built-in ekonomik ve askeri denge v0.1.12 degerlerine yenilenir.
+- Built-in Food zinciri v0.1.13 sivil nufus hedeflerine yenilenir; mevcut Food binalari da yeni outputu alir.
+- Eski Economic/Military bina bonus slotlari tek genel `Bonus District Slots` alaninda birlestirilir.
+- Built-in unitler Infantry, Ranged, Cavalry, Siege ve Unique agaclarina tasinir.
 - Manuel assignment yerine otomatik is gucu uygulanir.
 - Eski Garrison/Campaign upkeep tek %20 upkeep'e tasinir.
 - Settlement kimligi, owner, custom catalog, resim, regiment, Actor, log ve notlar korunur.
@@ -306,14 +311,14 @@ v0.1.11 ve daha eski dunya verileri otomatik tasinir.
 
 ## City Denge Referansi
 
-Otomatik testte 2.000 POP City su sekiz districti ve Laurent Manor'i kullanir:
+Otomatik testte 5.000 POP City, tek Food districtiyle su sekiz districti ve Laurent Manor'i kullanir:
 
 ```text
 Grand Granary
-Royal Stockyards
 Grand Bazaar
 Grand Harbor
 Builders Guild
+Grand Foundry
 Cathedral Academy
 Royal Barracks
 Citadel
@@ -323,10 +328,10 @@ Laurent Manor (district disi)
 Sonuc:
 
 ```text
-Gross Crown: 141.488
-Building Upkeep: 14.973
-Surdurulebilir Men-at-Arms: yaklasik 1.013
-Bu ordudaki Food Coverage: %192
+Gross Crown: 249.150
+Building Upkeep: 15.066
+Surdurulebilir Men-at-Arms: yaklasik 1.957
+Bu ordudaki Food Coverage: %142
 ```
 
 Bu zorunlu build degil, denge regression referansidir. Oyuncu daha fazla Order, Growth, Materials, recruitment veya savunma icin income ve army kapasitesinden fedakarlik yapabilir.
@@ -348,5 +353,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.12.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.13.zip
 ```

@@ -2418,3 +2418,126 @@
   .ds-branch-level-nodes { grid-template-columns: 1fr; }
   .ds-branch-level-nodes > .ds-tree-node { grid-column: 1 !important; width: 100%; max-width: none; }
 }
+
+/* v0.1.13 terrain-free library trees and reliable district scrolling */
+.ds-overview-districts:has(.ds-district-branch-overlay) {
+  min-height: clamp(520px, calc(100vh - 225px), 720px);
+}
+
+.ds-district-branch-overlay {
+  inset: 50px 14px 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: none;
+  overflow: hidden;
+}
+
+.ds-district-branch-overlay > header {
+  top: 0;
+  padding-top: 0;
+}
+
+.ds-district-branch-overlay > .ds-branch-workspace {
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ds-district-branch-overlay > .ds-branch-workspace > :first-child {
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding-right: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.ds-district-branch-overlay .ds-slot-branch-tree {
+  align-content: start;
+}
+
+.ds-district-branch-overlay .ds-branch-detail-panel {
+  top: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.ds-library-tree-grid {
+  align-items: start;
+}
+
+.ds-tier-marker {
+  width: 38px;
+  min-width: 38px;
+  white-space: nowrap;
+}
+
+.ds-branch-level {
+  grid-template-columns: 40px minmax(0, 1fr);
+}
+
+.ds-branch-level:not(:last-child)::after {
+  left: 18px;
+}
+
+.ds-unit-tree-unique {
+  grid-column: 1 / -1;
+}
+
+.ds-unit-tree-unique .ds-branch-level,
+.ds-building-tree-landmark .ds-branch-level {
+  grid-template-columns: 70px minmax(0, 1fr);
+}
+
+.ds-unit-tree-unique .ds-tier-marker,
+.ds-building-tree-landmark .ds-tier-marker {
+  width: 68px;
+}
+
+.ds-unit-tree-node {
+  grid-template-columns: 42px minmax(0, 1fr);
+  width: min(100%, 196px) !important;
+  min-height: 66px;
+}
+
+.ds-unit-tree-node > img,
+.ds-unit-tree-node > i {
+  width: 42px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.ds-unit-tree-node > small {
+  white-space: normal;
+  line-height: 1.15;
+}
+
+@media (max-width: 860px) {
+  .ds-district-branch-overlay {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .ds-district-branch-overlay > header {
+    margin-bottom: 10px;
+  }
+
+  .ds-district-branch-overlay > .ds-branch-workspace {
+    display: grid;
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ds-district-branch-overlay > .ds-branch-workspace > :first-child,
+  .ds-district-branch-overlay .ds-branch-detail-panel {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .ds-district-branch-overlay .ds-branch-detail-panel {
+    margin-top: 10px;
+  }
+}
