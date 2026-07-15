@@ -73,9 +73,21 @@ vm.runInContext(`${source}\n;globalThis.__dsTest = {
   treeLineageLayout,
   unitTreeGroups,
   updateTroop,
+  synchronizeBuildingGarrisons,
+  troopAvailableForDefense,
+  addSettlementEffect,
+  updateSettlementEffect,
+  createBuildingWizard,
+  createUnitWizard,
+  createRegimentWizard,
+  importData,
   recruitableUnitsContext,
   permissionsFor,
   toggleBuildingOperation,
+  deleteBuilding,
+  processRecruitment,
+  addContentCategory,
+  updateContentCategory,
   transferTreasure,
   unitUpkeepFromRules,
   constructionCost,
@@ -103,9 +115,9 @@ const prepareSettlement = (data, population = 500) => {
   return settlement;
 };
 
-// Schema v11 and settlement hierarchy defaults.
+// Schema v12 and settlement hierarchy defaults.
 const defaults = api.defaultWorldData();
-assert.equal(defaults.schemaVersion, 11);
+assert.equal(defaults.schemaVersion, 12);
 assert.deepEqual(
   [...defaults.rules.tiers.map(tier => [tier.openSlots, tier.maxSlots])],
   [[2, 3], [3, 4], [4, 6], [6, 8], [8, 10]]
@@ -135,7 +147,7 @@ staleManor.recruitPerLevel = 17;
 staleManor.imageUrl = "world/laurent-custom.webp";
 const migrated = api.normalizeData(stale);
 const migratedManor = migrated.settlements[0].buildings.find(building => building.catalogId === "laurent-manor");
-assert.equal(migrated.schemaVersion, 11);
+assert.equal(migrated.schemaVersion, 12);
 assert.equal(migrated.rules.tiers.find(tier => tier.id === "city").openSlots, 7);
 assert.equal(migrated.rules.tiers.find(tier => tier.id === "city").maxSlots, 9);
 assert.equal(migratedManor.workers, 20);
@@ -150,7 +162,154 @@ assert.deepEqual([...migrated.settlements[0].biomeTags], []);
 assert.deepEqual([...migrated.settlements[0].terrainTags], []);
 assert.equal(migrated.settlementTemplates.find(template => template.id === "starter-village").buildings.find(building => building.catalogId === "farmstead").foodOutput, 500);
 
-// Schema v11 reprices old defaults while preserving deliberately customized rank costs.
+// Schema v12 keeps legacy player regiments raised and turns building garrisons into persistent casualty-capable records.
+const schemaEleven = api.defaultWorldData();
+schemaEleven.schemaVersion = 11;
+schemaEleven.settlements[0].troops[0].mode = "garrison";
+const migratedTwelve = api.normalizeData(schemaEleven);
+assert.equal(migratedTwelve.settlements[0].troops.find(troop => troop.id === "dl-maa").mode, "raised");
+
+const garrisonData = freshWorld();
+const garrisonSettlement = prepareSettlement(garrisonData, 500);
+api.addBuilding(garrisonData, { settlementId: garrisonSettlement.id, catalogId: "laurent-manor" }, gm);
+let garrisonSummary = api.calculateSettlement(garrisonSettlement, garrisonData);
+const sourceGarrison = garrisonSettlement.troops.find(troop => troop.sourceCatalogId === "laurent-manor");
+assert.ok(sourceGarrison, "landmark should create real garrison regiments");
+assert.equal(sourceGarrison.mode, "garrison");
+assert.equal(sourceGarrison.freeUpkeep, true);
+assert.equal(sourceGarrison.usesManpower, false);
+assert.equal(sourceGarrison.lockedToGarrison, true);
+assert.equal(garrisonSummary.militaryCost, 0);
+assert.equal(garrisonSummary.troopManpowerUsed, 0);
+assert.ok(garrisonSummary.garrisonPower > 0);
+
+sourceGarrison.count = Math.max(0, sourceGarrison.maxCount - 3);
+const damagedCount = sourceGarrison.count;
+api.calculateSettlement(garrisonSettlement, garrisonData);
+assert.equal(sourceGarrison.count, damagedCount, "garrison casualties must survive recalculation");
+const activeFood = api.calculateSettlement(garrisonSettlement, garrisonData).foodConsumption;
+const sourceBuilding = garrisonSettlement.buildings.find(building => building.id === sourceGarrison.sourceBuildingId);
+api.toggleBuildingOperation(garrisonData, { settlementId: garrisonSettlement.id, buildingId: sourceBuilding.id, operation: "halt" }, gm);
+const haltedSummary = api.calculateSettlement(garrisonSettlement, garrisonData);
+assert.equal(api.troopAvailableForDefense(sourceGarrison, garrisonSettlement), false);
+assert.ok(haltedSummary.garrisonPower < garrisonSummary.garrisonPower);
+assert.ok(haltedSummary.foodConsumption < activeFood);
+api.toggleBuildingOperation(garrisonData, { settlementId: garrisonSettlement.id, buildingId: sourceBuilding.id, operation: "continue" }, gm);
+
+const reserveBeforeReplenishment = garrisonSettlement.manpowerReserve;
+const recruitmentCapacityBefore = api.calculateSettlement(garrisonSettlement, garrisonData).recruitmentCapacity;
+api.queueReplenishment(garrisonData, { settlementId: garrisonSettlement.id, troopId: sourceGarrison.id, targetCount: 3 }, player);
+const garrisonReplenishment = garrisonSettlement.recruitment.find(order => order.regimentId === sourceGarrison.id);
+assert.equal(garrisonReplenishment.kind, "replenishment");
+assert.equal(api.calculateSettlement(garrisonSettlement, garrisonData).recruitmentCapacity, recruitmentCapacityBefore);
+assert.equal(garrisonSettlement.manpowerReserve, reserveBeforeReplenishment - 3);
+await api.processSingleSettlement(garrisonData, { settlementId: garrisonSettlement.id }, gm);
+assert.equal(sourceGarrison.count, sourceGarrison.maxCount);
+assert.equal(garrisonReplenishment.status, "completed");
+
+sourceGarrison.count -= 1;
+const treasureBeforeOrphan = garrisonSettlement.treasure;
+api.queueReplenishment(garrisonData, { settlementId: garrisonSettlement.id, troopId: sourceGarrison.id, targetCount: 1 }, player);
+const orphanOrder = garrisonSettlement.recruitment.find(order => order.regimentId === sourceGarrison.id && order.status !== "completed");
+api.deleteBuilding(garrisonData, { settlementId: garrisonSettlement.id, buildingId: sourceBuilding.id }, gm);
+api.calculateSettlement(garrisonSettlement, garrisonData);
+api.processRecruitment(garrisonSettlement, garrisonData);
+assert.equal(orphanOrder.status, "completed");
+assert.equal(garrisonSettlement.treasure, treasureBeforeOrphan);
+assert.equal(garrisonSettlement.troops.some(troop => troop.sourceRecruitmentId === orphanOrder.id), false);
+
+// GM settlement modifiers support timed/hidden effects and permanent edits.
+api.addSettlementEffect(garrisonData, {
+  settlementId: garrisonSettlement.id,
+  name: "Royal Favor",
+  kind: "buff",
+  source: "Campaign",
+  visible: false,
+  remainingMonths: 3,
+  incomePercent: 15,
+  publicOrder: 4,
+  description: "A temporary campaign reward."
+}, gm);
+const royalFavor = garrisonSettlement.activeEffects[0];
+assert.equal(royalFavor.visible, false);
+assert.equal(royalFavor.effects.incomePercent, 15);
+assert.equal(royalFavor.remainingMonths, 3);
+api.updateSettlementEffect(garrisonData, {
+  settlementId: garrisonSettlement.id,
+  effectId: royalFavor.id,
+  name: royalFavor.name,
+  kind: "buff",
+  source: royalFavor.source,
+  permanent: true,
+  visible: true,
+  incomePercent: 10,
+  publicOrder: 2
+}, gm);
+assert.equal(royalFavor.permanent, true);
+assert.equal(royalFavor.remainingMonths, 0);
+assert.equal(royalFavor.visible, true);
+
+// Content wizards create linked building/unit chains and the regiment wizard places existing templates directly.
+const wizardData = freshWorld();
+const wizardSettlement = prepareSettlement(wizardData, 500);
+api.createBuildingWizard(wizardData, {
+  categoryId: "food",
+  nodes: [
+    { localId: "root", name: "Apiary", nodeTier: 1, foodOutput: 150, workers: 5 },
+    { localId: "child", name: "Royal Apiary", nodeTier: 2, parentRefs: ["root"], foodOutput: 400, workers: 10 }
+  ]
+}, gm);
+const apiary = wizardData.catalog.find(item => item.name === "Apiary");
+const royalApiary = wizardData.catalog.find(item => item.name === "Royal Apiary");
+assert.ok(apiary && royalApiary);
+assert.deepEqual([...royalApiary.parentIds], [apiary.id]);
+assert.equal(royalApiary.chainId, apiary.chainId);
+api.createUnitWizard(wizardData, {
+  categoryId: "infantry",
+  nodes: [
+    { localId: "root", name: "Household Levy", tier: 1, recruitCost: 200, sourceBuildingIds: ["muster-field"] },
+    { localId: "child", name: "Household Spear", tier: 2, parentRefs: ["root"], recruitCost: 500, sourceBuildingIds: ["infantry-yard"] }
+  ]
+}, gm);
+const householdLevy = wizardData.unitCatalog.find(item => item.name === "Household Levy");
+const householdSpear = wizardData.unitCatalog.find(item => item.name === "Household Spear");
+assert.deepEqual([...householdSpear.parentIds], [householdLevy.id]);
+assert.ok(wizardData.catalog.find(item => item.id === "muster-field").recruitableUnitIds.includes(householdLevy.id));
+api.createRegimentWizard(wizardData, { settlementId: wizardSettlement.id, unitId: householdSpear.id, name: "Red Spears", mode: "garrison", count: 7, maxCount: 10 }, gm);
+const directGarrison = wizardSettlement.troops.find(troop => troop.name === "Red Spears");
+assert.equal(directGarrison.mode, "garrison");
+assert.equal(directGarrison.freeUpkeep, false);
+assert.equal(directGarrison.usesManpower, true);
+
+api.addContentCategory(wizardData, { kind: "building", label: "Arcane Works", systemType: "economic", color: "#8b6fb5" }, gm);
+const arcaneWorks = wizardData.contentCategories.find(category => category.label === "Arcane Works");
+api.createBuildingWizard(wizardData, { categoryId: arcaneWorks.id, nodes: [{ name: "Rune Market", nodeTier: 1, flatOutput: 500 }] }, gm);
+const runeMarket = wizardData.catalog.find(item => item.name === "Rune Market");
+api.updateContentCategory(wizardData, { categoryId: arcaneWorks.id, categoryKind: "building", label: arcaneWorks.label, icon: arcaneWorks.icon, color: arcaneWorks.color, sort: arcaneWorks.sort, enabled: true, systemType: "military" }, gm);
+assert.equal(runeMarket.category, "military");
+assert.equal(runeMarket.slot, "military");
+
+// Content imports merge reusable records without replacing settlement instances.
+const settlementIdBeforeImport = wizardSettlement.id;
+api.importData(wizardData, {
+  importMode: "merge",
+  importData: {
+    format: "astargon-domain-system",
+    formatVersion: 1,
+    kind: "content",
+    content: {
+      contentCategories: [{ id: "arcane", kind: "unit", label: "Arcane", icon: "fa-wand-sparkles", color: "#8b6fb5", sort: 90, enabled: true, builtIn: false, systemType: "unit" }],
+      policyCatalog: [],
+      unitCatalog: [],
+      catalog: [],
+      eventCatalog: []
+    }
+  }
+}, gm);
+assert.equal(wizardData.settlements[0].id, settlementIdBeforeImport);
+assert.ok(wizardData.contentCategories.some(category => category.id === "arcane" && category.kind === "unit"));
+
+// Legacy price migration reprices old defaults while preserving deliberately customized rank costs.
 const stalePriceWorld = api.defaultWorldData();
 stalePriceWorld.schemaVersion = 10;
 for (const [tierId, crown] of Object.entries({ village: 100_000, town: 400_000, city: 1_500_000, metropolis: 5_000_000 })) {
@@ -655,11 +814,15 @@ assert.match(hbs, /Unique Units/);
 assert.match(hbs, /Recruitment Buildings/);
 assert.match(hbs, /Recruitment Landmarks/);
 assert.match(hbs, /Bonus District Slots/);
-assert.match(hbs, /Create a new Economic building template\?/);
 assert.match(hbs, /selected\.overviewDescription/);
 assert.match(hbs, /ds-regiment-settings/);
-assert.match(hbs, /does not resolve sieges, casualties, or battles/);
+assert.match(hbs, /battles remain a GM decision/);
 assert.match(hbs, /no building or recruitment-capacity requirement/);
+assert.match(hbs, /Garrison Regiments/);
+assert.ok(hbs.indexOf("Garrison Regiments") > hbs.indexOf("Raised Regiments"), "garrison regiments must remain below owned raised regiments");
+assert.match(hbs, /Settlement Buffs and Debuffs/);
+assert.match(hbs, /Export Content/);
+assert.match(hbs, /Building Wizard/);
 assert.match(hbs, /Starvation below 50% gives -3% Growth/);
 assert.match(hbs, /Unrest 0-24 gives -50% Crown/);
 assert.match(hbs, /Base Public Order/);
@@ -671,4 +834,4 @@ assert.match(css, /\.ds-regiment-strip\s*\{[\s\S]*grid-template-columns:\s*repea
 assert.match(css, /\.ds-regiment-settings-panel/);
 assert.match(css, /\.ds-slot-tree-nodes\s*\{[\s\S]*repeat\(var\(--tree-columns/);
 
-console.log("DS v0.1.15 logic tests passed");
+console.log("DS v0.1.16 logic tests passed");

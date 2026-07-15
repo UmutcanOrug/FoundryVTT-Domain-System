@@ -1,0 +1,143 @@
+<div class="ds-workshop">
+  <header class="ds-workshop-header">
+    <div class="ds-workshop-mark"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+    <div>
+      <p>DS CONTENT WORKSHOP</p>
+      <h1>{{title}}</h1>
+      <span>{{subtitle}}</span>
+    </div>
+  </header>
+
+  <form data-workshop-form data-workshop-action="{{action}}">
+    {{#if isRegiment}}
+      <section class="ds-workshop-panel ds-workshop-regiment">
+        <div class="ds-section-heading"><h2><i class="fa-solid fa-shield-halved"></i> Regiment Record</h2><span>Direct GM placement</span></div>
+        <div class="ds-form-grid ds-workshop-regiment-grid">
+          <label>Settlement<select name="settlementId">{{#each settlements}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} / {{tier}}</option>{{/each}}</select></label>
+          <label>Unit Template<select name="unitId">{{#each units}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} / Tier {{tier}}</option>{{/each}}</select></label>
+          <label>Regiment Name<input type="text" name="name" placeholder="Uses the unit name when blank"></label>
+          <label>Assignment<select name="mode"><option value="raised" selected>Raised Force</option><option value="garrison">Garrison</option></select></label>
+          <label>Current Strength<input type="number" name="count" min="0" step="1" value="10"></label>
+          <label>Maximum Strength<input type="number" name="maxCount" min="1" step="1" value="10"></label>
+          <label class="ds-span-2">Regiment Image<div class="ds-input-action"><input type="text" name="imageUrl" placeholder="path or URL"><button type="button" data-file-picker="" title="Choose image"><i class="fa-solid fa-image"></i></button></div></label>
+          <label class="ds-span-2">Foundry Actor UUID<input type="text" name="actorUuid" data-actor-drop placeholder="Drop an Actor here"></label>
+          <label class="ds-span-2">Notes<textarea name="notes" rows="4"></textarea></label>
+        </div>
+        <div class="ds-workshop-submit"><span>This creates a regiment immediately; it does not spend Crown or Recruitment Capacity.</span><button type="submit"><i class="fa-solid fa-plus"></i><span>Add Regiment</span></button></div>
+      </section>
+    {{else}}
+      <nav class="ds-workshop-steps" aria-label="Wizard steps">
+        <button type="button" class="active" data-workshop-step="1"><b>1</b><span>Family</span></button>
+        <button type="button" data-workshop-step="2"><b>2</b><span>Nodes</span></button>
+        <button type="button" data-workshop-step="3"><b>3</b><span>Review</span></button>
+      </nav>
+
+      <section class="ds-workshop-panel" data-workshop-panel="1">
+        <div class="ds-section-heading"><h2>{{#if isBuilding}}Building Category{{else}}Unit Family{{/if}}</h2><span>Controls color, library group, and rules role</span></div>
+        <div class="ds-workshop-category-grid">
+          {{#if isBuilding}}
+            {{#each buildingCategories}}
+              <label class="ds-workshop-category" style="{{style}}"><input type="radio" name="categoryId" value="{{id}}" {{#if selected}}checked{{/if}}><i class="fa-solid {{icon}}"></i><strong>{{label}}</strong><span>{{kindLabel}}</span></label>
+            {{/each}}
+          {{else}}
+            {{#each unitCategories}}
+              <label class="ds-workshop-category" style="{{style}}"><input type="radio" name="categoryId" value="{{id}}" {{#if selected}}checked{{/if}}><i class="fa-solid {{icon}}"></i><strong>{{label}}</strong><span>Unit family</span></label>
+            {{/each}}
+          {{/if}}
+        </div>
+        <div class="ds-workshop-next"><button type="button" data-workshop-step="2"><span>Define Nodes</span><i class="fa-solid fa-arrow-right"></i></button></div>
+      </section>
+
+      <section class="ds-workshop-panel" data-workshop-panel="2" hidden>
+        <div class="ds-section-heading"><h2>{{#if isBuilding}}Building Chain{{else}}Unit Progression{{/if}}</h2><button type="button" data-add-workshop-node><i class="fa-solid fa-plus"></i><span>Add Node</span></button></div>
+        <div class="ds-workshop-node-list" data-workshop-node-list>
+          <article class="ds-workshop-node" data-workshop-node data-local-id="node-initial">
+            <header><div><span>CHAIN NODE</span><h3 data-workshop-node-title>New Node / Tier 1</h3></div><button type="button" data-remove-workshop-node title="Remove node"><i class="fa-solid fa-trash"></i></button></header>
+            <div class="ds-form-grid">
+              <label>Name<input type="text" data-node-field="name" value="" placeholder="{{#if isBuilding}}Building name{{else}}Unit name{{/if}}" required></label>
+              {{#if isBuilding}}<label>Tier<select data-node-field="nodeTier"><option value="1">Tier 1 / Hamlet</option><option value="2">Tier 2 / Village</option><option value="3">Tier 3 / Town</option><option value="4">Tier 4 / City</option><option value="5">Tier 5 / Metropolis</option></select></label>{{else}}<label>Tier<select data-node-field="tier"><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option><option value="4">Tier 4</option><option value="5">Tier 5</option></select></label>{{/if}}
+              <label>Parent<select data-node-field="parentRefs"><option value="">Branch root</option></select></label>
+              <label>Internal ID<input type="text" data-node-field="id" placeholder="Generated from name"></label>
+              <label class="ds-span-2">Image<div class="ds-input-action"><input type="text" data-node-field="imageUrl" placeholder="path or URL"><button type="button" data-file-picker="" title="Choose image"><i class="fa-solid fa-image"></i></button></div></label>
+              <label class="ds-span-2">Description<textarea data-node-field="description" rows="3" placeholder="What this choice does and why a player would choose it"></textarea></label>
+            </div>
+            {{#if isBuilding}}
+              <details><summary>Economy and Construction</summary><div class="ds-form-grid ds-workshop-stats">
+                <label>Required POP<input type="number" data-node-field="workers" min="0" step="1" value="0"></label>
+                <label>Crown / Worker<input type="number" data-node-field="rate" min="0" step="1" value="0"></label>
+                <label>Flat Crown<input type="number" data-node-field="flatOutput" step="1" value="0"></label>
+                <label>Food Output<input type="number" data-node-field="foodOutput" step="1" value="0"></label>
+                <label>Materials Output<input type="number" data-node-field="materialsOutput" step="1" value="0"></label>
+                <label>Monthly Upkeep<input type="number" data-node-field="buildingUpkeep" min="0" step="1" value="0"></label>
+                <label>Crown Cost<input type="number" data-node-field="crownCost" min="0" step="1" value="0"></label>
+                <label>Materials Cost<input type="number" data-node-field="materialCost" min="0" step="1" value="0"></label>
+                <label>Construction CP<input type="number" data-node-field="cpCost" min="0" step="1" value="0"></label>
+                <label>District Slots<input type="number" data-node-field="slotUse" min="0" max="10" step="1" value="1"></label>
+                <label>Bonus Slots<input type="number" data-node-field="bonusSlots" min="0" step="1" value="0"></label>
+                <label>Growth %<input type="number" data-node-field="growth" step="0.05" value="0"></label>
+                <label>Public Order<input type="number" data-node-field="publicOrder" step="1" value="0"></label>
+                <label>Settlement Crown %<input type="number" data-node-field="incomeBonusPercent" step="1" value="0"></label>
+                <label>Building Upkeep Discount %<input type="number" data-node-field="buildingUpkeepDiscount" min="0" max="90" step="1" value="0"></label>
+                <label>Army Upkeep Discount %<input type="number" data-node-field="upkeepDiscount" min="0" max="90" step="1" value="0"></label>
+                <label>Building Crown Discount %<input type="number" data-node-field="constructionCrownDiscount" min="0" max="90" step="1" value="0"></label>
+                <label>Building Materials Discount %<input type="number" data-node-field="constructionMaterialsDiscount" min="0" max="90" step="1" value="0"></label>
+                <label>Construction CP Bonus %<input type="number" data-node-field="constructionCpPercent" min="0" step="1" value="0"></label>
+              </div></details>
+              <details><summary>Military and Garrison</summary><div class="ds-form-grid ds-workshop-stats">
+                <label>Recruitment / Month<input type="number" data-node-field="recruitPerLevel" min="0" step="1" value="0"></label>
+                <label>Recruitment Discount %<input type="number" data-node-field="recruitmentDiscount" min="0" max="90" step="1" value="0"></label>
+                <label>Siege Defense %<input type="number" data-node-field="siegeDefensePercent" min="0" max="100" step="1" value="0"></label>
+                <label>Free Garrison<input type="text" data-node-field="garrisonUnits" placeholder="militia:20, archer:10"></label>
+                <label class="ds-span-2">Recruitable Units<select data-node-field="recruitableUnitIds" multiple size="5">{{#each units}}<option value="{{id}}">T{{tier}} / {{name}}</option>{{/each}}</select></label>
+                <label class="ds-check"><input type="checkbox" data-node-field="canRecruit"><span>Provides recruitment capacity</span></label>
+                <label class="ds-check"><input type="checkbox" data-node-field="special"><span>Special marker</span></label>
+                <label class="ds-check"><input type="checkbox" data-node-field="landmark"><span>Tierless landmark</span></label>
+                <label class="ds-check"><input type="checkbox" data-node-field="gmOnly"><span>GM-only construction</span></label>
+              </div></details>
+            {{else}}
+              <div class="ds-form-grid ds-workshop-stats">
+                <label>Recruit Cost<input type="number" data-node-field="recruitCost" min="0" step="1" value="500"></label>
+                <label>Power / Soldier<input type="number" data-node-field="power" min="0.1" step="0.1" value="2"></label>
+                <label>Food / Soldier<input type="number" data-node-field="foodUpkeep" min="0" step="0.05" value="0.5"></label>
+                <label>Settlement Limit<input type="number" data-node-field="maxPerSettlement" min="0" step="1" value="0"></label>
+                <label class="ds-span-2">Recruitment Sources<select data-node-field="sourceBuildingIds" multiple size="6">{{#each buildings}}<option value="{{id}}">{{name}} / {{#if landmark}}Landmark{{else}}Tier {{nodeTier}}{{/if}}</option>{{/each}}</select></label>
+                <label class="ds-span-2">Foundry Actor UUID<input type="text" data-node-field="actorUuid" data-actor-drop placeholder="Drop an Actor here"></label>
+              </div>
+            {{/if}}
+          </article>
+        </div>
+
+        <template data-workshop-node-template>
+          <article class="ds-workshop-node" data-workshop-node>
+            <header><div><span>CHAIN NODE</span><h3 data-workshop-node-title>New Node</h3></div><button type="button" data-remove-workshop-node title="Remove node"><i class="fa-solid fa-trash"></i></button></header>
+            <div class="ds-form-grid">
+              <label>Name<input type="text" data-node-field="name" placeholder="{{#if isBuilding}}Building name{{else}}Unit name{{/if}}" required></label>
+              {{#if isBuilding}}<label>Tier<select data-node-field="nodeTier"><option value="1">Tier 1 / Hamlet</option><option value="2">Tier 2 / Village</option><option value="3">Tier 3 / Town</option><option value="4">Tier 4 / City</option><option value="5">Tier 5 / Metropolis</option></select></label>{{else}}<label>Tier<select data-node-field="tier"><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option><option value="4">Tier 4</option><option value="5">Tier 5</option></select></label>{{/if}}
+              <label>Parent<select data-node-field="parentRefs"><option value="">Branch root</option></select></label>
+              <label>Internal ID<input type="text" data-node-field="id" placeholder="Generated from name"></label>
+              <label class="ds-span-2">Image<div class="ds-input-action"><input type="text" data-node-field="imageUrl" placeholder="path or URL"><button type="button" data-file-picker="" title="Choose image"><i class="fa-solid fa-image"></i></button></div></label>
+              <label class="ds-span-2">Description<textarea data-node-field="description" rows="3"></textarea></label>
+            </div>
+            {{#if isBuilding}}
+              <details><summary>Economy and Construction</summary><div class="ds-form-grid ds-workshop-stats">
+                <label>Required POP<input type="number" data-node-field="workers" min="0" value="0"></label><label>Crown / Worker<input type="number" data-node-field="rate" min="0" value="0"></label><label>Flat Crown<input type="number" data-node-field="flatOutput" value="0"></label><label>Food Output<input type="number" data-node-field="foodOutput" value="0"></label><label>Materials Output<input type="number" data-node-field="materialsOutput" value="0"></label><label>Monthly Upkeep<input type="number" data-node-field="buildingUpkeep" min="0" value="0"></label><label>Crown Cost<input type="number" data-node-field="crownCost" min="0" value="0"></label><label>Materials Cost<input type="number" data-node-field="materialCost" min="0" value="0"></label><label>Construction CP<input type="number" data-node-field="cpCost" min="0" value="0"></label><label>District Slots<input type="number" data-node-field="slotUse" min="0" value="1"></label><label>Bonus Slots<input type="number" data-node-field="bonusSlots" min="0" value="0"></label><label>Growth %<input type="number" data-node-field="growth" step="0.05" value="0"></label><label>Public Order<input type="number" data-node-field="publicOrder" value="0"></label><label>Settlement Crown %<input type="number" data-node-field="incomeBonusPercent" value="0"></label><label>Building Upkeep Discount %<input type="number" data-node-field="buildingUpkeepDiscount" value="0"></label><label>Army Upkeep Discount %<input type="number" data-node-field="upkeepDiscount" value="0"></label><label>Building Crown Discount %<input type="number" data-node-field="constructionCrownDiscount" value="0"></label><label>Building Materials Discount %<input type="number" data-node-field="constructionMaterialsDiscount" value="0"></label><label>Construction CP Bonus %<input type="number" data-node-field="constructionCpPercent" value="0"></label>
+              </div></details>
+              <details><summary>Military and Garrison</summary><div class="ds-form-grid ds-workshop-stats">
+                <label>Recruitment / Month<input type="number" data-node-field="recruitPerLevel" min="0" value="0"></label><label>Recruitment Discount %<input type="number" data-node-field="recruitmentDiscount" value="0"></label><label>Siege Defense %<input type="number" data-node-field="siegeDefensePercent" value="0"></label><label>Free Garrison<input type="text" data-node-field="garrisonUnits" placeholder="militia:20"></label><label class="ds-span-2">Recruitable Units<select data-node-field="recruitableUnitIds" multiple size="5">{{#each units}}<option value="{{id}}">T{{tier}} / {{name}}</option>{{/each}}</select></label><label class="ds-check"><input type="checkbox" data-node-field="canRecruit"><span>Provides recruitment capacity</span></label><label class="ds-check"><input type="checkbox" data-node-field="special"><span>Special marker</span></label><label class="ds-check"><input type="checkbox" data-node-field="landmark"><span>Tierless landmark</span></label><label class="ds-check"><input type="checkbox" data-node-field="gmOnly"><span>GM-only construction</span></label>
+              </div></details>
+            {{else}}
+              <div class="ds-form-grid ds-workshop-stats"><label>Recruit Cost<input type="number" data-node-field="recruitCost" min="0" value="500"></label><label>Power / Soldier<input type="number" data-node-field="power" min="0.1" step="0.1" value="2"></label><label>Food / Soldier<input type="number" data-node-field="foodUpkeep" min="0" step="0.05" value="0.5"></label><label>Settlement Limit<input type="number" data-node-field="maxPerSettlement" min="0" value="0"></label><label class="ds-span-2">Recruitment Sources<select data-node-field="sourceBuildingIds" multiple size="6">{{#each buildings}}<option value="{{id}}">{{name}} / {{#if landmark}}Landmark{{else}}Tier {{nodeTier}}{{/if}}</option>{{/each}}</select></label><label class="ds-span-2">Foundry Actor UUID<input type="text" data-node-field="actorUuid" data-actor-drop></label></div>
+            {{/if}}
+          </article>
+        </template>
+        <div class="ds-workshop-next"><button type="button" data-workshop-step="1"><i class="fa-solid fa-arrow-left"></i><span>Family</span></button><button type="button" data-workshop-step="3"><span>Review Chain</span><i class="fa-solid fa-arrow-right"></i></button></div>
+      </section>
+
+      <section class="ds-workshop-panel" data-workshop-panel="3" hidden>
+        <div class="ds-section-heading"><h2>Review</h2><span>All nodes are saved together or none are saved</span></div>
+        <ol class="ds-workshop-review" data-workshop-review></ol>
+        <div class="ds-workshop-submit"><button type="button" data-workshop-step="2"><i class="fa-solid fa-arrow-left"></i><span>Edit Nodes</span></button><button type="submit"><i class="fa-solid fa-floppy-disk"></i><span>{{#if isBuilding}}Create Building Chain{{else}}Create Unit Tree{{/if}}</span></button></div>
+      </section>
+    {{/if}}
+  </form>
+</div>

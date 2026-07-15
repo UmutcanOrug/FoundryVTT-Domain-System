@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.16
+
+- Replaced reference-only auto-garrisons with real building-sourced Settlement Garrison regiments. Their Current/Maximum Strength and casualties persist, active garrisons consume Food and add Defense Power, and halted source buildings temporarily disable them.
+- Added garrison replenishment using Crown and Manpower Reserve at month end without a building or Recruitment Capacity requirement. Building upgrades preserve casualties and add only newly granted soldiers; orphaned orders refund their reserved resources safely.
+- Split Overview and Recruitment into Raised Forces and Settlement Garrison displays. The full editable Garrison Regiments section now appears beneath the player's owned raised regiments at the bottom of Recruitment.
+- Added guided Building Chain, Unit Tree, and Add Regiment workshops with linked nodes, review steps, complete stats, images, Actor UUID drag/drop, and raised/garrison placement.
+- Added editable content categories with custom names, colors, icons, order, Economic/Military type changes, and safe deletion rules. Built-in categories remain resettable foundations.
+- Added editable built-in and custom policies with rank availability and complete economic, Growth, Order, Food, manpower, recruitment, upkeep, and event modifiers.
+- Added settlement-specific GM buffs and debuffs with timed/permanent duration, public/GM-only visibility, and month-end expiration.
+- Added reusable Content export/import and full World Backup/restore JSON workflows. Content merge/replace does not overwrite settlements; full restore requires explicit confirmation.
+- Added schema v12 migration preserving existing settlements and treating pre-v12 regiments as Raised while generating the new building-sourced garrison records.
+- Expanded automated migration, garrison, replenishment, custom-category, custom-policy/effect, workshop, import, responsive-template, and balance coverage.
+
 ## 0.1.15
 
 - Divided the default Crown promotion prices by five: Village `20,000`, Town `80,000`, City `300,000`, and Metropolis `1,000,000`. Existing deliberately customized promotion costs remain unchanged during migration.

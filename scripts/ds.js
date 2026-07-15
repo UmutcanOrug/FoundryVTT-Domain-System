@@ -3,10 +3,13 @@ const DATA_SETTING = "worldData";
 const CLIENT_SETTING = "clientState";
 const SOCKET_NAME = `module.${MODULE_ID}`;
 const TEMPLATE_PATH = `modules/${MODULE_ID}/templates/ds-panel.hbs`;
+const WORKSHOP_TEMPLATE_PATH = `modules/${MODULE_ID}/templates/ds-workshop.hbs`;
 const ACTION_CONFIRM_TIMEOUT_MS = 15000;
 const DIRECT_RECRUITMENT_SOURCE = "__direct__";
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 12;
+const EXPORT_FORMAT_VERSION = 1;
 const DISTRICT_PAGE_SIZE = 8;
+const CATALOG_KINDS = ["buildings", "units", "events", "categories", "policies"];
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "fa-map" },
@@ -63,6 +66,33 @@ const UNIT_BRANCHES = [
   { id: "siege", label: "Siege", icon: "fa-hammer", color: "silver" },
   { id: "unique", label: "Unique Units", icon: "fa-crown", color: "gold" }
 ];
+
+const BRANCH_COLORS = {
+  green: "#6ea878",
+  silver: "#aeb7bc",
+  gold: "#c9a64f",
+  teal: "#55a59a",
+  red: "#b45454"
+};
+
+const BASE_CONTENT_CATEGORIES = [
+  ...BRANCHES.map((item, index) => ({
+    ...item,
+    kind: "building",
+    systemType: ["recruitment", "defense", "siege"].includes(item.id) ? "military" : "economic",
+    builtIn: true,
+    sort: index * 10
+  })),
+  ...UNIT_BRANCHES.map((item, index) => ({
+    ...item,
+    kind: "unit",
+    systemType: "unit",
+    builtIn: true,
+    sort: index * 10
+  }))
+];
+
+let runtimeContentCategories = BASE_CONTENT_CATEGORIES.map(item => ({ ...item }));
 
 const PUBLIC_ORDER_BANDS = [
   { id: "unrest", label: "Unrest", min: 0, max: 24, growth: -1, incomePercent: -50, eventRoll: -5, className: "ds-bad" },
@@ -283,6 +313,7 @@ const EVENT_CATALOG = [
 ];
 
 let dsApp = null;
+let contentWorkshopApp = null;
 const pendingActionRequests = new Map();
 let actionQueue = Promise.resolve();
 
@@ -315,16 +346,25 @@ function policy(id, name, settlementTier, description, effects = {}) {
       flatPopulation: 0,
       publicOrder: 0,
       eventRoll: 0,
+      foodOutputPercent: 0,
+      materialsOutputPercent: 0,
+      constructionPercent: 0,
+      recruitmentCostPercent: 0,
+      recruitmentCapacityPercent: 0,
+      manpowerRecoveryPercent: 0,
       ...effects
-    }
+    },
+    enabled: true
   };
 }
 
-function policyFor(value, settlementTier = "metropolis") {
+function policyFor(value, settlementTier = "metropolis", policyCatalog = POLICY_OPTIONS) {
   const tierIndex = Math.max(0, SETTLEMENT_TIER_IDS.indexOf(settlementTierValue(settlementTier)));
-  const candidate = POLICY_OPTIONS.find(item => item.id === cleanString(value)) || POLICY_OPTIONS[0];
+  const catalog = Array.isArray(policyCatalog) && policyCatalog.length ? policyCatalog : POLICY_OPTIONS;
+  const fallback = catalog.find(item => item.id === "balanced") || catalog[0] || POLICY_OPTIONS[0];
+  const candidate = catalog.find(item => item.id === cleanString(value) && item.enabled !== false) || fallback;
   const requiredIndex = Math.max(0, SETTLEMENT_TIER_IDS.indexOf(candidate.settlementTier));
-  return requiredIndex <= tierIndex ? candidate : POLICY_OPTIONS[0];
+  return requiredIndex <= tierIndex ? candidate : fallback;
 }
 
 function unit(id, name, recruitCost, power, tier, foodUpkeep, description, extra = {}) {
@@ -515,7 +555,7 @@ function mil(id, name, workers, crownCost, cpCost, extra = {}) {
 }
 
 function describeBuilding(building) {
-  const branch = BRANCHES.find(item => item.id === building.branch || item.id === building.chainId);
+  const branch = contentCategoryById(building.branch || building.chainId, "building") || branchMeta(building.branch || building.chainId, building.category);
   const effects = [];
   if (Number(building.rate || 0) > 0) effects.push(`${formatNumber(building.rate)} Crown per assigned POP`);
   if (Number(building.flatOutput || 0) > 0) effects.push(`${formatNumber(building.flatOutput)} flat Crown`);
@@ -621,13 +661,255 @@ class DomainSystemApplication extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 }
 
+class ContentWorkshopApplication extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "ds-content-workshop",
+    classes: ["ds-window", "ds-workshop-window"],
+    tag: "section",
+    window: {
+      title: "DS: Content Workshop",
+      icon: "fa-solid fa-wand-magic-sparkles",
+      resizable: true
+    },
+    position: {
+      width: 1120,
+      height: 780
+    }
+  };
+
+  static PARTS = {
+    body: {
+      template: WORKSHOP_TEMPLATE_PATH
+    }
+  };
+
+  constructor(options = {}) {
+    super(options);
+    this.workshopKind = ["building", "unit", "regiment"].includes(options.workshopKind) ? options.workshopKind : "building";
+    this.settlementId = cleanString(options.settlementId);
+  }
+
+  async _prepareContext(options) {
+    const context = await super._prepareContext(options);
+    return Object.assign(context, buildWorkshopContext(getWorldData(), this.workshopKind, this.settlementId));
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    activateWorkshopListeners(this.element, this);
+  }
+
+  async close(options = {}) {
+    contentWorkshopApp = null;
+    return super.close(options);
+  }
+}
+
 function exposeApi() {
   globalThis.DS = {
     open: openDsPanel,
     close: closeDsPanel,
     toggle: toggleDsPanel,
-    getData: getWorldData
+    getData: getWorldData,
+    exportWorld: exportWorldBackup,
+    exportContent: exportContentPack
   };
+}
+
+function openContentWorkshop(kind, settlementId = "") {
+  if (!game.user?.isGM) {
+    ui.notifications.warn("DS: Only a GM can open the Content Workshop.");
+    return false;
+  }
+  if (contentWorkshopApp?.rendered) contentWorkshopApp.close();
+  contentWorkshopApp = new ContentWorkshopApplication({
+    workshopKind: kind,
+    settlementId,
+    position: {
+      width: Math.max(520, Math.min(1120, (globalThis.innerWidth || 1280) - 36)),
+      height: Math.max(560, Math.min(780, (globalThis.innerHeight || 840) - 36))
+    }
+  });
+  return contentWorkshopApp.render(true);
+}
+
+function exportEnvelope(kind, payload) {
+  return {
+    format: "astargon-domain-system",
+    formatVersion: EXPORT_FORMAT_VERSION,
+    kind,
+    moduleVersion: game.modules.get(MODULE_ID)?.version || "unknown",
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    ...payload
+  };
+}
+
+function exportWorldBackup() {
+  if (!game.user?.isGM) return ui.notifications.warn("DS: Only a GM can export world data.");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  downloadJson(exportEnvelope("world", { worldData: getWorldData() }), `ads-world-${stamp}.json`);
+}
+
+function exportContentPack() {
+  if (!game.user?.isGM) return ui.notifications.warn("DS: Only a GM can export content.");
+  const data = getWorldData();
+  const content = {
+    contentCategories: data.contentCategories,
+    policyCatalog: data.policyCatalog,
+    catalog: data.catalog,
+    unitCatalog: data.unitCatalog,
+    eventCatalog: data.eventCatalog
+  };
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  downloadJson(exportEnvelope("content", { content }), `ads-content-${stamp}.json`);
+}
+
+function downloadJson(value, filename) {
+  const json = JSON.stringify(value, null, 2);
+  const saver = globalThis.saveDataToFile || foundry?.utils?.saveDataToFile;
+  if (typeof saver === "function") {
+    saver(json, "application/json", filename);
+    return;
+  }
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildWorkshopContext(data, kind, settlementId = "") {
+  const settlement = data.settlements.find(item => item.id === settlementId) || data.settlements[0];
+  const buildingCategories = contentCategoriesFor("building").map((item, index) => ({ ...contentCategoryContext(item), selected: index === 0 }));
+  const unitCategories = contentCategoriesFor("unit").map((item, index) => ({ ...contentCategoryContext(item), selected: index === 0 }));
+  return {
+    kind,
+    isBuilding: kind === "building",
+    isUnit: kind === "unit",
+    isRegiment: kind === "regiment",
+    title: kind === "building" ? "Building Chain Wizard" : kind === "unit" ? "Unit Tree Wizard" : "Add Regiment Wizard",
+    subtitle: kind === "building"
+      ? "Create one building or an entire five-tier branch in a single transaction."
+      : kind === "unit" ? "Build a readable unit progression and assign its recruitment sources." : `Add a catalog unit directly to ${settlement?.name || "a settlement"}.`,
+    action: kind === "building" ? "createBuildingWizard" : kind === "unit" ? "createUnitWizard" : "createRegimentWizard",
+    buildingCategories,
+    unitCategories,
+    units: data.unitCatalog.filter(item => item.enabled).map((item, index) => ({ ...item, selected: index === 0 })),
+    buildings: data.catalog.filter(item => item.enabled).sort((a, b) => a.name.localeCompare(b.name)),
+    settlements: data.settlements.map(item => ({ ...item, selected: item.id === settlement?.id })),
+    settlementId: settlement?.id || "",
+    defaultModeRaised: true
+  };
+}
+
+function activateWorkshopListeners(element, application) {
+  const root = element.querySelector(".ds-workshop");
+  const form = root?.querySelector("[data-workshop-form]");
+  if (!root || !form) return;
+
+  const cards = () => Array.from(form.querySelectorAll("[data-workshop-node]"));
+  const collectNode = card => {
+    const node = { localId: card.dataset.localId };
+    card.querySelectorAll("[data-node-field]").forEach(input => {
+      const key = input.dataset.nodeField;
+      if (input.type === "checkbox") node[key] = input.checked;
+      else if (input.multiple) node[key] = Array.from(input.selectedOptions, option => option.value).filter(Boolean);
+      else node[key] = input.value;
+    });
+    return node;
+  };
+  const collectNodes = () => cards().map(collectNode);
+  const refreshParents = () => {
+    const allCards = cards();
+    allCards.forEach((card, index) => {
+      const select = card.querySelector('[data-node-field="parentRefs"]');
+      if (!select) return;
+      const selected = select.value;
+      const options = ['<option value="">Branch root</option>'];
+      for (const previous of allCards.slice(0, index)) {
+        const name = cleanString(previous.querySelector('[data-node-field="name"]')?.value) || `Node ${allCards.indexOf(previous) + 1}`;
+        options.push(`<option value="${escapeHtml(previous.dataset.localId)}">${escapeHtml(name)}</option>`);
+      }
+      select.innerHTML = options.join("");
+      if (Array.from(select.options).some(option => option.value === selected)) select.value = selected;
+    });
+  };
+  const refreshLabels = () => {
+    cards().forEach((card, index) => {
+      const name = cleanString(card.querySelector('[data-node-field="name"]')?.value) || `Node ${index + 1}`;
+      const tier = card.querySelector('[data-node-field="nodeTier"], [data-node-field="tier"]')?.value || index + 1;
+      const title = card.querySelector("[data-workshop-node-title]");
+      if (title) title.textContent = `${name} / Tier ${tier}`;
+    });
+    refreshParents();
+    const review = form.querySelector("[data-workshop-review]");
+    if (review) review.innerHTML = collectNodes().map((node, index) => `<li><strong>${escapeHtml(node.name || `Node ${index + 1}`)}</strong><span>Tier ${escapeHtml(node.nodeTier || node.tier || index + 1)}</span></li>`).join("");
+  };
+  const bindNode = card => {
+    if (!card.dataset.localId) card.dataset.localId = `node-${randomId().toLowerCase()}`;
+    card.querySelectorAll("input, select, textarea").forEach(input => input.addEventListener("input", refreshLabels));
+    card.querySelector("[data-remove-workshop-node]")?.addEventListener("click", () => {
+      if (cards().length <= 1) return ui.notifications.warn("DS: Keep at least one node in the wizard.");
+      card.remove();
+      refreshLabels();
+    });
+    card.querySelectorAll("[data-file-picker]").forEach(button => button.addEventListener("click", event => {
+      event.preventDefault();
+      openImagePicker(event.currentTarget);
+    }));
+  };
+  cards().forEach(bindNode);
+  root.querySelectorAll("[data-actor-drop]").forEach(input => {
+    input.addEventListener("dragover", event => event.preventDefault());
+    input.addEventListener("drop", async event => {
+      event.preventDefault();
+      let dragData = {};
+      try {
+        dragData = globalThis.TextEditor?.getDragEventData?.(event) || JSON.parse(event.dataTransfer?.getData("text/plain") || "{}");
+      } catch (_error) {
+        dragData = {};
+      }
+      const uuid = cleanString(dragData.uuid || (dragData.type === "Actor" ? `Actor.${dragData.id}` : ""));
+      if (!uuid || !globalThis.fromUuid) return;
+      const actor = await globalThis.fromUuid(uuid);
+      if (actor?.documentName !== "Actor" && actor?.constructor?.metadata?.name !== "Actor") {
+        ui.notifications.warn("DS: Drop an Actor here.");
+        return;
+      }
+      input.value = uuid;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+  form.querySelector("[data-add-workshop-node]")?.addEventListener("click", () => {
+    const template = form.querySelector("template[data-workshop-node-template]");
+    const fragment = template?.content.cloneNode(true);
+    const card = fragment?.querySelector?.("[data-workshop-node]");
+    if (!card) return;
+    const index = cards().length;
+    card.dataset.localId = `node-${randomId().toLowerCase()}`;
+    const tier = card.querySelector('[data-node-field="nodeTier"], [data-node-field="tier"]');
+    if (tier) tier.value = String(Math.min(5, index + 1));
+    form.querySelector("[data-workshop-node-list]")?.append(fragment);
+    bindNode(form.querySelector("[data-workshop-node-list]")?.lastElementChild);
+    refreshLabels();
+  });
+  root.querySelectorAll("[data-workshop-step]").forEach(button => button.addEventListener("click", () => {
+    const step = button.dataset.workshopStep;
+    root.querySelectorAll("[data-workshop-panel]").forEach(panel => panel.hidden = panel.dataset.workshopPanel !== step);
+    root.querySelectorAll("[data-workshop-step]").forEach(item => item.classList.toggle("active", item.dataset.workshopStep === step));
+    refreshLabels();
+  }));
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const payload = formPayload(form);
+    if (application.workshopKind !== "regiment") payload.nodesJson = JSON.stringify(collectNodes());
+    const success = await sendAction(form.dataset.workshopAction, payload);
+    if (success !== false) await application.close();
+  });
+  refreshLabels();
 }
 
 function openDsPanel() {
@@ -718,6 +1000,8 @@ function buildContext(rawData) {
     catalogBuildingsActive: uiState.catalogKind === "buildings",
     catalogUnitsActive: uiState.catalogKind === "units",
     catalogEventsActive: uiState.catalogKind === "events",
+    catalogCategoriesActive: uiState.catalogKind === "categories",
+    catalogPoliciesActive: uiState.catalogKind === "policies",
     tabs,
     settlements: filtered.map(settlement => settlementListContext(settlement, data)),
     selected: selected ? selectedContext(selected, data, isGM) : null,
@@ -758,8 +1042,12 @@ function buildContext(rawData) {
     projectStatuses: PROJECT_STATUSES,
     recruitmentStatuses: RECRUITMENT_STATUSES,
     troopTypes: data.unitCatalog,
-    branches: BRANCHES,
-    policies: POLICY_OPTIONS.map(item => ({ ...item, tierLabel: tierName(item.settlementTier, data.rules) })),
+    branches: contentCategoriesFor("building"),
+    contentCategories: data.contentCategories.map(contentCategoryContext),
+    buildingContentCategories: data.contentCategories.filter(item => item.kind === "building").map(contentCategoryContext),
+    unitContentCategories: data.contentCategories.filter(item => item.kind === "unit").map(contentCategoryContext),
+    policies: data.policyCatalog.map(item => policyContext(item, data.rules)),
+    policyCatalog: data.policyCatalog.map(item => policyContext(item, data.rules)),
     hasVisibleSettlements: allVisible.length > 0
   };
 }
@@ -801,7 +1089,9 @@ function selectedContext(settlement, data, isGM) {
   const warnings = buildWarnings(settlement, data, summary);
   const note = settlement.turnNotes[game.user.id] || { text: "", authorName: game.user.name || "Player", updated: 0 };
   const buildingCards = settlement.buildings.map(building => buildingContext(building, settlement, data, permissions));
-  const troopCards = settlement.troops.map(troop => troopContext(troop, settlement, permissions, data.unitCatalog, data.rules, isGM));
+  const troopCards = settlement.troops.map(troop => troopContext(troop, settlement, permissions, data.unitCatalog, data.rules, isGM, data));
+  const raisedTroops = troopCards.filter(troop => troop.mode !== "garrison");
+  const garrisonTroops = troopCards.filter(troop => troop.mode === "garrison");
   const projects = settlement.projects.map((project, index) => projectContext(project, summary, permissions, settlement, data, index));
   const recruitment = settlement.recruitment.map(order => recruitmentContext(order, settlement, permissions, data.unitCatalog, isGM));
   const slots = settlementSlotsContext(settlement, data, permissions, summary, isGM);
@@ -828,6 +1118,10 @@ function selectedContext(settlement, data, isGM) {
     manpowerReserveValue: settlement.manpowerReserve,
     buildings: buildingCards,
     troops: troopCards,
+    raisedTroops,
+    garrisonTroops,
+    hasRaisedTroops: raisedTroops.length > 0,
+    hasGarrisonTroops: garrisonTroops.length > 0,
     economicBuildings: buildingCards.filter(building => building.category === "economic"),
     militaryBuildings: buildingCards.filter(building => building.category === "military"),
     specialBuildings: buildingCards.filter(building => building.special),
@@ -835,8 +1129,9 @@ function selectedContext(settlement, data, isGM) {
     hasLandmarks: buildingCards.some(building => building.landmark),
     tierLabel: tierName(settlement.tier, data.rules),
     overviewDescription: settlementOverviewDescription(settlement),
-    policy: policyFor(settlement.policyId, settlement.tier),
-    policyOptions: POLICY_OPTIONS
+    policy: policyFor(settlement.policyId, settlement.tier, data.policyCatalog),
+    policyOptions: data.policyCatalog
+      .filter(item => item.enabled !== false)
       .filter(item => tierIndex(item.settlementTier) <= tierIndex(settlement.tier))
       .map(item => ({ ...item, selected: item.id === settlement.policyId, tierLabel: tierName(item.settlementTier, data.rules) })),
     coreName: tierRuleFor(settlement.tier, data.rules).coreName,
@@ -858,7 +1153,7 @@ function selectedContext(settlement, data, isGM) {
     completedRecruitment: recruitment.filter(order => order.status === "completed"),
     constructionCatalog: constructionCatalogContext(settlement, data, permissions, summary),
     recruitmentBuildingTrees: buildingTreeGroups(data.catalog
-      .filter(item => item.enabled && item.category === "military" && ["recruitment", "siege"].includes(item.branch))
+      .filter(item => item.enabled && item.category === "military" && item.canRecruit)
       .map(item => catalogBuildingContext(item, data.unitCatalog))),
     recruitableUnits: recruitableUnitsContext(settlement, data, permissions, summary, isGM),
     canManageConstruction: permissions.canEditConstruction,
@@ -866,8 +1161,8 @@ function selectedContext(settlement, data, isGM) {
     pendingEvents: settlement.pendingEvents.filter(event => event.status === "pending").map(pendingEventContext),
     resolvedEvents: settlement.pendingEvents.filter(event => event.status !== "pending").map(pendingEventContext),
     hasPendingEvents: settlement.pendingEvents.some(event => event.status === "pending"),
-    activeEffects: settlement.activeEffects.map(activeEffectContext),
-    hasActiveEffects: settlement.activeEffects.length > 0,
+    activeEffects: settlement.activeEffects.filter(effect => isGM || effect.visible !== false).map(activeEffectContext),
+    hasActiveEffects: settlement.activeEffects.some(effect => isGM || effect.visible !== false),
     turnSnapshots: settlement.turnSnapshots.map(snapshot => ({ ...snapshot, createdLabel: new Date(snapshot.created).toLocaleString() })),
     hasTurnSnapshots: settlement.turnSnapshots.length > 0,
     currentTurnNote: {
@@ -1044,20 +1339,20 @@ function buildingContext(building, settlement, data, permissions) {
   };
 }
 
-function troopContext(troop, settlement, permissions, unitCatalog, rules = defaultRules(), isGM = false) {
+function troopContext(troop, settlement, permissions, unitCatalog, rules = defaultRules(), isGM = false, data = {}) {
   const type = troopType(troop.type, unitCatalog);
   const upkeep = unitUpkeepFromRules(type, rules);
-  const costPerTroop = upkeep.upkeep;
+  const costPerTroop = troop.freeUpkeep ? 0 : upkeep.upkeep;
   const missing = Math.max(0, troop.maxCount - troop.count);
-  const replenishmentCost = Math.max(0, Math.round(replenishmentUnitCost(type, rules) * recruitmentCostMultiplier(settlement)));
+  const replenishmentCost = Math.max(0, Math.round(replenishmentUnitCost(type, rules) * recruitmentCostMultiplier(settlement, data)));
   return {
     ...troop,
     displayName: troop.name || type.name,
     typeName: type.name,
     hasImage: Boolean(troop.imageUrl),
-    upkeepDisplay: formatNumber(upkeep.upkeep),
-    garrisonCostDisplay: formatNumber(upkeep.upkeep),
-    campaignCostDisplay: formatNumber(upkeep.upkeep),
+    upkeepDisplay: formatNumber(costPerTroop),
+    garrisonCostDisplay: formatNumber(costPerTroop),
+    campaignCostDisplay: formatNumber(costPerTroop),
     cost: formatNumber(costPerTroop * troop.count),
     tierLabel: `Tier ${type.tier}`,
     power: formatNumber(regimentPower(troop, unitCatalog)),
@@ -1078,9 +1373,15 @@ function troopContext(troop, settlement, permissions, unitCatalog, rules = defau
     actorUuid: troop.actorUuid || type.actorUuid,
     canEditFull: permissions.canEditMilitary,
     canEditAssignments: permissions.canEditAssignments,
+    sourceBuildingName: settlement.buildings.find(building => building.id === troop.sourceBuildingId)?.name || "",
+    sourceGarrison: Boolean(troop.sourceBuildingId),
+    freeUpkeepLabel: troop.freeUpkeep ? "Free Crown upkeep" : "Paid upkeep",
+    defenseAvailable: troopAvailableForDefense(troop, settlement),
+    modeLabel: troop.mode === "garrison" ? "Garrison" : "Raised Force",
+    canDelete: isGM && !troop.sourceBuildingId,
     typeOptions: unitCatalog.map(option => ({ ...option, selected: option.id === troop.type })),
-    garrisonSelected: true,
-    campaignSelected: false
+    garrisonSelected: troop.mode === "garrison",
+    campaignSelected: troop.mode !== "garrison"
   };
 }
 
@@ -1167,6 +1468,7 @@ function catalogBuildingContext(item, unitCatalog) {
     branchIcon: branch.icon,
     branchColor: branch.color,
     branchClass: `ds-branch-${branch.color}`,
+    branchStyle: branchCssStyle(branch),
     branchOptions: branchOptionsFor(item.category, item.branch),
     effectBadges: buildingEffectBadges(item, unitCatalog),
     tooltip: buildingTooltip(item, unitCatalog),
@@ -1208,7 +1510,8 @@ function catalogUnitContext(item, rules = defaultRules(), unitCatalog = TROOP_TY
     branchIcon: branch.icon,
     branchColor: branch.color,
     branchClass: `ds-branch-${branch.color}`,
-    branchOptions: UNIT_BRANCHES.filter(option => option.id !== "unique").map(option => ({ ...option, selected: option.id === branch.id })),
+    branchStyle: branchCssStyle(branch),
+    branchOptions: contentCategoriesFor("unit").filter(option => option.id !== "unique").map(option => ({ ...option, selected: option.id === branch.id })),
     categoryIcon: branch.icon,
     hasImage: Boolean(item.imageUrl),
     enabledChecked: item.enabled ? "checked" : "",
@@ -1235,8 +1538,9 @@ function catalogUnitContext(item, rules = defaultRules(), unitCatalog = TROOP_TY
 }
 
 function unitBranchMeta(value, special = false) {
-  if (special) return UNIT_BRANCHES.find(item => item.id === "unique");
-  return UNIT_BRANCHES.find(item => item.id === cleanString(value) && item.id !== "unique") || UNIT_BRANCHES[0];
+  const categories = contentCategoriesFor("unit");
+  if (special) return categories.find(item => item.id === "unique") || UNIT_BRANCHES.find(item => item.id === "unique");
+  return categories.find(item => item.id === cleanString(value) && item.id !== "unique") || categories.find(item => item.id !== "unique") || UNIT_BRANCHES[0];
 }
 
 function unitEffectBadges(item, rules = defaultRules(), sourceBuildings = []) {
@@ -1254,7 +1558,7 @@ function unitEffectBadges(item, rules = defaultRules(), sourceBuildings = []) {
 }
 
 function unitTreeGroups(items) {
-  return UNIT_BRANCHES.map(branch => {
+  return contentCategoriesFor("unit").map(branch => {
     const branchItems = items
       .filter(item => branch.id === "unique" ? item.special : !item.special && item.branch === branch.id)
       .sort((a, b) => a.tier - b.tier || items.indexOf(a) - items.indexOf(b));
@@ -1264,6 +1568,7 @@ function unitTreeGroups(items) {
       return {
         ...branch,
         className: `ds-branch-${branch.color} ds-unit-tree-unique`,
+        branchStyle: branchCssStyle(branch),
         nodes: branchItems,
         levels: [{ tier: 0, tierLabel: "Unique", columnCount, nodes: branchItems }]
       };
@@ -1273,6 +1578,7 @@ function unitTreeGroups(items) {
     return {
       ...branch,
       className: `ds-branch-${branch.color}`,
+      branchStyle: branchCssStyle(branch),
       nodes,
       levels: [1, 2, 3, 4, 5].map(tier => ({
         tier,
@@ -1285,15 +1591,68 @@ function unitTreeGroups(items) {
 }
 
 function branchMeta(value, category = "economic") {
-  return BRANCHES.find(item => item.id === cleanString(value))
+  const categories = contentCategoriesFor("building");
+  return categories.find(item => item.id === cleanString(value))
+    || categories.find(item => item.systemType === category)
     || (category === "military" ? BRANCHES.find(item => item.id === "recruitment") : BRANCHES.find(item => item.id === "commerce"));
 }
 
 function branchOptionsFor(category, selectedId) {
-  const allowed = category === "military"
-    ? new Set(["recruitment", "defense", "siege", "landmark"])
-    : new Set(["food", "materials", "commerce", "civic"]);
-  return BRANCHES.filter(item => allowed.has(item.id)).map(item => ({ ...item, selected: item.id === selectedId }));
+  return contentCategoriesFor("building")
+    .filter(item => item.systemType === category || item.id === "landmark")
+    .map(item => ({ ...item, selected: item.id === selectedId }));
+}
+
+function contentCategoriesFor(kind) {
+  return runtimeContentCategories
+    .filter(item => item.kind === kind && item.enabled !== false)
+    .sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+}
+
+function contentCategoryById(id, kind = "") {
+  return runtimeContentCategories.find(item => item.id === cleanString(id) && (!kind || item.kind === kind));
+}
+
+function categoryHexColor(item) {
+  const color = cleanString(item?.color).toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(color)) return color;
+  return BRANCH_COLORS[color] || "#c9a64f";
+}
+
+function branchCssStyle(item) {
+  return `--ds-branch: ${categoryHexColor(item)};`;
+}
+
+function contentCategoryContext(item) {
+  return {
+    ...item,
+    hexColor: categoryHexColor(item),
+    style: branchCssStyle(item),
+    kindLabel: item.kind === "unit" ? "Unit Family" : categoryLabel(item.systemType),
+    builtIn: Boolean(item.builtIn),
+    enabledChecked: item.enabled !== false ? "checked" : "",
+    buildingSelected: item.kind === "building" ? "selected" : "",
+    unitSelected: item.kind === "unit" ? "selected" : "",
+    economicSelected: item.systemType === "economic" ? "selected" : "",
+    militarySelected: item.systemType === "military" ? "selected" : ""
+  };
+}
+
+function policyContext(item, rules = defaultRules()) {
+  const effects = normalizePolicyEffects(item.effects);
+  return {
+    ...item,
+    effects,
+    tierLabel: tierName(item.settlementTier, rules),
+    tierOptions: SETTLEMENT_TIER_IDS.map(id => ({ id, name: tierName(id, rules), selected: id === item.settlementTier })),
+    isBuiltIn: POLICY_OPTIONS.some(candidate => candidate.id === item.id),
+    enabledChecked: item.enabled !== false ? "checked" : "",
+    incomePercent: Math.round((effects.incomeMultiplier - 1) * 10000) / 100,
+    buildingUpkeepPercent: Math.round((effects.buildingUpkeepMultiplier - 1) * 10000) / 100,
+    militaryUpkeepPercent: Math.round((effects.militaryUpkeepMultiplier - 1) * 10000) / 100,
+    manpowerPercent: Math.round((effects.manpowerMultiplier - 1) * 10000) / 100,
+    armyFoodPercent: Math.round((effects.armyFoodMultiplier - 1) * 10000) / 100
+  };
 }
 
 function buildingEffectBadges(item, unitCatalog = TROOP_TYPES) {
@@ -1363,7 +1722,7 @@ function buildingTooltip(item, unitCatalog = TROOP_TYPES) {
 }
 
 function buildingTreeGroups(items) {
-  return BRANCHES.map(branch => {
+  return contentCategoriesFor("building").map(branch => {
     const branchItems = items
       .filter(item => (item.branch || item.chainId) === branch.id)
       .sort((a, b) => a.nodeTier - b.nodeTier || items.indexOf(a) - items.indexOf(b));
@@ -1373,6 +1732,7 @@ function buildingTreeGroups(items) {
     return {
       ...branch,
       className: `ds-branch-${branch.color}${branch.id === "landmark" ? " ds-building-tree-landmark" : ""}`,
+      branchStyle: branchCssStyle(branch),
       columnCount: layout.columnCount,
       nodes,
       levels: tiers.map(tier => ({
@@ -1449,7 +1809,9 @@ function activeEffectContext(item) {
   return {
     ...item,
     effectsText: eventEffectsText(item.effects),
-    remainingLabel: `${formatNumber(item.remainingMonths)} month${item.remainingMonths === 1 ? "" : "s"} remaining`
+    remainingLabel: item.permanent ? "Permanent" : `${formatNumber(item.remainingMonths)} month${item.remainingMonths === 1 ? "" : "s"} remaining`,
+    visibleLabel: item.visible === false ? "GM only" : "Visible to players",
+    kindLabel: item.kind === "debuff" ? "Debuff" : item.kind === "buff" ? "Buff" : "Modifier"
   };
 }
 
@@ -1575,11 +1937,12 @@ function overviewBranchPickerContext(slot, settlement, data, permissions, summar
   if (context.locked || context.supportSlot || context.hasProject) return context;
 
   if (!current) {
-    context.rootGroups = BRANCHES
+    context.rootGroups = contentCategoriesFor("building")
       .filter(branch => branch.id !== "landmark")
       .map(branch => ({
         ...branch,
         className: `ds-branch-${branch.color}`,
+        branchStyle: branchCssStyle(branch),
         nodes: data.catalog
           .filter(item => item.enabled && !item.landmark && !item.parentIds.length && item.branch === branch.id && (isGM || !item.gmOnly))
           .filter(item => slot.allowedCategory === "all" || item.category === slot.allowedCategory)
@@ -1731,10 +2094,12 @@ function recruitableUnitsContext(settlement, data, permissions, summary, isGM) {
     const upkeep = unitUpkeepFromRules(unit, data.rules);
     const sources = recruitmentSources(settlement, unit.id, false, data);
     const discount = settlementRecruitmentDiscount(settlement, null, data.rules);
-    const effectiveRecruitCost = Math.max(0, Math.round(unit.recruitCost * (1 - discount / 100) * recruitmentCostMultiplier(settlement)));
+    const effectiveRecruitCost = Math.max(0, Math.round(unit.recruitCost * (1 - discount / 100) * recruitmentCostMultiplier(settlement, data)));
     const manpowerRemaining = summary.manpowerAvailable;
     const treasuryLimit = effectiveRecruitCost > 0 ? Math.floor(settlement.treasure / effectiveRecruitCost) : 9999;
-    const existingCount = settlement.troops.filter(troop => troop.type === unit.id).reduce((total, troop) => total + troop.maxCount, 0);
+    const existingCount = settlement.troops
+      .filter(troop => troop.type === unit.id && !troop.sourceBuildingId)
+      .reduce((total, troop) => total + troop.maxCount, 0);
     const sameQueued = settlement.recruitment.filter(order => order.status !== "completed" && order.troopType === unit.id).reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
     const unitLimit = unit.maxPerSettlement > 0 ? Math.max(0, unit.maxPerSettlement - existingCount - sameQueued) : 9999;
     const maxRecruit = Math.max(0, Math.min(capacityRemaining, manpowerRemaining, treasuryLimit, unitLimit));
@@ -1906,10 +2271,52 @@ function activateListeners(element) {
 
   root.querySelectorAll("[data-catalog-kind]").forEach(button => {
     button.addEventListener("click", event => {
-      uiState.catalogKind = ["buildings", "units", "events"].includes(event.currentTarget.dataset.catalogKind) ? event.currentTarget.dataset.catalogKind : "buildings";
+      uiState.catalogKind = CATALOG_KINDS.includes(event.currentTarget.dataset.catalogKind) ? event.currentTarget.dataset.catalogKind : "buildings";
       persistClientState();
       renderDsPanel();
     });
+  });
+
+  root.querySelectorAll("[data-open-workshop]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      openContentWorkshop(event.currentTarget.dataset.openWorkshop, event.currentTarget.dataset.settlementId || "");
+    });
+  });
+
+  root.querySelectorAll("[data-export-kind]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      if (event.currentTarget.dataset.exportKind === "world") exportWorldBackup();
+      else exportContentPack();
+    });
+  });
+
+  root.querySelector("[data-import-trigger]")?.addEventListener("click", event => {
+    event.preventDefault();
+    root.querySelector("[data-import-input]")?.click();
+  });
+
+  root.querySelector("[data-import-input]")?.addEventListener("change", async event => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) return ui.notifications.warn("DS: Import files are limited to 20 MB.");
+    let textValue;
+    let pack;
+    try {
+      textValue = await file.text();
+      pack = JSON.parse(textValue);
+    } catch (_error) {
+      return ui.notifications.warn("DS: The selected file is not valid JSON.");
+    }
+    const importMode = pack.kind === "world" ? "replace" : root.querySelector("[data-import-mode]")?.value === "replace" ? "replace" : "merge";
+    const message = pack.kind === "world"
+      ? "Replace all DS world data with this backup? This overwrites settlements, catalogs, rules, and the current month."
+      : importMode === "replace" ? "Replace the current content library with this pack? Settlement instances remain." : "Merge this content pack into the current library? Matching IDs will be updated.";
+    if (!globalThis.confirm(message)) return;
+    await sendAction("importData", { importJson: textValue, importMode });
   });
 
   root.querySelectorAll("[data-file-picker]").forEach(button => {
@@ -2255,6 +2662,45 @@ async function processAction(action, payload, userId) {
     case "deleteCatalogEvent":
       deleteCatalogEvent(data, payload, user);
       break;
+    case "addContentCategory":
+      addContentCategory(data, payload, user);
+      break;
+    case "updateContentCategory":
+      updateContentCategory(data, payload, user);
+      break;
+    case "deleteContentCategory":
+      deleteContentCategory(data, payload, user);
+      break;
+    case "addPolicyTemplate":
+      addPolicyTemplate(data, payload, user);
+      break;
+    case "updatePolicyTemplate":
+      updatePolicyTemplate(data, payload, user);
+      break;
+    case "resetPolicyTemplate":
+      resetPolicyTemplate(data, payload, user);
+      break;
+    case "deletePolicyTemplate":
+      deletePolicyTemplate(data, payload, user);
+      break;
+    case "addSettlementEffect":
+      addSettlementEffect(data, payload, user);
+      break;
+    case "updateSettlementEffect":
+      updateSettlementEffect(data, payload, user);
+      break;
+    case "createBuildingWizard":
+      createBuildingWizard(data, payload, user);
+      break;
+    case "createUnitWizard":
+      createUnitWizard(data, payload, user);
+      break;
+    case "createRegimentWizard":
+      createRegimentWizard(data, payload, user);
+      break;
+    case "importData":
+      importData(data, payload, user);
+      break;
     case "queueRecruitment":
       queueRecruitment(data, payload, user);
       break;
@@ -2425,11 +2871,11 @@ function updatePolicy(data, payload, user) {
   const settlement = findSettlement(data, payload.settlementId);
   const permissions = permissionsFor(settlement, user.isGM, user.id);
   if (!permissions.canEditAssignments) throw new Error("You cannot change settlement policy.");
-  const selected = POLICY_OPTIONS.find(item => item.id === cleanString(payload.policyId));
+  const selected = data.policyCatalog.find(item => item.id === cleanString(payload.policyId) && item.enabled !== false);
   if (!selected) throw new Error("Unknown settlement policy.");
   if (tierIndex(settlement.tier) < tierIndex(selected.settlementTier)) throw new Error(`${selected.name} requires ${tierName(selected.settlementTier, data.rules)}.`);
   settlement.policyId = selected.id;
-  settlement.manpowerReserve = Math.min(manpowerCapForSettlement(settlement, data.rules), settlement.manpowerReserve);
+  settlement.manpowerReserve = Math.min(manpowerCapForSettlement(settlement, data.rules, data.policyCatalog), settlement.manpowerReserve);
 }
 
 function updateVisuals(data, payload, user) {
@@ -2457,7 +2903,7 @@ function updatePopulation(data, payload, user) {
   settlement.manpowerOverride = cleanString(payload.manpowerOverride);
   settlement.manpowerReserve = Math.max(0, toNumber(payload.manpowerReserve, settlement.manpowerReserve));
   settlement.slotBonus = Math.max(0, Math.trunc(toNumber(payload.slotBonus, settlement.slotBonus)));
-  settlement.manpowerReserve = Math.min(manpowerCapForSettlement(settlement, data.rules), settlement.manpowerReserve);
+  settlement.manpowerReserve = Math.min(manpowerCapForSettlement(settlement, data.rules, data.policyCatalog), settlement.manpowerReserve);
   settlement.slots = normalizeSettlementSlots(settlement.slots, settlement, data.rules);
 }
 
@@ -2910,7 +3356,7 @@ function addTroop(data, payload, user) {
   const settlement = findSettlement(data, payload.settlementId);
   requireGM(user);
   const type = data.unitCatalog[0] || TROOP_TYPES[0];
-  settlement.troops.push(normalizeTroop({ id: randomId(), type: type.id, count: 0, mode: "garrison", imageUrl: type.imageUrl, notes: "" }, data.unitCatalog));
+  settlement.troops.push(normalizeTroop({ id: randomId(), type: type.id, count: 0, maxCount: 0, mode: "raised", imageUrl: type.imageUrl, notes: "" }, data.unitCatalog));
 }
 
 function updateTroop(data, payload, user) {
@@ -2922,22 +3368,25 @@ function updateTroop(data, payload, user) {
   troop.name = cleanString(payload.name) || troop.name;
   troop.imageUrl = cleanString(payload.imageUrl) || troopType(troop.type, data.unitCatalog).imageUrl;
   troop.actorUuid = cleanString(payload.actorUuid) || troopType(troop.type, data.unitCatalog).actorUuid;
-  if (user.isGM) {
+  if (user.isGM && !troop.lockedToGarrison) {
     const type = troopType(payload.type, data.unitCatalog);
     troop.type = type.id;
     troop.maxCount = Math.max(0, Math.trunc(toNumber(payload.maxCount, troop.maxCount)));
+    if (Object.hasOwn(payload, "mode")) troop.mode = cleanString(payload.mode) === "garrison" ? "garrison" : "raised";
+    if (Object.hasOwn(payload, "usesManpower")) troop.usesManpower = Boolean(payload.usesManpower);
   }
   const requestedCount = Math.trunc(toNumber(payload.count, troop.count));
   troop.count = user.isGM
     ? clamp(requestedCount, 0, troop.maxCount)
     : clamp(requestedCount, 0, troop.count);
-  troop.mode = "garrison";
   troop.notes = cleanString(payload.notes);
 }
 
 function deleteTroop(data, payload, user) {
   const settlement = findSettlement(data, payload.settlementId);
   requireGM(user);
+  const troop = findById(settlement.troops, payload.troopId, "Troop");
+  if (troop.sourceBuildingId) throw new Error("A building garrison is removed by changing or deleting its source building.");
   if (settlement.recruitment.some(order => order.kind === "replenishment" && order.regimentId === payload.troopId && order.status !== "completed")) {
     throw new Error("Cancel this regiment's active replenishment order before deleting it.");
   }
@@ -2978,7 +3427,7 @@ function updateCatalogUnit(data, payload, user) {
     unit.parentIds = [];
   } else {
     const requestedBranch = cleanString(payload.branch);
-    unit.branch = UNIT_BRANCHES.some(branch => branch.id === requestedBranch && branch.id !== "unique") ? requestedBranch : "infantry";
+    unit.branch = contentCategoriesFor("unit").some(branch => branch.id === requestedBranch && branch.id !== "unique") ? requestedBranch : "infantry";
     unit.parentIds = splitTags(payload.parentIds);
     if (unit.parentIds.includes(unit.id)) throw new Error("A unit cannot be its own parent.");
     const missingParent = unit.parentIds.find(id => !data.unitCatalog.some(candidate => candidate.id === id));
@@ -3101,6 +3550,377 @@ function deleteCatalogEvent(data, payload, user) {
   deleteById(data.eventCatalog, event.id);
 }
 
+function findContentCategory(data, id, kind) {
+  const category = data.contentCategories.find(item => item.id === cleanString(id) && item.kind === cleanString(kind));
+  if (!category) throw new Error("Content category not found.");
+  return category;
+}
+
+function addContentCategory(data, payload, user) {
+  requireGM(user);
+  const kind = payload.kind === "unit" ? "unit" : "building";
+  const label = cleanString(payload.label) || (kind === "unit" ? "New Unit Family" : "New Building Category");
+  let id = slugId(payload.id || label) || `category-${randomId().toLowerCase()}`;
+  let suffix = 2;
+  while (data.contentCategories.some(item => item.kind === kind && item.id === id)) id = `${slugId(payload.id || label)}-${suffix++}`;
+  data.contentCategories.push({
+    id,
+    kind,
+    systemType: kind === "unit" ? "unit" : payload.systemType === "military" ? "military" : "economic",
+    label,
+    icon: cleanString(payload.icon) || (kind === "unit" ? "fa-shield-halved" : "fa-industry"),
+    color: cleanString(payload.color) || "#c9a64f",
+    builtIn: false,
+    enabled: true,
+    sort: Math.trunc(toNumber(payload.sort, data.contentCategories.filter(item => item.kind === kind).length * 10))
+  });
+  data.contentCategories = normalizeContentCategories(data.contentCategories);
+  runtimeContentCategories = data.contentCategories.map(item => ({ ...item }));
+}
+
+function updateContentCategory(data, payload, user) {
+  requireGM(user);
+  const category = findContentCategory(data, payload.categoryId, payload.categoryKind);
+  const previousSystemType = category.systemType;
+  category.label = cleanString(payload.label) || category.label;
+  category.icon = cleanString(payload.icon) || category.icon;
+  category.color = cleanString(payload.color) || category.color;
+  category.sort = Math.trunc(toNumber(payload.sort, category.sort));
+  category.enabled = payload.enabled === undefined ? category.enabled !== false : Boolean(payload.enabled);
+  if (!category.builtIn && category.kind === "building") {
+    category.systemType = payload.systemType === "military" ? "military" : "economic";
+    if (category.systemType !== previousSystemType) {
+      for (const item of data.catalog.filter(item => item.branch === category.id)) {
+        item.category = category.systemType;
+        item.slot = category.systemType;
+      }
+      for (const settlement of data.settlements) {
+        for (const building of settlement.buildings.filter(item => item.branch === category.id)) {
+          building.category = category.systemType;
+          building.slot = category.systemType;
+        }
+      }
+    }
+  }
+  data.contentCategories = normalizeContentCategories(data.contentCategories);
+  runtimeContentCategories = data.contentCategories.map(item => ({ ...item }));
+}
+
+function deleteContentCategory(data, payload, user) {
+  requireGM(user);
+  const category = findContentCategory(data, payload.categoryId, payload.categoryKind);
+  if (category.builtIn) throw new Error("Base categories can be renamed or recolored but not deleted.");
+  const inUse = category.kind === "building"
+    ? data.catalog.some(item => item.branch === category.id || item.chainId === category.id)
+    : data.unitCatalog.some(item => item.branch === category.id);
+  if (inUse) throw new Error("Move or delete the content in this category before deleting it.");
+  data.contentCategories = data.contentCategories.filter(item => !(item.kind === category.kind && item.id === category.id));
+  runtimeContentCategories = data.contentCategories.map(item => ({ ...item }));
+}
+
+function addPolicyTemplate(data, payload, user) {
+  requireGM(user);
+  const name = cleanString(payload.name) || "New Settlement Policy";
+  let id = slugId(payload.id || name) || `policy-${randomId().toLowerCase()}`;
+  let suffix = 2;
+  while (data.policyCatalog.some(item => item.id === id)) id = `${slugId(payload.id || name)}-${suffix++}`;
+  data.policyCatalog.push({
+    id,
+    name,
+    settlementTier: settlementTierValue(payload.settlementTier),
+    description: cleanString(payload.description) || "A GM-authored settlement policy.",
+    effects: normalizePolicyEffects({}),
+    enabled: true,
+    builtIn: false
+  });
+}
+
+function policyEffectsFromPayload(payload, current = {}) {
+  const percentMultiplierValue = (key, fallback) => Math.max(0, 1 + toNumber(payload[key], (toNumber(fallback, 1) - 1) * 100) / 100);
+  return normalizePolicyEffects({
+    ...current,
+    incomeMultiplier: percentMultiplierValue("incomePercent", current.incomeMultiplier),
+    buildingUpkeepMultiplier: percentMultiplierValue("buildingUpkeepPercent", current.buildingUpkeepMultiplier),
+    militaryUpkeepMultiplier: percentMultiplierValue("militaryUpkeepPercent", current.militaryUpkeepMultiplier),
+    manpowerMultiplier: percentMultiplierValue("manpowerPercent", current.manpowerMultiplier),
+    armyFoodMultiplier: percentMultiplierValue("armyFoodPercent", current.armyFoodMultiplier),
+    foodPerPop: toNumber(payload.foodPerPop, current.foodPerPop),
+    growth: toNumber(payload.growth, current.growth),
+    flatPopulation: Math.trunc(toNumber(payload.flatPopulation, current.flatPopulation)),
+    publicOrder: toNumber(payload.publicOrder, current.publicOrder),
+    eventRoll: toNumber(payload.eventRoll, current.eventRoll),
+    foodOutputPercent: toNumber(payload.foodOutputPercent, current.foodOutputPercent),
+    materialsOutputPercent: toNumber(payload.materialsOutputPercent, current.materialsOutputPercent),
+    constructionPercent: toNumber(payload.constructionPercent, current.constructionPercent),
+    recruitmentCostPercent: toNumber(payload.recruitmentCostPercent, current.recruitmentCostPercent),
+    recruitmentCapacityPercent: toNumber(payload.recruitmentCapacityPercent, current.recruitmentCapacityPercent),
+    manpowerRecoveryPercent: toNumber(payload.manpowerRecoveryPercent, current.manpowerRecoveryPercent)
+  });
+}
+
+function updatePolicyTemplate(data, payload, user) {
+  requireGM(user);
+  const item = findById(data.policyCatalog, payload.policyId, "Policy template");
+  item.name = cleanString(payload.name) || item.name;
+  item.settlementTier = settlementTierValue(payload.settlementTier);
+  item.description = cleanString(payload.description);
+  item.enabled = payload.enabled === undefined ? item.enabled !== false : Boolean(payload.enabled);
+  item.effects = policyEffectsFromPayload(payload, item.effects);
+  for (const settlement of data.settlements) {
+    if (settlement.policyId === item.id && (!item.enabled || tierIndex(settlement.tier) < tierIndex(item.settlementTier))) settlement.policyId = "balanced";
+  }
+}
+
+function resetPolicyTemplate(data, payload, user) {
+  requireGM(user);
+  const item = findById(data.policyCatalog, payload.policyId, "Policy template");
+  const base = POLICY_OPTIONS.find(candidate => candidate.id === item.id);
+  if (!base) throw new Error("Only a base policy can be reset.");
+  Object.assign(item, clone(base), { builtIn: true });
+}
+
+function deletePolicyTemplate(data, payload, user) {
+  requireGM(user);
+  const item = findById(data.policyCatalog, payload.policyId, "Policy template");
+  if (POLICY_OPTIONS.some(candidate => candidate.id === item.id)) throw new Error("Base policies can be edited or reset but not deleted.");
+  data.settlements.forEach(settlement => {
+    if (settlement.policyId === item.id) settlement.policyId = "balanced";
+  });
+  deleteById(data.policyCatalog, item.id);
+}
+
+function settlementEffectFromPayload(payload, current = {}) {
+  const permanent = payload.permanent === undefined ? Boolean(current.permanent) : Boolean(payload.permanent);
+  return normalizeActiveEffect({
+    ...current,
+    id: current.id || randomId(),
+    name: cleanString(payload.name) || current.name || "GM Settlement Modifier",
+    description: cleanString(payload.description),
+    source: cleanString(payload.source) || "GM",
+    kind: ["buff", "debuff", "neutral"].includes(payload.kind) ? payload.kind : current.kind || "neutral",
+    permanent,
+    visible: payload.visible === undefined ? current.visible !== false : Boolean(payload.visible),
+    remainingMonths: permanent ? 0 : clamp(Math.trunc(toNumber(payload.remainingMonths, current.remainingMonths || 1)), 1, 120),
+    createdMonth: Math.max(0, Math.trunc(toNumber(current.createdMonth, 0))),
+    effects: normalizeEventEffects(Object.fromEntries(EVENT_EFFECT_KEYS.map(key => [key, toNumber(payload[key], current.effects?.[key])]))),
+    gmNote: cleanString(payload.gmNote)
+  });
+}
+
+function addSettlementEffect(data, payload, user) {
+  requireGM(user);
+  const settlement = findSettlement(data, payload.settlementId);
+  settlement.activeEffects.unshift(settlementEffectFromPayload(payload));
+  settlement.activeEffects = settlement.activeEffects.slice(0, 50);
+}
+
+function updateSettlementEffect(data, payload, user) {
+  requireGM(user);
+  const settlement = findSettlement(data, payload.settlementId);
+  const effect = findById(settlement.activeEffects, payload.effectId, "Settlement modifier");
+  Object.assign(effect, settlementEffectFromPayload(payload, effect));
+}
+
+function parseWorkshopNodes(payload) {
+  let nodes = payload.nodes;
+  if (!Array.isArray(nodes)) {
+    try {
+      nodes = JSON.parse(cleanString(payload.nodesJson) || "[]");
+    } catch (_error) {
+      throw new Error("The workshop data could not be read.");
+    }
+  }
+  if (!Array.isArray(nodes) || !nodes.length) throw new Error("Add at least one node to the workshop.");
+  if (nodes.length > 25) throw new Error("A workshop can create at most 25 nodes at once.");
+  return nodes;
+}
+
+function uniqueContentId(items, value, prefix) {
+  const base = slugId(value) || `${prefix}-${randomId().toLowerCase()}`;
+  let id = base;
+  let suffix = 2;
+  while (items.some(item => item.id === id)) id = `${base}-${suffix++}`;
+  return id;
+}
+
+function createBuildingWizard(data, payload, user) {
+  requireGM(user);
+  const category = findContentCategory(data, payload.categoryId, "building");
+  const nodes = parseWorkshopNodes(payload);
+  const localIds = new Map();
+  const created = [];
+  for (const [index, raw] of nodes.entries()) {
+    const id = uniqueContentId([...data.catalog, ...created], raw.id || raw.name, "building");
+    const localId = cleanString(raw.localId) || `node-${index + 1}`;
+    localIds.set(localId, id);
+    const parentRefs = normalizeTags(raw.parentRefs || raw.parentIds);
+    const parentIds = parentRefs.map(ref => localIds.get(ref) || ref).filter(parentId => data.catalog.some(item => item.id === parentId) || created.some(item => item.id === parentId));
+    if (parentRefs.length !== parentIds.length) throw new Error(`A parent for ${cleanString(raw.name) || `node ${index + 1}`} must be created before its child.`);
+    const parent = [...data.catalog, ...created].find(item => item.id === parentIds[0]);
+    const landmark = category.id === "landmark" || Boolean(raw.landmark);
+    const nodeTier = landmark ? 0 : clamp(Math.trunc(toNumber(raw.nodeTier, index + 1)), 1, 5);
+    if (parent && parent.nodeTier >= nodeTier) throw new Error(`${cleanString(raw.name) || "Building"} must be a later tier than its parent.`);
+    const chainId = landmark ? category.id : parent?.chainId || id;
+    const item = normalizeCatalogItem({
+      id,
+      name: cleanString(raw.name) || `New ${category.label} Building`,
+      category: category.systemType,
+      slot: category.systemType,
+      branch: category.id,
+      chainId,
+      nodeTier,
+      parentIds,
+      landmark,
+      special: Boolean(raw.special) || landmark,
+      gmOnly: Boolean(raw.gmOnly) || landmark,
+      enabled: true,
+      uniqueChain: raw.uniqueChain === undefined ? true : Boolean(raw.uniqueChain),
+      maxPerSettlement: Math.max(0, Math.trunc(toNumber(raw.maxPerSettlement, 1))),
+      workers: Math.max(0, toNumber(raw.workers, 0)),
+      rate: Math.max(0, toNumber(raw.rate, 0)),
+      flatOutput: toNumber(raw.flatOutput, 0),
+      foodOutput: toNumber(raw.foodOutput, 0),
+      materialsOutput: toNumber(raw.materialsOutput, 0),
+      buildingUpkeep: Math.max(0, toNumber(raw.buildingUpkeep, 0)),
+      crownCost: Math.max(0, toNumber(raw.crownCost, 0)),
+      materialCost: Math.max(0, toNumber(raw.materialCost, 0)),
+      cpCost: Math.max(0, toNumber(raw.cpCost, 0)),
+      slotUse: landmark ? 0 : Math.max(1, Math.trunc(toNumber(raw.slotUse, 1))),
+      bonusSlots: Math.max(0, Math.trunc(toNumber(raw.bonusSlots, 0))),
+      publicOrder: toNumber(raw.publicOrder, 0),
+      growth: toNumber(raw.growth, 0),
+      siegeDefensePercent: toNumber(raw.siegeDefensePercent, 0),
+      incomeBonusPercent: toNumber(raw.incomeBonusPercent, 0),
+      buildingUpkeepDiscount: toNumber(raw.buildingUpkeepDiscount, 0),
+      upkeepDiscount: toNumber(raw.upkeepDiscount, 0),
+      constructionCrownDiscount: toNumber(raw.constructionCrownDiscount, 0),
+      constructionMaterialsDiscount: toNumber(raw.constructionMaterialsDiscount, 0),
+      constructionCpPercent: toNumber(raw.constructionCpPercent, 0),
+      recruitmentDiscount: toNumber(raw.recruitmentDiscount, 0),
+      canRecruit: Boolean(raw.canRecruit),
+      recruitPerLevel: Math.max(0, toNumber(raw.recruitPerLevel, 0)),
+      recruitableUnitIds: normalizeTags(raw.recruitableUnitIds),
+      garrisonUnits: normalizeGarrisonUnits(raw.garrisonUnits, data.unitCatalog),
+      imageUrl: cleanString(raw.imageUrl),
+      description: cleanString(raw.description),
+      notes: cleanString(raw.notes)
+    }, data.unitCatalog);
+    created.push(item);
+  }
+  data.catalog.push(...created);
+  ui.notifications.info(`DS: Created ${created.length} building node(s).`);
+}
+
+function createUnitWizard(data, payload, user) {
+  requireGM(user);
+  const category = findContentCategory(data, payload.categoryId, "unit");
+  const nodes = parseWorkshopNodes(payload);
+  const localIds = new Map();
+  const created = [];
+  const sourceAssignments = [];
+  for (const [index, raw] of nodes.entries()) {
+    const id = uniqueContentId([...data.unitCatalog, ...created], raw.id || raw.name, "unit");
+    const localId = cleanString(raw.localId) || `node-${index + 1}`;
+    localIds.set(localId, id);
+    const special = category.id === "unique" || Boolean(raw.special);
+    const parentRefs = special ? [] : normalizeTags(raw.parentRefs || raw.parentIds);
+    const parentIds = parentRefs.map(ref => localIds.get(ref) || ref).filter(parentId => data.unitCatalog.some(item => item.id === parentId) || created.some(item => item.id === parentId));
+    if (parentRefs.length !== parentIds.length) throw new Error(`A parent for ${cleanString(raw.name) || `node ${index + 1}`} must be created before its child.`);
+    const tier = clamp(Math.trunc(toNumber(raw.tier, index + 1)), 1, 5);
+    const invalidParent = [...data.unitCatalog, ...created].find(item => parentIds.includes(item.id) && (item.tier >= tier || item.special || item.branch !== category.id));
+    if (invalidParent) throw new Error(`${cleanString(raw.name) || "Unit"} needs an earlier-tier parent from the same family.`);
+    const item = normalizeUnitCatalogItem({
+      id,
+      name: cleanString(raw.name) || `New ${category.label} Unit`,
+      branch: special ? "unique" : category.id,
+      special,
+      parentIds,
+      tier,
+      recruitCost: Math.max(0, toNumber(raw.recruitCost, 0)),
+      power: Math.max(0.1, toNumber(raw.power, tier)),
+      foodUpkeep: Math.max(0, toNumber(raw.foodUpkeep, 0.5)),
+      maxPerSettlement: Math.max(0, Math.trunc(toNumber(raw.maxPerSettlement, 0))),
+      imageUrl: cleanString(raw.imageUrl),
+      actorUuid: cleanString(raw.actorUuid),
+      description: cleanString(raw.description),
+      enabled: true
+    });
+    created.push(item);
+    sourceAssignments.push({ unitId: id, sourceBuildingIds: normalizeTags(raw.sourceBuildingIds) });
+  }
+  data.unitCatalog.push(...created);
+  for (const assignment of sourceAssignments) {
+    for (const building of data.catalog.filter(item => assignment.sourceBuildingIds.includes(item.id))) {
+      building.recruitableUnitIds = Array.from(new Set([...(building.recruitableUnitIds || []), assignment.unitId]));
+      building.recruitType = building.recruitableUnitIds[0] || "";
+      building.canRecruit = true;
+      building.recruitPerLevel = Math.max(10, toNumber(building.recruitPerLevel, 0));
+    }
+  }
+  synchronizeCatalogRecruitment(data);
+  ui.notifications.info(`DS: Created ${created.length} unit node(s).`);
+}
+
+function createRegimentWizard(data, payload, user) {
+  requireGM(user);
+  const settlement = findSettlement(data, payload.settlementId);
+  const unit = findById(data.unitCatalog, payload.unitId, "Unit template");
+  const maximum = Math.max(1, Math.trunc(toNumber(payload.maxCount, payload.count || 1)));
+  const current = clamp(Math.trunc(toNumber(payload.count, maximum)), 0, maximum);
+  const mode = payload.mode === "garrison" ? "garrison" : "raised";
+  settlement.troops.push(normalizeTroop({
+    id: randomId(),
+    name: cleanString(payload.name) || unit.name,
+    type: unit.id,
+    count: current,
+    maxCount: maximum,
+    mode,
+    usesManpower: true,
+    freeUpkeep: false,
+    imageUrl: cleanString(payload.imageUrl) || unit.imageUrl,
+    actorUuid: cleanString(payload.actorUuid) || unit.actorUuid,
+    notes: cleanString(payload.notes) || "Added directly by the GM."
+  }, data.unitCatalog));
+}
+
+function mergeRecords(current, incoming, keyFor = item => item.id) {
+  const merged = new Map((current || []).map(item => [keyFor(item), clone(item)]));
+  for (const item of incoming || []) merged.set(keyFor(item), clone(item));
+  return Array.from(merged.values());
+}
+
+function importData(data, payload, user) {
+  requireGM(user);
+  let pack;
+  try {
+    pack = typeof payload.importJson === "string" ? JSON.parse(payload.importJson) : clone(payload.importData);
+  } catch (_error) {
+    throw new Error("The selected file is not valid JSON.");
+  }
+  if (!pack || pack.format !== "astargon-domain-system") throw new Error("This is not an ADS/DS export file.");
+  if (toNumber(pack.formatVersion, 0) > EXPORT_FORMAT_VERSION) throw new Error("This export was created by a newer DS format.");
+  const mode = payload.importMode === "replace" ? "replace" : "merge";
+  if (pack.kind === "world") {
+    if (mode !== "replace") throw new Error("A full world backup must use Replace World mode.");
+    const normalized = normalizeData(pack.worldData || pack.data);
+    for (const key of Object.keys(data)) delete data[key];
+    Object.assign(data, normalized);
+    uiState.selectedSettlementId = data.settlements[0]?.id || "";
+    return;
+  }
+  if (pack.kind !== "content") throw new Error("Unknown DS export type.");
+  const content = pack.content || pack.data || {};
+  data.contentCategories = mode === "replace"
+    ? normalizeContentCategories(content.contentCategories)
+    : normalizeContentCategories(mergeRecords(data.contentCategories, content.contentCategories, item => `${item.kind}:${item.id}`));
+  runtimeContentCategories = data.contentCategories.map(item => ({ ...item }));
+  data.policyCatalog = normalizePolicyCatalog(mode === "replace" ? content.policyCatalog : mergeRecords(data.policyCatalog, content.policyCatalog));
+  data.unitCatalog = normalizeUnitCatalog(mode === "replace" ? content.unitCatalog : mergeRecords(data.unitCatalog, content.unitCatalog));
+  data.catalog = normalizeCatalog(mode === "replace" ? content.catalog : mergeRecords(data.catalog, content.catalog), data.unitCatalog);
+  data.eventCatalog = normalizeEventCatalog(mode === "replace" ? content.eventCatalog : mergeRecords(data.eventCatalog, content.eventCatalog));
+  synchronizeCatalogRecruitment(data);
+}
+
 function queueRecruitment(data, payload, user) {
   const settlement = findSettlement(data, payload.settlementId);
   const permissions = permissionsFor(settlement, user.isGM, user.id);
@@ -3115,7 +3935,9 @@ function queueRecruitment(data, payload, user) {
   const summary = calculateSettlement(settlement, data);
   if (!direct && !recruitmentSources(settlement, unit.id, false, data).length) throw new Error(`No completed building unlocks ${unit.name}.`);
   if (!direct && unit.maxPerSettlement > 0) {
-    const existing = settlement.troops.filter(troop => troop.type === unit.id).reduce((total, troop) => total + troop.maxCount, 0);
+    const existing = settlement.troops
+      .filter(troop => troop.type === unit.id && !troop.sourceBuildingId)
+      .reduce((total, troop) => total + troop.maxCount, 0);
     const queued = settlement.recruitment.filter(order => order.status !== "completed" && order.troopType === unit.id).reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
     if (existing + queued + count > unit.maxPerSettlement) throw new Error(`${unit.name} settlement limit is ${formatNumber(unit.maxPerSettlement)}.`);
   }
@@ -3133,7 +3955,7 @@ function queueRecruitment(data, payload, user) {
   }
 
   const discount = direct ? 0 : settlementRecruitmentDiscount(settlement, null, data.rules);
-  const costPerUnit = direct ? 0 : Math.max(0, Math.round(unit.recruitCost * (1 - discount / 100) * recruitmentCostMultiplier(settlement)));
+  const costPerUnit = direct ? 0 : Math.max(0, Math.round(unit.recruitCost * (1 - discount / 100) * recruitmentCostMultiplier(settlement, data)));
   const totalCost = costPerUnit * count;
   if (settlement.treasure < totalCost) throw new Error(`Recruitment needs ${formatNumber(totalCost)} Crown.`);
   settlement.treasure -= totalCost;
@@ -3182,7 +4004,7 @@ function queueReplenishment(data, payload, user) {
   }
 
   const discount = settlementRecruitmentDiscount(settlement, null, data.rules);
-  const costPerUnit = Math.max(0, Math.round(replenishmentUnitCost(unit, data.rules, discount) * recruitmentCostMultiplier(settlement)));
+  const costPerUnit = Math.max(0, Math.round(replenishmentUnitCost(unit, data.rules, discount) * recruitmentCostMultiplier(settlement, data)));
   const totalCost = costPerUnit * count;
   if (settlement.treasure < totalCost) throw new Error(`Replenishment needs ${formatNumber(totalCost)} Crown.`);
   settlement.treasure -= totalCost;
@@ -3218,7 +4040,7 @@ function cancelRecruitment(data, payload, user) {
   deleteById(settlement.recruitment, order.id);
   if (!settlement.overrides.ignoreManpowerLimits) {
     const type = troopType(order.troopType, data.unitCatalog);
-    const cap = manpowerCapForSettlement(settlement, data.rules);
+    const cap = manpowerCapForSettlement(settlement, data.rules, data.policyCatalog);
     const committed = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, data.unitCatalog), 0)
       + settlement.recruitment.filter(item => item.status !== "completed").reduce((total, item) => total + Math.max(0, item.targetCount - item.trained) * troopType(item.troopType, data.unitCatalog).manpowerCost, 0);
     settlement.manpowerReserve = Math.min(Math.max(0, cap - committed), settlement.manpowerReserve + remaining * type.manpowerCost);
@@ -3772,6 +4594,22 @@ function processRecruitment(settlement, data) {
     const remaining = Math.max(0, order.targetCount - order.trained);
     const type = troopType(order.troopType, data.unitCatalog);
     const isReplenishment = order.kind === "replenishment";
+    const existingRegiment = isReplenishment ? settlement.troops.find(troop => troop.id === order.regimentId) : null;
+    if (isReplenishment && !existingRegiment) {
+      const refund = Math.min(order.crownPaid, remaining * order.costPerUnit);
+      settlement.treasure += refund;
+      const cap = manpowerCapForSettlement(settlement, data.rules, data.policyCatalog);
+      const otherCommitted = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, data.unitCatalog), 0)
+        + settlement.recruitment
+          .filter(candidate => candidate.id !== order.id && candidate.status !== "completed")
+          .reduce((total, candidate) => total + Math.max(0, candidate.targetCount - candidate.trained) * troopType(candidate.troopType, data.unitCatalog).manpowerCost, 0);
+      settlement.manpowerReserve = Math.min(Math.max(0, cap - otherCommitted), settlement.manpowerReserve + remaining * type.manpowerCost);
+      order.trained = order.targetCount;
+      order.status = "completed";
+      order.notes = `${order.notes} Refunded because the source regiment no longer exists.`.trim();
+      lines.push(`${order.regimentName || type.name} replenishment refunded because the regiment no longer exists`);
+      continue;
+    }
     const trainedNow = isReplenishment ? remaining : Math.min(remaining, capacityRemaining);
     if (trainedNow <= 0) continue;
 
@@ -3807,7 +4645,7 @@ function addRecruitsToTroops(settlement, order, amount, data) {
     type: type.id,
     count: amount,
     maxCount: amount,
-    mode: "garrison",
+    mode: "raised",
     garrisonCost: upkeep.garrison,
     campaignCost: upkeep.campaign,
     useRuleUpkeep: true,
@@ -3936,7 +4774,7 @@ function resolveMonthEvent(data, payload, user) {
       created: Date.now(),
       gmNote: cleanString(payload.gmNote)
     }));
-    settlement.activeEffects = settlement.activeEffects.slice(0, 25);
+    settlement.activeEffects = settlement.activeEffects.slice(0, 50);
   }
   const titlePrefix = resolution === "apply" ? "Active Event" : resolution === "narrative" ? "Narrative Event" : "Ignored Event";
   const text = resolution === "apply"
@@ -4017,6 +4855,8 @@ function defaultWorldData() {
     schemaVersion: SCHEMA_VERSION,
     month: 1,
     rules,
+    contentCategories: BASE_CONTENT_CATEGORIES.map(item => ({ ...item })),
+    policyCatalog: POLICY_OPTIONS.map(item => clone(item)),
     settlementTemplates: starterSettlementTemplates(),
     catalog: BUILDING_CATALOG.map(item => ({ ...item })),
     unitCatalog: TROOP_TYPES.map(item => ({ ...item })),
@@ -4173,9 +5013,9 @@ function sampleSettlement(rules = defaultRules()) {
       buildingFromCatalog(BUILDING_CATALOG.find(item => item.id === "laurent-manor"), { id: "dl-manor", assignedPop: 5 })
     ],
     troops: [
-      { id: "dl-maa", type: "men-at-arms", count: 70, mode: "garrison", notes: "" },
-      { id: "dl-sergeants", type: "watchman", count: 5, mode: "garrison", notes: "" },
-      { id: "dl-militia", type: "militia", count: 25, mode: "garrison", notes: "" }
+      { id: "dl-maa", type: "men-at-arms", count: 70, mode: "raised", notes: "" },
+      { id: "dl-sergeants", type: "watchman", count: 5, mode: "raised", notes: "" },
+      { id: "dl-militia", type: "militia", count: 25, mode: "raised", notes: "" }
     ],
     recruitment: [],
     projects: [],
@@ -4379,12 +5219,79 @@ function buildingFromCatalog(item, overrides = {}, unitCatalog = TROOP_TYPES) {
   }, unitCatalog);
 }
 
+function normalizeContentCategories(items) {
+  const keyFor = item => `${item.kind}:${item.id}`;
+  const merged = new Map(BASE_CONTENT_CATEGORIES.map(item => [keyFor(item), { ...item }]));
+  for (const raw of Array.isArray(items) ? items : []) {
+    const kind = raw?.kind === "unit" ? "unit" : "building";
+    const id = slugId(raw?.id || raw?.label || raw?.name) || `category-${randomId().toLowerCase()}`;
+    const key = `${kind}:${id}`;
+    const base = merged.get(key);
+    const systemType = kind === "unit" ? "unit" : raw?.systemType === "military" ? "military" : "economic";
+    const color = cleanString(raw?.color || base?.color || "gold");
+    merged.set(key, {
+      id,
+      kind,
+      systemType: base?.systemType || systemType,
+      label: cleanString(raw?.label || raw?.name) || base?.label || "Content Category",
+      icon: cleanString(raw?.icon) || base?.icon || (kind === "unit" ? "fa-shield-halved" : "fa-industry"),
+      color: /^#[0-9a-f]{6}$/i.test(color) || Object.hasOwn(BRANCH_COLORS, color.toLowerCase()) ? color : (base?.color || "gold"),
+      builtIn: Boolean(base),
+      enabled: raw?.enabled === undefined ? base?.enabled !== false : Boolean(raw.enabled),
+      sort: Math.trunc(toNumber(raw?.sort, base?.sort ?? merged.size * 10))
+    });
+  }
+  return Array.from(merged.values()).sort((a, b) => a.kind.localeCompare(b.kind) || a.sort - b.sort || a.label.localeCompare(b.label));
+}
+
+function normalizePolicyEffects(effects = {}) {
+  return {
+    incomeMultiplier: Math.max(0, toNumber(effects.incomeMultiplier, 1)),
+    buildingUpkeepMultiplier: Math.max(0, toNumber(effects.buildingUpkeepMultiplier, 1)),
+    militaryUpkeepMultiplier: Math.max(0, toNumber(effects.militaryUpkeepMultiplier, 1)),
+    manpowerMultiplier: Math.max(0, toNumber(effects.manpowerMultiplier, 1)),
+    armyFoodMultiplier: Math.max(0, toNumber(effects.armyFoodMultiplier, 1)),
+    foodPerPop: toNumber(effects.foodPerPop, 0),
+    growth: toNumber(effects.growth, 0),
+    flatPopulation: Math.trunc(toNumber(effects.flatPopulation, 0)),
+    publicOrder: toNumber(effects.publicOrder, 0),
+    eventRoll: toNumber(effects.eventRoll, 0),
+    foodOutputPercent: toNumber(effects.foodOutputPercent, 0),
+    materialsOutputPercent: toNumber(effects.materialsOutputPercent, 0),
+    constructionPercent: toNumber(effects.constructionPercent, 0),
+    recruitmentCostPercent: toNumber(effects.recruitmentCostPercent, 0),
+    recruitmentCapacityPercent: toNumber(effects.recruitmentCapacityPercent, 0),
+    manpowerRecoveryPercent: toNumber(effects.manpowerRecoveryPercent, 0)
+  };
+}
+
+function normalizePolicyCatalog(items) {
+  const merged = new Map(POLICY_OPTIONS.map(item => [item.id, clone(item)]));
+  for (const raw of Array.isArray(items) ? items : []) {
+    const id = slugId(raw?.id || raw?.name) || `policy-${randomId().toLowerCase()}`;
+    const base = merged.get(id);
+    merged.set(id, {
+      id,
+      name: cleanString(raw?.name) || base?.name || "Settlement Policy",
+      settlementTier: settlementTierValue(raw?.settlementTier || base?.settlementTier),
+      description: cleanString(raw?.description) || base?.description || "A GM-authored settlement policy.",
+      effects: normalizePolicyEffects({ ...(base?.effects || {}), ...(raw?.effects || {}) }),
+      enabled: raw?.enabled === undefined ? base?.enabled !== false : Boolean(raw.enabled),
+      builtIn: Boolean(base)
+    });
+  }
+  return Array.from(merged.values()).map(item => ({ ...item, effects: normalizePolicyEffects(item.effects) }));
+}
+
 function normalizeData(raw) {
   const fallback = defaultWorldData();
   const source = clone(raw || {});
   const sourceSchema = Math.max(1, Math.trunc(toNumber(source.schemaVersion, 1)));
   const migrateLegacy = sourceSchema < 5;
   const rules = normalizeRules(source.rules || fallback.rules, migrateLegacy, sourceSchema);
+  const contentCategories = normalizeContentCategories(source.contentCategories || fallback.contentCategories);
+  runtimeContentCategories = contentCategories.map(item => ({ ...item }));
+  const policyCatalog = normalizePolicyCatalog(source.policyCatalog || fallback.policyCatalog);
   const unitCatalog = normalizeUnitCatalog(source.unitCatalog || fallback.unitCatalog, migrateLegacy);
   const catalog = normalizeCatalog(source.catalog || fallback.catalog, unitCatalog, migrateLegacy);
   const refreshEconomicBalance = sourceSchema < 7;
@@ -4399,8 +5306,8 @@ function normalizeData(raw) {
   if (refreshSchema11) refreshSchema11Catalog(catalog);
   const eventCatalog = normalizeEventCatalog(source.eventCatalog || fallback.eventCatalog, migrateLegacy);
   const settlements = Array.isArray(source.settlements) && source.settlements.length
-    ? source.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, migrateLegacy))
-    : fallback.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules));
+    ? source.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, migrateLegacy, policyCatalog, sourceSchema))
+    : fallback.settlements.map(item => normalizeSettlement(item, unitCatalog, catalog, rules, false, policyCatalog, SCHEMA_VERSION));
   if (sourceSchema < 6) migrateLaurentStaffing(catalog, settlements);
   if (refreshEconomicBalance) refreshEconomicBuildings(settlements, catalog, unitCatalog, rules);
   if (refreshSchema8) refreshSchema8Settlements(settlements, catalog, unitCatalog, rules);
@@ -4416,6 +5323,8 @@ function normalizeData(raw) {
     schemaVersion: SCHEMA_VERSION,
     month: Math.max(1, Math.trunc(toNumber(source.month, fallback.month))),
     rules,
+    contentCategories,
+    policyCatalog,
     settlementTemplates,
     catalog,
     unitCatalog,
@@ -5009,7 +5918,7 @@ function normalizeUnitCatalogItem(item) {
   const requestedBranch = cleanString(item?.branch);
   const branch = special
     ? "unique"
-    : UNIT_BRANCHES.some(option => option.id === requestedBranch && option.id !== "unique") ? requestedBranch : "infantry";
+    : contentCategoriesFor("unit").some(option => option.id === requestedBranch && option.id !== "unique") ? requestedBranch : "infantry";
   return {
     id: cleanString(item?.id) || randomId(),
     name: cleanString(item?.name) || "Unit",
@@ -5044,7 +5953,7 @@ function legacyUnitPower(item, tier = 1) {
   return Math.max(0.1, Math.round((melee + ranged * 0.85 + defense + morale + mobility * 0.5 + charge * 0.65 + siege * 0.45) / 4 * 10) / 10);
 }
 
-function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING_CATALOG, rules = defaultRules(), migrateLegacy = false) {
+function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING_CATALOG, rules = defaultRules(), migrateLegacy = false, policyCatalog = POLICY_OPTIONS, sourceSchema = SCHEMA_VERSION) {
   const tier = settlementTierValue(item?.tier || item?.type);
   const migratingDeLaurent = migrateLegacy && cleanString(item?.id) === "de-laurent";
   const deLaurentBuildingMap = migratingDeLaurent ? {
@@ -5110,7 +6019,7 @@ function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING
     manpowerBonus: toNumber(item?.manpowerBonus, 0),
     manpowerOverride: cleanString(item?.manpowerOverride),
     manpowerReserve: 0,
-    policyId: policyFor(item?.policyId, tier).id,
+    policyId: policyFor(item?.policyId, tier, policyCatalog).id,
     slotBonus: Math.max(0, Math.trunc(toNumber(item?.slotBonus, toNumber(item?.economicSlotBonus, 0) + toNumber(item?.militarySlotBonus, 0)))),
     economicSlotBonus: Math.trunc(toNumber(item?.economicSlotBonus, 0)),
     militarySlotBonus: Math.trunc(toNumber(item?.militarySlotBonus, 0)),
@@ -5118,14 +6027,19 @@ function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING
     permissions: { ...defaultPermissions(), ...(item?.permissions || {}) },
     overrides: { ...defaultOverrides(), ...(item?.overrides || {}) },
     buildings,
-    troops: Array.isArray(item?.troops) ? item.troops.map(troop => normalizeTroop(migratingDeLaurent && cleanString(troop?.id) === "dl-sergeants" ? { ...troop, type: "watchman" } : troop, unitCatalog, migrateLegacy)) : [],
+    troops: Array.isArray(item?.troops) ? item.troops.map(troop => normalizeTroop(
+      migratingDeLaurent && cleanString(troop?.id) === "dl-sergeants" ? { ...troop, type: "watchman" } : troop,
+      unitCatalog,
+      migrateLegacy,
+      sourceSchema < 12
+    )) : [],
     recruitment: Array.isArray(item?.recruitment) ? item.recruitment.map(order => normalizeRecruitment(order, unitCatalog)) : [],
     projects,
     slots: [],
     districtBackgroundUrl: cleanString(item?.districtBackgroundUrl || item?.imageUrl),
     backgroundOverlay: clamp(toNumber(item?.backgroundOverlay, 55), 0, 90),
     pendingEvents: Array.isArray(item?.pendingEvents) ? item.pendingEvents.map(normalizePendingEvent).filter(Boolean).slice(0, 25) : [],
-    activeEffects: Array.isArray(item?.activeEffects) ? item.activeEffects.map(normalizeActiveEffect).filter(Boolean).slice(0, 25) : [],
+    activeEffects: Array.isArray(item?.activeEffects) ? item.activeEffects.map(normalizeActiveEffect).filter(Boolean).slice(0, 50) : [],
     turnSnapshots: Array.isArray(item?.turnSnapshots) ? item.turnSnapshots.map(normalizeTurnSnapshot).filter(Boolean).slice(0, rules.construction.snapshotLimit) : [],
     growth: normalizeGrowth(item?.growth),
     turnNotes: normalizeTurnNotes(item?.turnNotes),
@@ -5135,7 +6049,8 @@ function normalizeSettlement(item, unitCatalog = TROOP_TYPES, catalog = BUILDING
   };
   settlement.slots = normalizeSettlementSlots(item?.slots, settlement, rules);
   synchronizeAutomaticLabor(settlement);
-  const manpowerCap = manpowerCapForSettlement(settlement, rules);
+  synchronizeBuildingGarrisons(settlement, unitCatalog);
+  const manpowerCap = manpowerCapForSettlement(settlement, rules, policyCatalog);
   const committed = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, unitCatalog), 0)
     + settlement.recruitment.filter(order => order.status !== "completed").reduce((total, order) => total + Math.max(0, order.targetCount - order.trained), 0);
   const fallbackReserve = Math.max(0, manpowerCap - committed);
@@ -5236,18 +6151,27 @@ function normalizeBuilding(item, unitCatalog = TROOP_TYPES, catalogItem = null, 
   };
 }
 
-function normalizeTroop(item, unitCatalog = TROOP_TYPES, migrateLegacy = false) {
+function normalizeTroop(item, unitCatalog = TROOP_TYPES, migrateLegacy = false, migrateTroopModes = false) {
   const type = troopType(item?.type, unitCatalog);
   const currentUpkeep = unitUpkeepFromRules(type, defaultRules());
   const count = Math.max(0, Math.trunc(toNumber(item?.count, 0)));
   const maxCount = Math.max(count, Math.trunc(toNumber(item?.maxCount, count)));
+  const sourceBuildingId = cleanString(item?.sourceBuildingId);
+  const sourceGarrison = Boolean(sourceBuildingId);
+  const requestedMode = cleanString(item?.mode).toLowerCase();
+  const mode = sourceGarrison ? "garrison" : migrateTroopModes ? "raised" : requestedMode === "garrison" ? "garrison" : "raised";
   return {
     id: cleanString(item?.id) || randomId(),
     name: cleanString(item?.name) || type.name,
     type: type.id,
     count,
     maxCount,
-    mode: "garrison",
+    mode,
+    freeUpkeep: sourceGarrison ? true : Boolean(item?.freeUpkeep),
+    usesManpower: sourceGarrison ? false : item?.usesManpower === undefined ? true : Boolean(item.usesManpower),
+    lockedToGarrison: sourceGarrison ? true : Boolean(item?.lockedToGarrison),
+    sourceBuildingId,
+    sourceCatalogId: cleanString(item?.sourceCatalogId),
     garrisonCost: currentUpkeep.garrison,
     campaignCost: currentUpkeep.campaign,
     useRuleUpkeep: true,
@@ -5256,6 +6180,67 @@ function normalizeTroop(item, unitCatalog = TROOP_TYPES, migrateLegacy = false) 
     sourceRecruitmentId: cleanString(item?.sourceRecruitmentId),
     notes: cleanString(item?.notes)
   };
+}
+
+function synchronizeBuildingGarrisons(settlement, unitCatalog = TROOP_TYPES) {
+  const expected = new Map();
+  for (const building of settlement?.buildings || []) {
+    for (const entry of normalizeGarrisonUnits(building.garrisonUnits, unitCatalog)) {
+      const key = `${building.id}:${entry.unitId}`;
+      expected.set(key, { building, entry });
+    }
+  }
+
+  const retained = [];
+  for (const troop of settlement?.troops || []) {
+    if (!troop.sourceBuildingId) {
+      retained.push(troop);
+      continue;
+    }
+    const key = `${troop.sourceBuildingId}:${troop.type}`;
+    const source = expected.get(key);
+    if (!source) continue;
+    const nextMaximum = source.entry.count;
+    const previousMaximum = Math.max(0, toNumber(troop.maxCount, 0));
+    troop.count = clamp(Math.trunc(toNumber(troop.count, 0)) + Math.max(0, nextMaximum - previousMaximum), 0, nextMaximum);
+    troop.maxCount = nextMaximum;
+    troop.name ||= `${source.building.name}: ${troopType(troop.type, unitCatalog).name}`;
+    troop.mode = "garrison";
+    troop.freeUpkeep = true;
+    troop.usesManpower = false;
+    troop.lockedToGarrison = true;
+    troop.sourceCatalogId = source.building.catalogId;
+    retained.push(troop);
+    expected.delete(key);
+  }
+
+  for (const { building, entry } of expected.values()) {
+    const type = troopType(entry.unitId, unitCatalog);
+    retained.push(normalizeTroop({
+      id: `garrison-${slugId(building.id)}-${slugId(type.id)}`,
+      name: `${building.name}: ${type.name}`,
+      type: type.id,
+      count: entry.count,
+      maxCount: entry.count,
+      mode: "garrison",
+      freeUpkeep: true,
+      usesManpower: false,
+      lockedToGarrison: true,
+      sourceBuildingId: building.id,
+      sourceCatalogId: building.catalogId,
+      imageUrl: type.imageUrl,
+      actorUuid: type.actorUuid,
+      notes: `Free building garrison supplied by ${building.name}.`
+    }, unitCatalog));
+  }
+  settlement.troops = retained;
+  return retained;
+}
+
+function troopAvailableForDefense(troop, settlement) {
+  if (!troop?.sourceBuildingId) return true;
+  const building = settlement?.buildings?.find(item => item.id === troop.sourceBuildingId);
+  return Boolean(building && buildingOperating(building));
 }
 
 function normalizeRecruitment(item, unitCatalog = TROOP_TYPES) {
@@ -5496,13 +6481,18 @@ function normalizeEventEffects(effects = {}) {
 
 function normalizeActiveEffect(item) {
   if (!item || typeof item !== "object") return null;
+  const permanent = Boolean(item.permanent);
   return {
     id: cleanString(item.id) || randomId(),
     sourceEventId: cleanString(item.sourceEventId),
     name: cleanString(item.name) || "Settlement Modifier",
     description: cleanString(item.description),
     effects: normalizeEventEffects(item.effects),
-    remainingMonths: clamp(Math.trunc(toNumber(item.remainingMonths, item.duration ?? 1)), 1, 12),
+    remainingMonths: permanent ? 0 : clamp(Math.trunc(toNumber(item.remainingMonths, item.duration ?? 1)), 1, 120),
+    permanent,
+    visible: item.visible === undefined ? true : Boolean(item.visible),
+    kind: ["buff", "debuff", "neutral"].includes(item.kind) ? item.kind : "neutral",
+    source: cleanString(item.source) || (item.sourceEventId ? "Month Event" : "GM"),
     createdMonth: Math.max(0, Math.trunc(toNumber(item.createdMonth, 0))),
     created: Math.max(0, toNumber(item.created, Date.now())),
     gmNote: cleanString(item.gmNote)
@@ -5555,15 +6545,18 @@ function calculateSettlement(settlement, data = {}) {
   const rules = data?.rules || defaultRules();
   const unitCatalog = data.unitCatalog || TROOP_TYPES;
   const tier = tierRuleFor(settlement.tier, rules);
-  const activePolicy = policyFor(settlement.policyId, settlement.tier);
+  const activePolicy = policyFor(settlement.policyId, settlement.tier, data.policyCatalog || POLICY_OPTIONS);
   const policyEffects = activePolicy.effects;
   const activeModifiers = aggregateActiveModifiers(settlement.activeEffects);
   synchronizeAutomaticLabor(settlement);
+  synchronizeBuildingGarrisons(settlement, unitCatalog);
   const allBuildings = settlement.buildings;
   const activeBuildings = settlement.buildings.filter(building => building.active);
   const operatingBuildings = activeBuildings.filter(buildingOperating);
   const economicWorkers = activeBuildings.filter(building => assignmentKind(building) === "economic").reduce((total, building) => total + assignedWorkers(building), 0);
   const militaryWorkers = activeBuildings.filter(building => assignmentKind(building) === "military").reduce((total, building) => total + assignedWorkers(building), 0);
+  const raisedTroops = settlement.troops.filter(troop => troop.mode !== "garrison");
+  const activeGarrisonTroops = settlement.troops.filter(troop => troop.mode === "garrison" && troopAvailableForDefense(troop, settlement));
   const troopManpowerUsed = settlement.troops.reduce((total, troop) => total + troopManpowerUse(troop, unitCatalog), 0);
   const civilianPopulationRaw = settlement.population;
   const civilianPopulation = settlement.population;
@@ -5590,7 +6583,7 @@ function calculateSettlement(settlement, data = {}) {
     * (1 - buildingUpkeepDiscount / 100)
     * policyEffects.buildingUpkeepMultiplier
     * percentMultiplier(activeModifiers.buildingUpkeepPercent));
-  const militaryCostRaw = settlement.troops.reduce((total, troop) => {
+  const militaryCostRaw = settlement.troops.filter(troop => !troop.freeUpkeep).reduce((total, troop) => {
     const type = troopType(troop.type, unitCatalog);
     const upkeep = unitUpkeepFromRules(type, rules);
     return total + troop.count * upkeep.upkeep;
@@ -5606,20 +6599,25 @@ function calculateSettlement(settlement, data = {}) {
   const militarySlots = settlement.slots.filter(slot => slot.unlocked && slot.allowedCategory !== "economic").length;
   const usedEconomicSlots = new Set(allBuildings.filter(building => building.category === "economic").flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean)).size;
   const usedMilitarySlots = new Set(allBuildings.filter(building => building.category === "military").flatMap(building => [building.slotId, ...(building.extraSlotIds || [])]).filter(Boolean)).size;
-  const recruitmentCapacity = operatingBuildings.reduce((total, building) => total + buildingRecruitmentCapacity(building), 0);
+  const recruitmentCapacity = Math.max(0, Math.floor(operatingBuildings.reduce((total, building) => total + buildingRecruitmentCapacity(building), 0)
+    * percentMultiplier(policyEffects.recruitmentCapacityPercent)));
   const constructionBonus = Math.floor(operatingBuildings.reduce((total, building) => total + building.constructionBonus, 0));
   const constructionBenefits = settlementConstructionBenefits(settlement);
   const cpThisMonth = Math.max(0, Math.floor((freePop * rules.construction.cpPerFreePop + constructionBonus)
     * percentMultiplier(constructionBenefits.cpPercent)
+    * percentMultiplier(policyEffects.constructionPercent)
     * percentMultiplier(activeModifiers.constructionPercent)));
   const subsistenceFood = Math.floor(freePop * rules.economy.subsistenceFoodPerFreePop);
   const buildingFood = Math.round(buildingOutputs.reduce((total, output) => total + output.food, 0));
   const buildingMaterials = Math.round(buildingOutputs.reduce((total, output) => total + output.materials, 0));
   const foodUpkeep = Math.round(operatingBuildings.reduce((total, building) => total + building.foodUpkeep, 0));
   const materialsUpkeep = Math.round(operatingBuildings.reduce((total, building) => total + building.materialsUpkeep, 0));
-  const foodProduction = subsistenceFood + Math.round(buildingFood * percentMultiplier(activeModifiers.foodOutputPercent));
+  const foodProduction = subsistenceFood + Math.round(buildingFood
+    * percentMultiplier(policyEffects.foodOutputPercent)
+    * percentMultiplier(activeModifiers.foodOutputPercent));
   const populationFood = settlement.population * (rules.economy.foodPerPop + policyEffects.foodPerPop);
-  const armyFood = settlement.troops.reduce((total, troop) => total + troop.count * troopType(troop.type, unitCatalog).foodUpkeep, 0) * policyEffects.armyFoodMultiplier;
+  const suppliedTroops = [...raisedTroops, ...activeGarrisonTroops];
+  const armyFood = suppliedTroops.reduce((total, troop) => total + troop.count * troopType(troop.type, unitCatalog).foodUpkeep, 0) * policyEffects.armyFoodMultiplier;
   const foodConsumption = Math.round(populationFood + armyFood + foodUpkeep);
   const foodBalance = foodProduction - foodConsumption;
   const foodShortage = Math.max(0, -foodBalance);
@@ -5627,24 +6625,24 @@ function calculateSettlement(settlement, data = {}) {
   const foodSecurity = foodSecurityState(foodCoverage);
   const foodSecurityGrowth = foodSecurity.growth;
   const populationPressure = populationPressureFor(settlement.population, rules);
-  const materialsProduction = Math.round(buildingMaterials * percentMultiplier(activeModifiers.materialsOutputPercent));
+  const materialsProduction = Math.round(buildingMaterials
+    * percentMultiplier(policyEffects.materialsOutputPercent)
+    * percentMultiplier(activeModifiers.materialsOutputPercent));
   const materialsBalance = materialsProduction - materialsUpkeep;
   const queuedManpower = settlement.recruitment
     .filter(order => order.status !== "completed")
     .reduce((total, order) => total + Math.max(0, order.targetCount - order.trained) * troopType(order.troopType, unitCatalog).manpowerCost, 0);
-  const manpowerCap = manpowerCapForSettlement(settlement, rules);
+  const manpowerCap = manpowerCapForSettlement(settlement, rules, data.policyCatalog || POLICY_OPTIONS);
   const forceCapacityAvailable = Math.max(0, manpowerCap - troopManpowerUsed - queuedManpower);
   const manpowerReserve = clamp(toNumber(settlement.manpowerReserve, 0), 0, forceCapacityAvailable);
   settlement.manpowerReserve = manpowerReserve;
   const manpowerAvailable = Math.min(forceCapacityAvailable, manpowerReserve);
-  const manpowerRecoveryRate = clamp(toNumber(rules.military.manpowerRecoveryRate, 10), 0, 100);
+  const manpowerRecoveryRate = clamp(toNumber(rules.military.manpowerRecoveryRate, 10) * percentMultiplier(policyEffects.manpowerRecoveryPercent), 0, 100);
   const manpowerRecovery = Math.min(Math.max(0, forceCapacityAvailable - manpowerReserve), Math.ceil(manpowerCap * manpowerRecoveryRate / 100));
   const eventRollBonus = Math.round(operatingBuildings.reduce((total, building) => total + building.eventRollBonus, 0) + policyEffects.eventRoll);
   const autoGarrisonMap = new Map();
-  for (const building of operatingBuildings) {
-    for (const entry of normalizeGarrisonUnits(building.garrisonUnits, unitCatalog)) {
-      autoGarrisonMap.set(entry.unitId, (autoGarrisonMap.get(entry.unitId) || 0) + entry.count);
-    }
+  for (const troop of activeGarrisonTroops) {
+    autoGarrisonMap.set(troop.type, (autoGarrisonMap.get(troop.type) || 0) + troop.count);
   }
   const autoGarrison = Array.from(autoGarrisonMap, ([unitId, count]) => ({
     unitId,
@@ -5653,7 +6651,7 @@ function calculateSettlement(settlement, data = {}) {
     power: Math.round(count * unitCombatRating(troopType(unitId, unitCatalog)))
   }));
   const autoGarrisonPower = autoGarrison.reduce((total, entry) => total + entry.power, 0);
-  const armyPower = Math.round(settlement.troops.reduce((total, troop) => total + regimentPower(troop, unitCatalog), 0));
+  const armyPower = Math.round(raisedTroops.reduce((total, troop) => total + regimentPower(troop, unitCatalog), 0));
   const defendingPower = armyPower + autoGarrisonPower;
   const siegeDefensePercent = clamp(Math.round(operatingBuildings.reduce((total, building) => total + building.siegeDefensePercent, 0)), 0, 75);
   const strategicTags = [];
@@ -5756,7 +6754,7 @@ function calculateSettlement(settlement, data = {}) {
     militaryCapacity: manpowerCap,
     recruitmentCapacity,
     recruitmentDiscount: settlementRecruitmentDiscount(settlement, null, rules),
-    recruitmentCostPercent: activeModifiers.recruitmentCostPercent,
+    recruitmentCostPercent: activeModifiers.recruitmentCostPercent + policyEffects.recruitmentCostPercent,
     constructionBonus,
     constructionCpPercent: constructionBenefits.cpPercent,
     constructionCrownDiscount: constructionBenefits.crownDiscount,
@@ -5799,7 +6797,7 @@ function calculateGrowth(settlement, summary, rules = defaultRules()) {
 function aggregateActiveModifiers(items = []) {
   const total = normalizeEventEffects({});
   for (const item of items || []) {
-    if (toNumber(item?.remainingMonths, 0) <= 0) continue;
+    if (!item?.permanent && toNumber(item?.remainingMonths, 0) <= 0) continue;
     for (const key of EVENT_EFFECT_KEYS) total[key] += toNumber(item?.effects?.[key], 0);
   }
   return total;
@@ -5845,9 +6843,9 @@ function publicOrderPressureFor(population, rules = defaultRules()) {
   return -Math.min(cap, Math.log2(current / start) * perDoubling);
 }
 
-function manpowerCapForSettlement(settlement, rules = defaultRules()) {
+function manpowerCapForSettlement(settlement, rules = defaultRules(), policyCatalog = POLICY_OPTIONS) {
   if (cleanString(settlement?.manpowerOverride) !== "") return Math.max(0, Math.trunc(toNumber(settlement.manpowerOverride, 0)));
-  const policyEffects = policyFor(settlement?.policyId, settlement?.tier).effects;
+  const policyEffects = policyFor(settlement?.policyId, settlement?.tier, policyCatalog).effects;
   return Math.max(0, Math.trunc(Math.floor(toNumber(settlement?.population, 0) * rules.military.manpowerRate / 100 * policyEffects.manpowerMultiplier) + toNumber(settlement?.manpowerBonus, 0)));
 }
 
@@ -5855,7 +6853,7 @@ function recoverManpower(settlement, summary, rules = defaultRules()) {
   const cap = Math.max(0, toNumber(summary?.manpowerCap, manpowerCapForSettlement(settlement, rules)));
   const target = Math.max(0, toNumber(summary?.forceCapacityAvailable, cap));
   const current = clamp(toNumber(settlement.manpowerReserve, 0), 0, target);
-  const rate = clamp(toNumber(rules.military.manpowerRecoveryRate, 10), 0, 100);
+  const rate = clamp(toNumber(summary?.manpowerRecoveryRate, rules.military.manpowerRecoveryRate), 0, 100);
   const recovered = Math.min(Math.max(0, target - current), Math.ceil(cap * rate / 100));
   settlement.manpowerReserve = current + recovered;
   return recovered;
@@ -5864,6 +6862,7 @@ function recoverManpower(settlement, summary, rules = defaultRules()) {
 function advanceActiveEffects(settlement) {
   const expired = [];
   settlement.activeEffects = (settlement.activeEffects || []).filter(effect => {
+    if (effect.permanent) return true;
     effect.remainingMonths = Math.max(0, Math.trunc(toNumber(effect.remainingMonths, 0)) - 1);
     if (effect.remainingMonths > 0) return true;
     expired.push(effect.name);
@@ -5872,8 +6871,10 @@ function advanceActiveEffects(settlement) {
   return expired;
 }
 
-function recruitmentCostMultiplier(settlement) {
-  return percentMultiplier(aggregateActiveModifiers(settlement?.activeEffects).recruitmentCostPercent);
+function recruitmentCostMultiplier(settlement, data = {}) {
+  const active = aggregateActiveModifiers(settlement?.activeEffects).recruitmentCostPercent;
+  const policyEffects = policyFor(settlement?.policyId, settlement?.tier, data.policyCatalog || POLICY_OPTIONS).effects;
+  return percentMultiplier(active + policyEffects.recruitmentCostPercent);
 }
 
 function romanTier(value) {
@@ -6113,6 +7114,7 @@ function constructionBlockReasons(item, settlement, slot, current, data, permiss
 }
 
 function troopManpowerUse(troop, unitCatalog = TROOP_TYPES) {
+  if (troop?.usesManpower === false) return 0;
   const type = troopType(troop.type, unitCatalog);
   return Math.max(0, troop.count * type.manpowerCost);
 }
@@ -6239,7 +7241,7 @@ function loadClientState() {
   uiState.search = cleanString(state.search);
   uiState.constructionCategory = ["all", "economic", "military"].includes(state.constructionCategory) ? state.constructionCategory : "all";
   uiState.constructionSearch = cleanString(state.constructionSearch);
-  uiState.catalogKind = ["buildings", "units", "events"].includes(state.catalogKind) ? state.catalogKind : "buildings";
+  uiState.catalogKind = CATALOG_KINDS.includes(state.catalogKind) ? state.catalogKind : "buildings";
   uiState.catalogSearch = cleanString(state.catalogSearch);
   uiState.districtPage = Math.max(0, Math.trunc(toNumber(state.districtPage, 0)));
   uiState.selectedDistrictSlotId = cleanString(state.selectedDistrictSlotId);
@@ -6297,6 +7299,21 @@ function arrayPayload(value) {
 
 function cleanString(value) {
   return String(value ?? "").trim();
+}
+
+function escapeHtml(value) {
+  if (globalThis.Handlebars?.escapeExpression) return Handlebars.escapeExpression(cleanString(value));
+  return cleanString(value).replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]);
+}
+
+function slugId(value) {
+  return cleanString(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
 }
 
 function toNumber(value, fallback = 0) {

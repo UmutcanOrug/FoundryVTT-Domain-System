@@ -6,14 +6,14 @@ DS, Foundry VTT v13 build 351 icin Astargon yerleskelerini uzun vadeli bir Total
 
 - Oyuncu yalnizca kendisine atanmis yerleskeleri gorur.
 - GM profil, bina durdurma, insaat, recruitment, Treasury transferi ve tur notu izinlerini yerleske bazinda verir.
-- `Overview`: 4x2 district tahtasi, branch secici, kuyruklar, Landmark, auto garrison ve ordu ozeti.
+- `Overview`: 4x2 district tahtasi, branch secici, kuyruklar, Landmark, Raised Forces ve gercek Settlement Garrison ozeti.
 - `Town`: kademe, profil, policy, Treasury, POP, Growth ve tamamlanmis binalar.
 - `Construction`: proje kuyrugu ve tum ekonomik/askeri bina agaclari.
 - `Recruitment`: askeri bina agaclari, acilmis unitler, ortak recruitment havuzu, replenishment ve regimentler.
 - `Chronicle`: Treasury transferleri, ay sonuclari, oyuncu notlari ve GM kayitlari.
 - `Rules`: tum temel formuller, Food/Public Order bantlari ve GM dunya ayarlari.
-- `Content Library`: GM icin bina agaclari, Infantry/Ranged/Cavalry/Siege unit agaclari, ayri Unique Unit ve Landmark bolumleri ile d100 Event sablonlari.
-- `GM Controls`: ay yonetimi, ledger, rank, gorseller, landmark, dogrudan yerlestirme, olay ve geri alma.
+- `Content Library`: GM icin bina/unit agaclari, Unique/Landmark bolumleri, d100 Event sablonlari, kategori ve policy yonetimi ile aktarim araclari.
+- `GM Controls`: ay yonetimi, ledger, rank, gorseller, landmark, dogrudan yerlestirme, yerleske buff/debufflari, olay ve geri alma.
 
 ## Yerleske Hiyerarsisi
 
@@ -29,7 +29,7 @@ Normal bina Tier 1-5, yerleske kademesiyle eslesir. Landmark tier kullanmaz ve n
 
 Food bir terfi veya insaat para birimi degildir. Terfi Crown ve Materials pesin odendikten sonra CP ile tamamlanir. GM `Settlement Rank` ile masrafsiz dogrudan kademe degistirebilir.
 
-GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v11 gecisi custom slot degerlerini ve varsayilandan farkli custom terfi fiyatlarini korur.
+GM, Rules ekraninda bu slot ve terfi degerlerini degistirebilir. Schema v12 gecisi custom slot degerlerini ve varsayilandan farkli custom terfi fiyatlarini korur.
 
 ## Otomatik Is Gucu
 
@@ -150,7 +150,7 @@ Bir POP yaklasik 10 kisiyi temsil eder. Bir POP ayni zamanda lorduna 1 Manpower 
 
 ```text
 Manpower Cap = floor(Total POP x Manpower Rate) + Bonus
-Committed Force = mevcut asker + kuyruktaki asker/replenishment
+Committed Force = raised/manual asker + kuyruktaki asker/replenishment
 Force Capacity = Manpower Cap - Committed Force
 Recruitable Now = min(Manpower Reserve, Force Capacity)
 ```
@@ -160,6 +160,7 @@ Recruitable Now = min(Manpower Reserve, Force Capacity)
 - Recruitment emri Crown ve Manpower'i verildigi anda ayirir.
 - Iptal edilen emrin egitilmemis kismi Crown ve Manpower iadesi alir.
 - Savas kayiplari otomatik manpower iadesi vermez.
+- Binalarin ucretsiz verdigi Settlement Garrison kalici Manpower Cap kullanmaz; GM'in elle ekledigi normal garrison regimentleri kullanir.
 
 ### Ortak Recruitment Capacity
 
@@ -198,11 +199,11 @@ GM bu iki yuzdeyi Rules ekranindan degistirebilir.
 - Ayni regiment icin ayni anda tek aktif replenishment emri olabilir.
 - Regiment resmi, adi, notu ve Foundry Actor UUID'si unit sablonundan bagimsizdir.
 
-## Defense, Auto Garrison ve Siege Defense
+## Defense, Settlement Garrison ve Siege Defense
 
-Eski belirsiz Defense target/coverage sistemi yoktur. Defense binalari somut garrison ve yuzdesel Siege Defense verir.
+Eski belirsiz Defense target/coverage sistemi yoktur. Defense binalari somut regiment kayitlari ve yuzdesel Siege Defense verir.
 
-| Bina | Ucretsiz Auto Garrison | Order | Siege Defense |
+| Bina | Ucretsiz Settlement Garrison | Order | Siege Defense |
 | --- | --- | ---: | ---: |
 | Watch Post | 20 Militia | +2 | +5% |
 | Palisade | 30 Militia, 15 Town Guard | +4 | +10% |
@@ -210,11 +211,15 @@ Eski belirsiz Defense target/coverage sistemi yoktur. Defense binalari somut gar
 | Citadel | 25 Veteran Infantry, 20 Crossbowmen, 25 Men-at-Arms | +12 | +35% |
 | Grand Fortress | 210 Town Guard, 45 Men-at-Arms, 30 Archers, 15 Royal Guard | +20 | +50% |
 
-- Auto garrison Manpower Reserve veya Recruitment Capacity kullanmaz.
-- Auto garrison Army Upkeep odemez.
+- Bina kaynakli ucretsiz garrison kalici Manpower Cap veya Recruitment Capacity kullanmaz ve Crown upkeep odemez.
+- Calisan kaynak bina varsa garrison Food tuketir, Defense Power'a katilir ve ay sonunda replenishment olabilir.
+- Kaynak bina Halt/Waiting durumundaysa garrison gecici olarak pasif olur; Food tuketmez ve Defense Power vermez.
+- Garrison regimentlerinin Current/Maximum Strength kaydi vardir. Kayiplar Recruitment sayfasinin en altindaki `Garrison Regiments` bolumunden girilir ve bina hesaplaninca silinmez.
+- Garrison replenishment eksik asker icin Crown ve Manpower Reserve ayirir, bina veya Recruitment Capacity istemez ve ay sonunda tamamlanir.
+- Bina upgrade edilirse mevcut kayiplar korunur; yalnizca yeni seviyenin ekledigi askerler maksimum ve mevcut guce eklenir.
+- GM'in Add Regiment wizardiyla ekledigi manuel garrison normal upkeep, Food ve Manpower kurallarini kullanir.
 - Stone Walls +1, Grand Fortress +2 genel district slotu verir.
-- Overview, auto garrison Power'ini ve kompozisyonunu ayri referans olarak gosterir.
-- Auto Garrison Power henuz otomatik savas cozmez, kayip vermez ve regiment olusturmaz.
+- Overview, Raised Forces ve Settlement Garrison regimentlerini ayri gosterir.
 - Toplam Siege Defense %75'te sinirlanir.
 - `Uses Defense` isaretli zararli ay sonu event modifierlari Siege Defense yuzdesi kadar azalir. Mevcut surumde kusatma savasi veya casualty cozumlemez.
 
@@ -252,6 +257,8 @@ Her yerleskede ayni anda bir policy aktiftir.
 - `Muster Reserves`: +25% Manpower Cap, +15% Army Food, -0,25% Growth.
 - `Public Festivals`: -10% Crown, +0,25% Growth, +10 Order, +2 event roll.
 
+GM, Content Library icindeki `Policies` yoneticisinden yerleske kademesi, aciklama ve tum mekanik modifierlari olan yeni policy ekleyebilir. Built-in policy'ler duzenlenip varsayilana dondurulebilir. Custom policy silinirse onu kullanan yerleskeler Balanced Administration'a doner.
+
 ## d100 Ay Sonu Olaylari
 
 - Eventler otomatik flat Crown, Food, Materials veya POP vermez.
@@ -262,15 +269,29 @@ Her yerleskede ayni anda bir policy aktiftir.
 - GM olay degerlerini kabul etmeden once degistirebilir.
 - Ay kapatmak icin bekleyen event kararlarinin bitmesi gerekir.
 
+## Content Workshop, Kategoriler ve Aktarim
+
+Content Library, tek alanli hizli ekleme yerine ayri bir wizard acar:
+
+- `Create Building Chain`: kategori ve branch kimligini secip T1-T5 veya tierless Landmark nodelarini parent baglantilariyla birlikte kurar.
+- `Create Unit Tree`: normal veya Unique unitleri tier, aile, parent, recruitment kaynagi, Power, Food, Crown, upkeep, Actor ve gorselleriyle birlikte kurar.
+- `Add Regiment`: GM'in mevcut unit katalogundan secim yapip Raised veya Garrison olarak Current/Maximum Strength ile yerlestirmesini saglar.
+
+`Categories` ekraninda built-in ailelerin adi, rengi, ikonu ve sirasi degistirilebilir. GM yeni Economic veya Military kategori ekleyebilir; kullanilmayan custom kategori silinebilir. Kategori tipi degisirse bagli katalog ve yerleske bina kayitlari birlikte tasinir.
+
+Aktarim dugmeleri:
+
+- `Export Content`: bina, unit, event, kategori ve policy verisini baska dunyaya tasinabilir JSON olarak indirir.
+- `Backup World`: tum settlementlar, kuyruklar, regimentler, loglar ve dunya ayarlariyla tam geri yukleme dosyasi indirir.
+- `Import JSON`: Content paketini mevcut settlementlara dokunmadan Merge/Replace eder; World Backup ise acik onaydan sonra tam dunya geri yuklemesi yapar.
+
+Patch guncellemeleri Foundry world ayarlarindaki runtime veriyi silmez. Yine de buyuk guncelleme veya custom katalog degisikliginden once `Backup World` kullanilmasi tavsiye edilir.
+
+## GM Yerleske Etkileri
+
+GM Controls icindeki `Settlement Buffs and Debuffs` bolumu, secili yerleskeye sureli veya kalici mekanik etki ekler. Crown, Food, Materials, Growth, Order, Building/Army Upkeep, Construction CP ve Recruitment Cost alanlari ayarlanabilir. Etki oyuncuya acik veya yalnizca GM gorunur olabilir; kalan ay sayisi her islenen ay azalir.
+
 ## GM Landmark ve Content Library Akisi
-
-Content Library bina sekmesinde uc ayri, onay isteyen ekleme dugmesi vardir:
-
-- `Economic`
-- `Military`
-- `Landmark`
-
-Bu nedenle yeni sablon once yanlis kategoriye eklenip birkac kez tasinmaz.
 
 GM Controls icinde:
 
@@ -295,13 +316,13 @@ Laurent Manor:
 - Varsayilan 5 POP ister.
 - Varsayilan +10 Recruitment Capacity verir.
 - Varsayilan +2 genel district slotu verir.
-- Varsayilan 20 Town Guard + 10 Men-at-Arms auto garrison verir.
+- Varsayilan 20 Town Guard + 10 Men-at-Arms ucretsiz Settlement Garrison verir.
 - Varsayilan +10% Siege Defense ve +6 Public Order verir.
-- Custom workers, upkeep, recruitment, resim ve not degerleri schema v11 gecisinde korunur.
+- Custom workers, upkeep, recruitment, resim ve not degerleri schema v12 gecisinde korunur.
 
-## Schema v11 Gecisi
+## Schema v12 Gecisi
 
-v0.1.14 ve daha eski dunya verileri otomatik tasinir.
+v0.1.15 ve daha eski dunya verileri otomatik tasinir.
 
 - Terrain ve Biome alanlari profil, sablon, bina editoru ve kurulum kosullarindan kaldirilir.
 - Iron/Horse resource ve unit gereksinimleri kaldirilir.
@@ -319,6 +340,9 @@ v0.1.14 ve daha eski dunya verileri otomatik tasinir.
 - Settlement kimligi, owner, custom catalog, resim, regiment, Actor, log ve notlar korunur.
 - Custom slot kurallari korunur.
 - Laurent Manor'un custom workers, upkeep, recruitment, resim ve notlari korunur.
+- Eski regimentler davranis degisikligiyle beklenmedik garnizona donusmemesi icin Raised olarak korunur.
+- Bina `garrisonUnits` listeleri, kayip alabilen gercek Settlement Garrison regimentlerine donusturulur.
+- Custom content kategorileri, policy'ler ve yerleske buff/debuff kayitlari yeni dunya verisine eklenir.
 
 ## City Denge Referansi
 
@@ -364,5 +388,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.15.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.16.zip
 ```
