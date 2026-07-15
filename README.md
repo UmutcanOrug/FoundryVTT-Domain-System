@@ -50,7 +50,7 @@ DS is a Foundry VTT v13 build 351 module for Total War-inspired settlement, econ
 
 ## Balance Reference
 
-The automated v0.1.16 City scenario uses `5,000 POP`, one Food district, seven other City districts, and Laurent Manor. It produces `249,150` gross Crown, pays `15,390` building upkeep, can sustain approximately `2,365 Men-at-Arms`, and reaches about `143%` Food coverage. A representative six-district T3 Town has `285,000` Crown in final-node prices.
+The automated v0.1.17 City scenario uses `5,000 POP`, one Food district, seven other City districts, and Laurent Manor. It produces `249,150` gross Crown, pays `15,390` building upkeep, can sustain approximately `2,365 Men-at-Arms`, and reaches about `143%` Food coverage. A representative six-district T3 Town has `285,000` Crown in final-node prices.
 
 See `KULLANIM-KILAVUZU.md` for the complete Turkish workflow and rule reference.
 
@@ -71,5 +71,5 @@ https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download
 Latest package:
 
 ```text
-https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.16.zip
+https://github.com/UmutcanOrug/FoundryVTT-Domain-System/releases/latest/download/DS-v0.1.17.zip
 ```

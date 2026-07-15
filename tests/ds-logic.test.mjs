@@ -803,6 +803,7 @@ await assert.rejects(() => api.processSingleSettlement(turnData, { settlementId:
 
 // Static UI contracts: obsolete controls are gone and the new workflows are visible.
 const hbs = fs.readFileSync(new URL("../templates/ds-panel.hbs", import.meta.url), "utf8");
+const workshopHbs = fs.readFileSync(new URL("../templates/ds-workshop.hbs", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../styles/ds.css", import.meta.url), "utf8");
 assert.doesNotMatch(hbs, /Terrain|Biome|Strategic Resource|Assigned POP|Garrison Upkeep|Campaign Upkeep|Promotion Food|Food Cost|Food Required|Food Paid|name="sourceBuildingId"|bonusEconomicSlots|bonusMilitarySlots/);
 assert.match(hbs, /Food Flow/);
@@ -833,5 +834,10 @@ assert.match(css, /\.ds-regiment-grid\s*\{[\s\S]*grid-template-columns:\s*repeat
 assert.match(css, /\.ds-regiment-strip\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,/);
 assert.match(css, /\.ds-regiment-settings-panel/);
 assert.match(css, /\.ds-slot-tree-nodes\s*\{[\s\S]*repeat\(var\(--tree-columns/);
+assert.match(workshopHbs, /data-workshop-picker/);
+assert.match(workshopHbs, /data-node-field="sourceBuildingIds" data-node-array/);
+assert.match(workshopHbs, /data-node-field="recruitableUnitIds" data-node-array/);
+assert.doesNotMatch(workshopHbs, /data-node-field="(?:sourceBuildingIds|recruitableUnitIds)" multiple/);
+assert.match(css, /\.ds-workshop-picker-options\s*\{[\s\S]*max-height:\s*240px/);
 
-console.log("DS v0.1.16 logic tests passed");
+console.log("DS v0.1.17 logic tests passed");

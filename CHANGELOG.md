@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.17
+
+- Replaced the Foundry-collapsed multi-select in Unit Tree `Recruitment Sources` with an expandable checkbox picker that opens downward, supports multiple buildings, and reports the selected source count.
+- Applied the same stable picker to Building Chain `Recruitable Units`, including newly added wizard nodes, so both linked-content selectors remain readable at every window size.
+- Preserved ordered Parent selection: the first node is intentionally a `Branch root`, while each later node can select any earlier node in the same wizard as its parent.
+
 ## 0.1.16
 
 - Replaced reference-only auto-garrisons with real building-sourced Settlement Garrison regiments. Their Current/Maximum Strength and casualties persist, active garrisons consume Food and add Defense Power, and halted source buildings temporarily disable them.

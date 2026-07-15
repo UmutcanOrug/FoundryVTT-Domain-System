@@ -815,7 +815,11 @@ function activateWorkshopListeners(element, application) {
     const node = { localId: card.dataset.localId };
     card.querySelectorAll("[data-node-field]").forEach(input => {
       const key = input.dataset.nodeField;
-      if (input.type === "checkbox") node[key] = input.checked;
+      if (input.hasAttribute("data-node-array")) {
+        if (!Array.isArray(node[key])) node[key] = [];
+        if (input.checked && input.value) node[key].push(input.value);
+      }
+      else if (input.type === "checkbox") node[key] = input.checked;
       else if (input.multiple) node[key] = Array.from(input.selectedOptions, option => option.value).filter(Boolean);
       else node[key] = input.value;
     });
@@ -837,6 +841,18 @@ function activateWorkshopListeners(element, application) {
       if (Array.from(select.options).some(option => option.value === selected)) select.value = selected;
     });
   };
+  const refreshPickers = () => {
+    form.querySelectorAll("[data-workshop-picker]").forEach(picker => {
+      const count = picker.querySelectorAll('[data-node-array]:checked').length;
+      const summary = picker.querySelector("[data-workshop-picker-summary]");
+      if (summary) {
+        summary.textContent = count
+          ? `${count} ${count === 1 ? picker.dataset.singularLabel : picker.dataset.pluralLabel}`
+          : picker.dataset.emptyLabel;
+      }
+      picker.classList.toggle("has-selection", count > 0);
+    });
+  };
   const refreshLabels = () => {
     cards().forEach((card, index) => {
       const name = cleanString(card.querySelector('[data-node-field="name"]')?.value) || `Node ${index + 1}`;
@@ -845,6 +861,7 @@ function activateWorkshopListeners(element, application) {
       if (title) title.textContent = `${name} / Tier ${tier}`;
     });
     refreshParents();
+    refreshPickers();
     const review = form.querySelector("[data-workshop-review]");
     if (review) review.innerHTML = collectNodes().map((node, index) => `<li><strong>${escapeHtml(node.name || `Node ${index + 1}`)}</strong><span>Tier ${escapeHtml(node.nodeTier || node.tier || index + 1)}</span></li>`).join("");
   };
